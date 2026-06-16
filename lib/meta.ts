@@ -125,6 +125,10 @@ export function getOAuthUrl(redirectUri: string, state: string): string {
   url.searchParams.set('scope', SCOPES);
   url.searchParams.set('state', state);
   url.searchParams.set('response_type', 'code');
+  // Force Facebook to re-show the consent + page-selection screen every time,
+  // so the user can grant ALL pages (otherwise previously-unselected pages
+  // never appear in /me/accounts).
+  url.searchParams.set('auth_type', 'reauthorize');
   return url.toString();
 }
 
