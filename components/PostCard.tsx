@@ -2,27 +2,28 @@
 
 import { useState } from 'react';
 
-interface Post {
+export interface NormalizedPost {
   id: string;
-  message?: string;
-  story?: string;
-  created_time: string;
-  permalink_url?: string;
-  full_picture?: string;
-  comments?: { summary?: { total_count: number } };
-  likes?: { summary?: { total_count: number } };
+  text: string;
+  created_time?: string;
+  permalink?: string;
+  image?: string;
+  likes?: number | null;
+  comments?: number | null;
 }
 
-interface Comment {
+interface NormalizedComment {
   id: string;
-  message?: string;
-  created_time: string;
-  like_count?: number;
-  comment_count?: number;
-  from?: { id: string; name?: string };
+  author: string;
+  text: string;
+  created_time?: string;
+  likes?: number;
 }
 
-function formatDate(iso: string) {
+type Platform = 'facebook' | 'instagram';
+
+function formatDate(iso?: string) {
+  if (!iso) return '';
   try {
     return new Date(iso).toLocaleString('he-IL', {
       day: '2-digit',
@@ -39,12 +40,14 @@ function formatDate(iso: string) {
 export default function PostCard({
   post,
   pageId,
+  platform,
 }: {
-  post: Post;
+  post: NormalizedPost;
   pageId: string;
+  platform: Platform;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [comments, setComments] = useState<NormalizedComment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [posting, setPosting] = useState(false);
@@ -52,12 +55,42 @@ export default function PostCard({
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
 
-  const commentCount = post.comments?.summary?.total_count ?? 0;
-  const likeCount = post.likes?.summary?.total_count ?? 0;
+  // Endpoint builders per platform
+  const commentsUrl = () =>
+    platform === 'facebook'
+      ? `/api/posts/${post.id}/comments?pageId=${pageId}`
+      : `/api/instagram/media/${post.id}/comments?pageId=${pageId}`;
+  const postCommentUrl = () =>
+    platform === 'facebook'
+      ? `/api/posts/${post.id}/comments`
+      : `/api/instagram/media/${post.id}/comments`;
+  const replyUrl = (commentId: string) =>
+    platform === 'facebook'
+      ? `/api/comments/${commentId}/reply`
+      : `/api/instagram/comments/${commentId}/reply`;
+
+  const normalizeComments = (raw: any[]): NormalizedComment[] =>
+    raw.map((c) =>
+      platform === 'facebook'
+        ? {
+            id: c.id,
+            author: c.from?.name || 'משתמש',
+            text: c.message || '',
+            created_time: c.created_time,
+            likes: c.like_count ?? 0,
+          }
+        : {
+            id: c.id,
+            author: c.username ? `@${c.username}` : 'משתמש',
+            text: c.text || '',
+            created_time: c.timestamp,
+            likes: c.like_count ?? 0,
+          }
+    );
 
   const showToast = (msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 2500);
+    setTimeout(() => setToast(null), 2800);
   };
 
   const loadComments = async () => {
@@ -68,12 +101,10 @@ export default function PostCard({
     setExpanded(true);
     setLoadingComments(true);
     try {
-      const res = await fetch(
-        `/api/posts/${post.id}/comments?pageId=${pageId}`
-      );
+      const res = await fetch(commentsUrl());
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'failed');
-      setComments(data.comments || []);
+      setComments(normalizeComments(data.comments || []));
     } catch (e: any) {
       showToast('שגיאה בטעינת תגובות: ' + e.message);
     } finally {
@@ -85,7 +116,7 @@ export default function PostCard({
     if (!newComment.trim()) return;
     setPosting(true);
     try {
-      const res = await fetch(`/api/posts/${post.id}/comments`, {
+      const res = await fetch(postCommentUrl(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pageId, message: newComment.trim() }),
@@ -94,11 +125,10 @@ export default function PostCard({
       if (!res.ok) throw new Error(data.error || 'failed');
       showToast('✅ התגובה פורסמה');
       setNewComment('');
-      // Refresh comments if expanded
       if (expanded) {
-        const r = await fetch(`/api/posts/${post.id}/comments?pageId=${pageId}`);
+        const r = await fetch(commentsUrl());
         const d = await r.json();
-        setComments(d.comments || []);
+        if (r.ok) setComments(normalizeComments(d.comments || []));
       }
     } catch (e: any) {
       showToast('שגיאה: ' + e.message);
@@ -111,7 +141,7 @@ export default function PostCard({
     if (!replyText.trim()) return;
     setPosting(true);
     try {
-      const res = await fetch(`/api/comments/${commentId}/reply`, {
+      const res = await fetch(replyUrl(commentId), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pageId, message: replyText.trim() }),
@@ -128,42 +158,53 @@ export default function PostCard({
     }
   };
 
+  const isIG = platform === 'instagram';
+
   return (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-      {/* Post body */}
       <div className="p-5">
         <div className="flex items-start gap-3">
-          {post.full_picture && (
+          {post.image && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={post.full_picture}
+              src={post.image}
               alt=""
               className="w-20 h-20 rounded-xl object-cover flex-shrink-0"
             />
           )}
           <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span
+                className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                  isIG
+                    ? 'bg-pink-100 text-pink-600'
+                    : 'bg-blue-100 text-blue-600'
+                }`}
+              >
+                {isIG ? 'Instagram' : 'Facebook'}
+              </span>
+            </div>
             <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
-              {post.message || post.story || '(פוסט ללא טקסט)'}
+              {post.text || '(פוסט ללא טקסט)'}
             </p>
             <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">
               <span>{formatDate(post.created_time)}</span>
-              <span>👍 {likeCount}</span>
-              <span>💬 {commentCount}</span>
-              {post.permalink_url && (
+              {post.likes != null && <span>👍 {post.likes}</span>}
+              {post.comments != null && <span>💬 {post.comments}</span>}
+              {post.permalink && (
                 <a
-                  href={post.permalink_url}
+                  href={post.permalink}
                   target="_blank"
                   rel="noreferrer"
                   className="text-brand-600 hover:underline"
                 >
-                  צפה בפייסבוק ↗
+                  צפה {isIG ? 'באינסטגרם' : 'בפייסבוק'} ↗
                 </a>
               )}
             </div>
           </div>
         </div>
 
-        {/* New comment box */}
         <div className="mt-4 flex gap-2">
           <input
             type="text"
@@ -186,11 +227,10 @@ export default function PostCard({
           onClick={loadComments}
           className="mt-3 text-sm text-brand-600 hover:underline"
         >
-          {expanded ? 'הסתר תגובות' : `הצג תגובות (${commentCount})`}
+          {expanded ? 'הסתר תגובות' : 'הצג תגובות'}
         </button>
       </div>
 
-      {/* Comments */}
       {expanded && (
         <div className="border-t border-gray-100 bg-gray-50 p-5 space-y-3">
           {loadingComments ? (
@@ -206,18 +246,16 @@ export default function PostCard({
                 className="bg-white rounded-xl border border-gray-200 p-3"
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-medium text-sm">
-                    {c.from?.name || 'משתמש'}
-                  </span>
+                  <span className="font-medium text-sm">{c.author}</span>
                   <span className="text-xs text-gray-400">
                     {formatDate(c.created_time)}
                   </span>
                 </div>
                 <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
-                  {c.message}
+                  {c.text}
                 </p>
                 <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
-                  <span>👍 {c.like_count ?? 0}</span>
+                  <span>👍 {c.likes ?? 0}</span>
                   <button
                     onClick={() =>
                       setReplyingTo(replyingTo === c.id ? null : c.id)
@@ -234,9 +272,7 @@ export default function PostCard({
                       type="text"
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
-                      onKeyDown={(e) =>
-                        e.key === 'Enter' && submitReply(c.id)
-                      }
+                      onKeyDown={(e) => e.key === 'Enter' && submitReply(c.id)}
                       placeholder="כתוב תשובה..."
                       autoFocus
                       className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:border-brand-500"
@@ -256,7 +292,6 @@ export default function PostCard({
         </div>
       )}
 
-      {/* Toast */}
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg z-50">
           {toast}

@@ -16,6 +16,14 @@ export async function GET() {
       category: p.category,
       fan_count: p.fan_count,
       picture: p.picture?.data?.url,
+      instagram: p.instagram_business_account
+        ? {
+            id: p.instagram_business_account.id,
+            username: p.instagram_business_account.username,
+            picture: p.instagram_business_account.profile_picture_url,
+            followers: p.instagram_business_account.followers_count,
+          }
+        : null,
     }));
     return NextResponse.json({ pages: safe });
   } catch (e: any) {

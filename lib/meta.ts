@@ -23,6 +23,14 @@ export const SCOPES =
   process.env.META_SCOPES ||
   ['public_profile', 'pages_show_list', 'pages_read_engagement'].join(',');
 
+export interface InstagramAccount {
+  id: string;
+  username?: string;
+  profile_picture_url?: string;
+  followers_count?: number;
+  media_count?: number;
+}
+
 export interface FacebookPage {
   id: string;
   name: string;
@@ -31,6 +39,27 @@ export interface FacebookPage {
   tasks?: string[];
   picture?: { data?: { url?: string } };
   fan_count?: number;
+  instagram_business_account?: InstagramAccount;
+}
+
+export interface InstagramMedia {
+  id: string;
+  caption?: string;
+  media_type?: string;
+  media_url?: string;
+  thumbnail_url?: string;
+  permalink?: string;
+  timestamp?: string;
+  like_count?: number;
+  comments_count?: number;
+}
+
+export interface InstagramComment {
+  id: string;
+  text?: string;
+  username?: string;
+  timestamp?: string;
+  like_count?: number;
 }
 
 export interface FacebookPost {
@@ -137,7 +166,7 @@ export async function listPages(userToken: string): Promise<FacebookPage[]> {
   let url: URL | null = new URL(`${GRAPH_BASE}/me/accounts`);
   url.searchParams.set(
     'fields',
-    'id,name,access_token,category,tasks,fan_count,picture{url}'
+    'id,name,access_token,category,tasks,fan_count,picture{url},instagram_business_account{id,username,profile_picture_url,followers_count,media_count}'
   );
   url.searchParams.set('limit', '100');
   url.searchParams.set('access_token', userToken);
@@ -220,6 +249,64 @@ export async function replyToComment(
   pageToken: string
 ): Promise<{ id: string }> {
   return graphPost(`${commentId}/comments`, {
+    message,
+    access_token: pageToken,
+  });
+}
+
+/* ---------------------------------------------------------------------------
+ * Instagram (via the linked Facebook Page token + IG Business account)
+ * ------------------------------------------------------------------------- */
+
+/** List recent media for an Instagram business account. */
+export async function listInstagramMedia(
+  igUserId: string,
+  pageToken: string
+): Promise<InstagramMedia[]> {
+  const data = await graphGet<{ data: InstagramMedia[] }>(`${igUserId}/media`, {
+    fields:
+      'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count',
+    limit: '25',
+    access_token: pageToken,
+  });
+  return data.data || [];
+}
+
+/** List comments on an Instagram media item. */
+export async function listInstagramComments(
+  mediaId: string,
+  pageToken: string
+): Promise<InstagramComment[]> {
+  const data = await graphGet<{ data: InstagramComment[] }>(
+    `${mediaId}/comments`,
+    {
+      fields: 'id,text,username,timestamp,like_count',
+      limit: '50',
+      access_token: pageToken,
+    }
+  );
+  return data.data || [];
+}
+
+/** Post a new top-level comment on an Instagram media item. */
+export async function commentOnInstagramMedia(
+  mediaId: string,
+  message: string,
+  pageToken: string
+): Promise<{ id: string }> {
+  return graphPost(`${mediaId}/comments`, {
+    message,
+    access_token: pageToken,
+  });
+}
+
+/** Reply to an existing Instagram comment. */
+export async function replyToInstagramComment(
+  commentId: string,
+  message: string,
+  pageToken: string
+): Promise<{ id: string }> {
+  return graphPost(`${commentId}/replies`, {
     message,
     access_token: pageToken,
   });
