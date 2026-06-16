@@ -160,18 +160,13 @@ export async function getMe(
   return graphGet('me', { fields: 'id,name', access_token: userToken });
 }
 
-/** List ALL pages the user manages, following pagination (each includes a page token). */
-export async function listPages(userToken: string): Promise<FacebookPage[]> {
-  const all: FacebookPage[] = [];
-  let url: URL | null = new URL(`${GRAPH_BASE}/me/accounts`);
-  url.searchParams.set(
-    'fields',
-    'id,name,access_token,category,tasks,fan_count,picture{url},instagram_business_account{id,username,profile_picture_url,followers_count,media_count}'
-  );
-  url.searchParams.set('limit', '100');
-  url.searchParams.set('access_token', userToken);
+const PAGE_FIELDS =
+  'id,name,access_token,category,tasks,fan_count,picture{url},instagram_business_account{id,username,profile_picture_url,followers_count,media_count}';
 
-  // Follow paging.next until exhausted (cap at 10 pages = 1000 records for safety).
+/** Fetch all records from a paginated edge. */
+async function fetchAllPages(startUrl: URL): Promise<FacebookPage[]> {
+  const all: FacebookPage[] = [];
+  let url: URL | null = startUrl;
   for (let i = 0; i < 10 && url; i++) {
     const res = await fetch(url.toString(), { cache: 'no-store' });
     const data: { data?: FacebookPage[]; paging?: { next?: string } } =
@@ -183,6 +178,63 @@ export async function listPages(userToken: string): Promise<FacebookPage[]> {
     url = data.paging?.next ? new URL(data.paging.next) : null;
   }
   return all;
+}
+
+/** Pages owned by / shared with the user's Business Portfolios (NPE / business pages). */
+async function listBusinessPages(userToken: string): Promise<FacebookPage[]> {
+  const out: FacebookPage[] = [];
+  try {
+    const bizRes = await fetch(
+      `${GRAPH_BASE}/me/businesses?fields=id,name&limit=50&access_token=${userToken}`,
+      { cache: 'no-store' }
+    );
+    const biz = await bizRes.json();
+    if (biz.error || !biz.data) return out;
+
+    for (const b of biz.data as Array<{ id: string }>) {
+      for (const edge of ['owned_pages', 'client_pages']) {
+        try {
+          const start = new URL(`${GRAPH_BASE}/${b.id}/${edge}`);
+          start.searchParams.set('fields', PAGE_FIELDS);
+          start.searchParams.set('limit', '100');
+          start.searchParams.set('access_token', userToken);
+          out.push(...(await fetchAllPages(start)));
+        } catch {
+          /* ignore individual edge failures */
+        }
+      }
+    }
+  } catch {
+    /* business_management not granted — ignore, /me/accounts is the fallback */
+  }
+  return out;
+}
+
+/**
+ * List ALL pages the user manages — merges /me/accounts with pages from the
+ * user's Business Portfolios so New Pages Experience / business-owned pages
+ * (which /me/accounts can omit) are included too. Deduped by page id.
+ */
+export async function listPages(userToken: string): Promise<FacebookPage[]> {
+  const direct = new URL(`${GRAPH_BASE}/me/accounts`);
+  direct.searchParams.set('fields', PAGE_FIELDS);
+  direct.searchParams.set('limit', '100');
+  direct.searchParams.set('access_token', userToken);
+
+  const [accountPages, businessPages] = await Promise.all([
+    fetchAllPages(direct),
+    listBusinessPages(userToken),
+  ]);
+
+  // Merge, preferring entries that carry an access_token.
+  const byId = new Map<string, FacebookPage>();
+  for (const p of [...accountPages, ...businessPages]) {
+    const existing = byId.get(p.id);
+    if (!existing || (!existing.access_token && p.access_token)) {
+      byId.set(p.id, { ...existing, ...p });
+    }
+  }
+  return Array.from(byId.values());
 }
 
 /** List recent posts for a page (uses the page access token). */
