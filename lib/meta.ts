@@ -9,15 +9,19 @@ const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 export const META_APP_ID = process.env.META_APP_ID || '1414848844000934';
 export const META_APP_SECRET = process.env.META_APP_SECRET || '';
 
-/** Permissions we request for managing pages and replying to comments. */
-export const SCOPES = [
-  'public_profile',
-  'pages_show_list',
-  'pages_read_engagement',
-  'pages_read_user_content',
-  'pages_manage_engagement',
-  'pages_manage_posts',
-].join(',');
+/**
+ * Permissions we request. Driven by the META_SCOPES env var so we can widen
+ * the scope set (e.g. add pages_manage_engagement for replying) the moment
+ * those permissions become valid in the Meta app — without a code change.
+ *
+ * Default = the permissions that are already valid for the app today:
+ * login + list pages + read posts/comments. To enable replying, add
+ * `pages_manage_engagement,pages_manage_posts,pages_read_user_content`
+ * to META_SCOPES once they are approved/active in the Meta dashboard.
+ */
+export const SCOPES =
+  process.env.META_SCOPES ||
+  ['public_profile', 'pages_show_list', 'pages_read_engagement'].join(',');
 
 export interface FacebookPage {
   id: string;
