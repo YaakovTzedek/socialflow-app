@@ -12,12 +12,24 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get('code');
   const error = searchParams.get('error');
+  // Facebook can report failures across several params — capture them all.
+  const errorDetail =
+    searchParams.get('error_description') ||
+    searchParams.get('error_message') ||
+    searchParams.get('error_reason') ||
+    error;
 
-  if (error) {
-    return NextResponse.redirect(`${baseUrl}/?error=${encodeURIComponent(error)}`);
+  if (error || errorDetail) {
+    return NextResponse.redirect(
+      `${baseUrl}/?error=${encodeURIComponent(errorDetail || error || 'oauth_error')}`
+    );
   }
   if (!code) {
-    return NextResponse.redirect(`${baseUrl}/?error=no_code`);
+    // Surface which params DID arrive so we can diagnose.
+    const keys = Array.from(searchParams.keys()).join(',') || 'none';
+    return NextResponse.redirect(
+      `${baseUrl}/?error=${encodeURIComponent('no_code (params: ' + keys + ')')}`
+    );
   }
 
   try {
