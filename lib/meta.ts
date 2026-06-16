@@ -161,13 +161,27 @@ export async function listPagePosts(
   pageId: string,
   pageToken: string
 ): Promise<FacebookPost[]> {
-  const data = await graphGet<{ data: FacebookPost[] }>(`${pageId}/posts`, {
-    fields:
-      'id,message,story,created_time,permalink_url,full_picture,comments.summary(true).limit(0),likes.summary(true).limit(0)',
-    limit: '25',
-    access_token: pageToken,
-  });
-  return data.data || [];
+  // Use published_posts (the page's own posts) with minimal fields so it works
+  // with pages_read_engagement at Standard Access. The comment/like summaries
+  // are requested best-effort; if they require extra review, we retry without.
+  const fullFields =
+    'id,message,story,created_time,permalink_url,full_picture,comments.summary(true).limit(0),likes.summary(true).limit(0)';
+  const minimalFields =
+    'id,message,story,created_time,permalink_url,full_picture';
+
+  try {
+    const data = await graphGet<{ data: FacebookPost[] }>(
+      `${pageId}/published_posts`,
+      { fields: fullFields, limit: '25', access_token: pageToken }
+    );
+    return data.data || [];
+  } catch {
+    const data = await graphGet<{ data: FacebookPost[] }>(
+      `${pageId}/published_posts`,
+      { fields: minimalFields, limit: '25', access_token: pageToken }
+    );
+    return data.data || [];
+  }
 }
 
 /** List comments on a post. */
