@@ -131,14 +131,29 @@ export async function getMe(
   return graphGet('me', { fields: 'id,name', access_token: userToken });
 }
 
-/** List the pages the user manages (each includes a page-scoped access token). */
+/** List ALL pages the user manages, following pagination (each includes a page token). */
 export async function listPages(userToken: string): Promise<FacebookPage[]> {
-  const data = await graphGet<{ data: FacebookPage[] }>('me/accounts', {
-    fields: 'id,name,access_token,category,tasks,fan_count,picture{url}',
-    limit: '100',
-    access_token: userToken,
-  });
-  return data.data || [];
+  const all: FacebookPage[] = [];
+  let url: URL | null = new URL(`${GRAPH_BASE}/me/accounts`);
+  url.searchParams.set(
+    'fields',
+    'id,name,access_token,category,tasks,fan_count,picture{url}'
+  );
+  url.searchParams.set('limit', '100');
+  url.searchParams.set('access_token', userToken);
+
+  // Follow paging.next until exhausted (cap at 10 pages = 1000 records for safety).
+  for (let i = 0; i < 10 && url; i++) {
+    const res = await fetch(url.toString(), { cache: 'no-store' });
+    const data: { data?: FacebookPage[]; paging?: { next?: string } } =
+      await res.json();
+    if ((data as any).error) {
+      throw new Error((data as any).error.message || 'Graph API error');
+    }
+    if (data.data) all.push(...data.data);
+    url = data.paging?.next ? new URL(data.paging.next) : null;
+  }
+  return all;
 }
 
 /** List recent posts for a page (uses the page access token). */

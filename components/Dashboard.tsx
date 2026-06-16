@@ -29,6 +29,7 @@ export default function Dashboard({ userName }: { userName: string }) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -96,9 +97,20 @@ export default function Dashboard({ userName }: { userName: string }) {
       <div className="max-w-6xl mx-auto px-6 py-8 grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6">
         {/* Sidebar: pages */}
         <aside>
-          <h2 className="text-sm font-semibold text-gray-500 mb-3 px-1">
-            הדפים שלך
-          </h2>
+          <div className="flex items-center justify-between mb-3 px-1">
+            <h2 className="text-sm font-semibold text-gray-500">
+              הדפים שלך {!loadingPages && `(${pages.length})`}
+            </h2>
+          </div>
+          {!loadingPages && pages.length > 0 && (
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="🔍 חפש דף..."
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm mb-3 focus:outline-none focus:border-brand-500"
+            />
+          )}
           {loadingPages ? (
             <div className="flex items-center gap-2 text-gray-400 text-sm p-3">
               <span className="spinner" /> טוען דפים...
@@ -108,8 +120,12 @@ export default function Dashboard({ userName }: { userName: string }) {
               לא נמצאו דפים. ודא שיש לך הרשאות ניהול לפחות לדף פייסבוק אחד.
             </div>
           ) : (
-            <div className="space-y-2">
-              {pages.map((page) => (
+            <div className="space-y-2 max-h-[calc(100vh-220px)] overflow-y-auto pl-1">
+              {pages
+                .filter((p) =>
+                  p.name.toLowerCase().includes(search.toLowerCase().trim())
+                )
+                .map((page) => (
                 <button
                   key={page.id}
                   onClick={() => loadPosts(page)}
