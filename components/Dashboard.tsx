@@ -121,12 +121,20 @@ export default function Dashboard({ userName }: { userName: string }) {
               <p className="text-xs text-gray-400 mt-0.5">שלום, {userName}</p>
             </div>
           </div>
-          <a
-            href="/api/auth/logout"
-            className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
-          >
-            התנתק
-          </a>
+          <nav className="flex items-center gap-4 text-sm">
+            <a
+              href="/automations"
+              className="text-gray-500 hover:text-gray-800 transition-colors"
+            >
+              אוטומציות ⚡
+            </a>
+            <a
+              href="/api/auth/logout"
+              className="text-gray-500 hover:text-gray-800 transition-colors"
+            >
+              התנתק
+            </a>
+          </nav>
         </div>
       </header>
 

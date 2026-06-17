@@ -306,6 +306,45 @@ export async function replyToComment(
   });
 }
 
+/**
+ * Send a private reply (DM) to the author of a comment. This is the
+ * "comment → DM" flow (like ManyChat). Allowed once per comment, within 7 days.
+ * Requires the pages_messaging permission.
+ */
+export async function sendPrivateReply(
+  commentId: string,
+  message: string,
+  pageToken: string
+): Promise<{ id?: string }> {
+  const url = `${GRAPH_BASE}/me/messages`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      recipient: { comment_id: commentId },
+      message: { text: message },
+      access_token: pageToken,
+    }),
+    cache: 'no-store',
+  });
+  const data = await res.json();
+  if (!res.ok || data.error) {
+    throw new Error(data.error?.message || `DM failed (${res.status})`);
+  }
+  return data;
+}
+
+/** Subscribe a page to webhook events (feed comments). Requires page token. */
+export async function subscribePageWebhook(
+  pageId: string,
+  pageToken: string
+): Promise<{ success?: boolean }> {
+  return graphPost(`${pageId}/subscribed_apps`, {
+    subscribed_fields: 'feed',
+    access_token: pageToken,
+  });
+}
+
 /* ---------------------------------------------------------------------------
  * Instagram (via the linked Facebook Page token + IG Business account)
  * ------------------------------------------------------------------------- */
