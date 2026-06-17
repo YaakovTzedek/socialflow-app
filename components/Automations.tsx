@@ -32,6 +32,8 @@ const empty = {
   name: '',
   platform: 'facebook',
   page_id: '',
+  ig_id: '',
+  target_label: '',
   post_scope: 'all_posts',
   post_id: '',
   keywords: '',
@@ -43,6 +45,15 @@ const empty = {
   dm_link: '',
   once_per_user: true,
 };
+
+// A selectable target = a Facebook page OR a page's linked Instagram account.
+interface Target {
+  key: string;
+  platform: 'facebook' | 'instagram';
+  page_id: string;
+  ig_id: string | null;
+  name: string;
+}
 
 export default function Automations({ userName }: { userName: string }) {
   const [pages, setPages] = useState<Page[]>([]);
@@ -56,6 +67,10 @@ export default function Automations({ userName }: { userName: string }) {
   const [logs, setLogs] = useState<any[]>([]);
   const [showLogs, setShowLogs] = useState(false);
   const [loadingLogs, setLoadingLogs] = useState(false);
+  const [targetOpen, setTargetOpen] = useState(false);
+  const [targetSearch, setTargetSearch] = useState('');
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState(false);
 
   const showToast = (m: string) => {
     setToast(m);
@@ -102,6 +117,7 @@ export default function Automations({ userName }: { userName: string }) {
           name: form.name,
           platform: form.platform,
           page_id: form.page_id,
+          ig_id: form.ig_id || null,
           post_scope: form.post_scope,
           post_id: form.post_scope === 'specific_post' ? form.post_id : null,
           keywords: form.keywords
@@ -168,7 +184,77 @@ export default function Automations({ userName }: { userName: string }) {
     }
   };
 
-  const selectedPage = pages.find((p) => p.id === form.page_id);
+  // Build the flat list of selectable targets (FB pages + linked IG accounts).
+  const targets: Target[] = [];
+  for (const p of pages) {
+    targets.push({
+      key: `fb_${p.id}`,
+      platform: 'facebook',
+      page_id: p.id,
+      ig_id: null,
+      name: p.name,
+    });
+    if (p.instagram) {
+      targets.push({
+        key: `ig_${p.instagram.id}`,
+        platform: 'instagram',
+        page_id: p.id,
+        ig_id: p.instagram.id,
+        name: p.instagram.username ? `@${p.instagram.username}` : 'Instagram',
+      });
+    }
+  }
+  const filteredTargets = targets.filter((t) =>
+    t.name.toLowerCase().includes(targetSearch.toLowerCase().trim())
+  );
+
+  const pickTarget = (t: Target) => {
+    setForm((f) => ({
+      ...f,
+      platform: t.platform,
+      page_id: t.page_id,
+      ig_id: t.ig_id || '',
+      target_label: t.name,
+      post_id: '',
+    }));
+    setTargetOpen(false);
+    setTargetSearch('');
+    setPosts([]);
+  };
+
+  // Load posts/media when a specific post is needed.
+  useEffect(() => {
+    if (form.post_scope !== 'specific_post' || !form.page_id) {
+      setPosts([]);
+      return;
+    }
+    (async () => {
+      setLoadingPosts(true);
+      try {
+        const url =
+          form.platform === 'instagram'
+            ? `/api/pages/${form.page_id}/instagram/media?igId=${form.ig_id}`
+            : `/api/pages/${form.page_id}/posts`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const items =
+          form.platform === 'instagram'
+            ? (data.media || []).map((m: any) => ({
+                id: m.id,
+                text: m.caption || '(ללא כיתוב)',
+                image: m.media_url || m.thumbnail_url,
+              }))
+            : (data.posts || []).map((p: any) => ({
+                id: p.id,
+                text: p.message || p.story || '(פוסט ללא טקסט)',
+                image: p.full_picture,
+              }));
+        setPosts(items);
+      } finally {
+        setLoadingPosts(false);
+      }
+    })();
+  }, [form.post_scope, form.page_id, form.platform, form.ig_id]);
 
   return (
     <div className="min-h-screen">
@@ -220,12 +306,52 @@ export default function Automations({ userName }: { userName: string }) {
 
             <div className="grid grid-cols-2 gap-4">
               <Field label="חשבון">
-                <select className="inp" value={form.page_id} onChange={(e) => update('page_id', e.target.value)}>
-                  <option value="">בחר דף...</option>
-                  {pages.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setTargetOpen((o) => !o)}
+                    className="inp text-right flex items-center justify-between gap-2"
+                  >
+                    {form.target_label ? (
+                      <span className="flex items-center gap-2 min-w-0">
+                        <PlatformIcon platform={form.platform} />
+                        <span className="truncate">{form.target_label}</span>
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">בחר דף או אינסטגרם...</span>
+                    )}
+                    <span className="text-gray-400 text-xs">▾</span>
+                  </button>
+
+                  {targetOpen && (
+                    <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-72 overflow-hidden flex flex-col">
+                      <input
+                        autoFocus
+                        value={targetSearch}
+                        onChange={(e) => setTargetSearch(e.target.value)}
+                        placeholder="🔍 חפש..."
+                        className="m-2 px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-brand-500"
+                      />
+                      <div className="overflow-y-auto">
+                        {filteredTargets.length === 0 ? (
+                          <p className="text-sm text-gray-400 p-3">לא נמצא</p>
+                        ) : (
+                          filteredTargets.map((t) => (
+                            <button
+                              key={t.key}
+                              type="button"
+                              onClick={() => pickTarget(t)}
+                              className="w-full text-right flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50"
+                            >
+                              <PlatformIcon platform={t.platform} />
+                              <span className="truncate">{t.name}</span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </Field>
               <Field label="היקף">
                 <select className="inp" value={form.post_scope} onChange={(e) => update('post_scope', e.target.value)}>
@@ -236,8 +362,37 @@ export default function Automations({ userName }: { userName: string }) {
             </div>
 
             {form.post_scope === 'specific_post' && (
-              <Field label="Post ID">
-                <input className="inp" dir="ltr" value={form.post_id} onChange={(e) => update('post_id', e.target.value)} placeholder="123456_789012" />
+              <Field label="בחר פוסט">
+                {!form.page_id ? (
+                  <p className="text-xs text-gray-400">בחר קודם דף/חשבון</p>
+                ) : loadingPosts ? (
+                  <div className="flex items-center gap-2 text-gray-400 text-sm">
+                    <span className="spinner" /> טוען פוסטים...
+                  </div>
+                ) : posts.length === 0 ? (
+                  <input className="inp" dir="ltr" value={form.post_id} onChange={(e) => update('post_id', e.target.value)} placeholder="לא נמצאו פוסטים — אפשר להזין Post ID ידנית" />
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-56 overflow-y-auto">
+                    {posts.map((p) => (
+                      <button
+                        type="button"
+                        key={p.id}
+                        onClick={() => update('post_id', p.id)}
+                        className={`text-right rounded-xl border-2 overflow-hidden transition-all ${
+                          form.post_id === p.id ? 'border-brand-500' : 'border-gray-200 hover:border-brand-300'
+                        }`}
+                      >
+                        {p.image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={p.image} alt="" className="w-full h-20 object-cover" />
+                        ) : (
+                          <div className="w-full h-20 bg-gray-100" />
+                        )}
+                        <p className="text-[11px] p-1.5 line-clamp-2 text-gray-600">{p.text}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </Field>
             )}
 
@@ -414,6 +569,25 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
       {children}
     </div>
+  );
+}
+
+function PlatformIcon({ platform }: { platform: string }) {
+  if (platform === 'instagram') {
+    return (
+      <span className="w-6 h-6 rounded-md bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex items-center justify-center flex-shrink-0">
+        <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2.2c3.2 0 3.6 0 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s0 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58 0-4.85-.07c-1.17-.05-1.8-.25-2.23-.41a3.7 3.7 0 0 1-1.38-.9 3.7 3.7 0 0 1-.9-1.38c-.16-.42-.36-1.06-.41-2.23C2.2 15.58 2.2 15.2 2.2 12s0-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.2 8.8 2.2 12 2.2zm0 3.65A6.15 6.15 0 1 0 18.15 12 6.15 6.15 0 0 0 12 5.85zm0 10.15A4 4 0 1 1 16 12a4 4 0 0 1-4 4zm6.4-10.55a1.44 1.44 0 1 1-1.44-1.44 1.44 1.44 0 0 1 1.44 1.44z" />
+        </svg>
+      </span>
+    );
+  }
+  return (
+    <span className="w-6 h-6 rounded-md bg-[#1877F2] flex items-center justify-center flex-shrink-0">
+      <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M24 12.07C24 5.41 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.04V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.97h-1.5c-1.5 0-1.96.93-1.96 1.89v2.25h3.32l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07z" />
+      </svg>
+    </span>
   );
 }
 
