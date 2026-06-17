@@ -53,6 +53,9 @@ export default function Automations({ userName }: { userName: string }) {
   const [form, setForm] = useState({ ...empty });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [showLogs, setShowLogs] = useState(false);
+  const [loadingLogs, setLoadingLogs] = useState(false);
 
   const showToast = (m: string) => {
     setToast(m);
@@ -147,6 +150,22 @@ export default function Automations({ userName }: { userName: string }) {
     await fetch(`/api/automations/${id}`, { method: 'DELETE' });
     setAutomations((prev) => prev.filter((x) => x.id !== id));
     showToast('נמחק');
+  };
+
+  const loadLogs = async () => {
+    if (showLogs) {
+      setShowLogs(false);
+      return;
+    }
+    setShowLogs(true);
+    setLoadingLogs(true);
+    try {
+      const res = await fetch('/api/logs');
+      const data = await res.json();
+      setLogs(data.logs || []);
+    } finally {
+      setLoadingLogs(false);
+    }
   };
 
   const selectedPage = pages.find((p) => p.id === form.page_id);
@@ -308,6 +327,62 @@ export default function Automations({ userName }: { userName: string }) {
             ))}
           </div>
         )}
+
+        {/* Recent activity / logs */}
+        <div className="mt-8">
+          <button
+            onClick={loadLogs}
+            className="text-sm font-semibold text-gray-600 hover:text-gray-900"
+          >
+            {showLogs ? '▾ הסתר פעילות אחרונה' : '▸ הצג פעילות אחרונה'}
+          </button>
+
+          {showLogs && (
+            <div className="mt-3">
+              {loadingLogs ? (
+                <div className="flex items-center gap-2 text-gray-400 text-sm p-4">
+                  <span className="spinner" /> טוען...
+                </div>
+              ) : logs.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center text-gray-400 text-sm">
+                  עדיין אין פעילות. כשמישהו יגיב ויפעיל אוטומציה — זה יופיע כאן.
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 text-gray-500 text-xs">
+                      <tr>
+                        <th className="text-right p-3 font-medium">אוטומציה</th>
+                        <th className="text-right p-3 font-medium">תגובה</th>
+                        <th className="text-right p-3 font-medium">מילה</th>
+                        <th className="text-center p-3 font-medium">תגובה ציבורית</th>
+                        <th className="text-center p-3 font-medium">DM</th>
+                        <th className="text-right p-3 font-medium">מתי</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {logs.map((l) => (
+                        <tr key={l.id} className="border-t border-gray-100">
+                          <td className="p-3 font-medium">{l.automation_name}</td>
+                          <td className="p-3 text-gray-600 max-w-[200px] truncate">
+                            {l.commenter_name ? `${l.commenter_name}: ` : ''}
+                            {l.comment_text}
+                          </td>
+                          <td className="p-3 text-gray-500">{l.matched_keyword || '—'}</td>
+                          <td className="p-3 text-center"><StatusDot s={l.public_reply_status} /></td>
+                          <td className="p-3 text-center"><StatusDot s={l.dm_status} /></td>
+                          <td className="p-3 text-gray-400 text-xs whitespace-nowrap">
+                            {new Date(l.created_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {toast && (
@@ -339,5 +414,19 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
       {children}
     </div>
+  );
+}
+
+function StatusDot({ s }: { s?: string }) {
+  const map: Record<string, { c: string; t: string }> = {
+    sent: { c: 'bg-emerald-500', t: 'נשלח' },
+    failed: { c: 'bg-red-500', t: 'נכשל' },
+    skipped: { c: 'bg-gray-300', t: 'דולג' },
+  };
+  const x = map[s || 'skipped'] || map.skipped;
+  return (
+    <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+      <span className={`w-2 h-2 rounded-full ${x.c}`} /> {x.t}
+    </span>
   );
 }
