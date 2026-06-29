@@ -72,6 +72,16 @@ export async function ensureSchema() {
     )
   `;
 
+  // Raw log of every incoming webhook POST — for diagnosing delivery.
+  await sql`
+    CREATE TABLE IF NOT EXISTS webhook_events (
+      id         SERIAL PRIMARY KEY,
+      object     TEXT,
+      body       TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+
   // Stores the page access token per page so the webhook (no user session) can act.
   await sql`
     CREATE TABLE IF NOT EXISTS page_tokens (

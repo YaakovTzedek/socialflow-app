@@ -46,7 +46,13 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  const rawEvents = await sql!`
+    SELECT object, body, created_at FROM webhook_events
+    ORDER BY created_at DESC LIMIT 15`;
+
   return NextResponse.json({
+    raw_webhook_count: rawEvents.length,
+    raw_webhooks: rawEvents,
     automations_count: automations.length,
     automations,
     logs_count: logs.length,

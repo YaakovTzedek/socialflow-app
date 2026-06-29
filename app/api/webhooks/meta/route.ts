@@ -41,7 +41,15 @@ export async function POST(req: NextRequest) {
 
   // Always ack fast; process best-effort.
   try {
-    if (hasDb) await processEvents(body);
+    if (hasDb) {
+      await ensureSchema();
+      // Record the raw event first so we can confirm delivery even if nothing matches.
+      await sql!`
+        INSERT INTO webhook_events (object, body)
+        VALUES (${body?.object || 'unknown'}, ${JSON.stringify(body).slice(0, 4000)})
+      `;
+      await processEvents(body);
+    }
   } catch (e) {
     console.error('webhook processing error', e);
   }
