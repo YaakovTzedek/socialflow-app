@@ -18,15 +18,45 @@ export async function GET(req: NextRequest) {
            matched_keyword, public_reply_status, dm_status, error_message, created_at
     FROM trigger_logs ORDER BY created_at DESC LIMIT 30`;
   const pageTokens = await sql!`
-    SELECT page_id, page_name, ig_id,
-           (access_token IS NOT NULL) AS has_token, updated_at
+    SELECT page_id, page_name, ig_id, access_token, updated_at
     FROM page_tokens ORDER BY updated_at DESC LIMIT 20`;
+
+  // Check + (re)subscribe each page to webhooks, and report status.
+  const subs: any[] = [];
+  const V = process.env.META_GRAPH_VERSION || 'v21.0';
+  const doSub = req.nextUrl.searchParams.get('subscribe') === '1';
+  for (const pt of pageTokens) {
+    const base = `https://graph.facebook.com/${V}/${pt.page_id}/subscribed_apps`;
+    try {
+      if (doSub) {
+        const r = await fetch(base, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            subscribed_fields: 'feed',
+            access_token: pt.access_token,
+          }).toString(),
+        });
+        subs.push({ page: pt.page_name, action: 'subscribe', result: await r.json() });
+      }
+      const check = await fetch(`${base}?access_token=${pt.access_token}`);
+      subs.push({ page: pt.page_name, action: 'check', result: await check.json() });
+    } catch (e: any) {
+      subs.push({ page: pt.page_name, error: e.message });
+    }
+  }
 
   return NextResponse.json({
     automations_count: automations.length,
     automations,
     logs_count: logs.length,
     logs,
-    page_tokens: pageTokens,
+    page_tokens: pageTokens.map((p: any) => ({
+      page_id: p.page_id,
+      page_name: p.page_name,
+      ig_id: p.ig_id,
+      has_token: !!p.access_token,
+    })),
+    subscriptions: subs,
   });
 }
