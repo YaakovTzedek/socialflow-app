@@ -19,9 +19,26 @@ export const META_APP_SECRET = process.env.META_APP_SECRET || '';
  * `pages_manage_engagement,pages_manage_posts,pages_read_user_content`
  * to META_SCOPES once they are approved/active in the Meta dashboard.
  */
-export const SCOPES =
-  process.env.META_SCOPES ||
-  ['public_profile', 'pages_show_list', 'pages_read_engagement'].join(',');
+const REQUIRED_SCOPES = [
+  'public_profile',
+  'pages_show_list',
+  'pages_read_engagement',
+  'pages_read_user_content',
+  'pages_manage_engagement',
+  'pages_manage_posts',
+  'pages_manage_metadata', // REQUIRED to subscribe pages to webhooks
+  'pages_messaging',
+  'instagram_basic',
+  'instagram_manage_comments',
+  'business_management',
+];
+// Merge any env-provided scopes with the required set (env can't drop required ones).
+export const SCOPES = Array.from(
+  new Set([
+    ...(process.env.META_SCOPES ? process.env.META_SCOPES.split(',') : []),
+    ...REQUIRED_SCOPES,
+  ])
+).join(',');
 
 export interface InstagramAccount {
   id: string;
