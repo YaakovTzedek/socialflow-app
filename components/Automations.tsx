@@ -88,7 +88,17 @@ export default function Automations({ userName }: { userName: string }) {
       const aData = await aRes.json();
       setPages(pData.pages || []);
       if (aData.error === 'db_not_configured') setDbError(true);
-      setAutomations(aData.automations || []);
+      const autos = aData.automations || [];
+      setAutomations(autos);
+
+      // Ensure every page that has an automation is subscribed to webhooks,
+      // using the current (freshly-granted) session token.
+      const uniquePages = Array.from(
+        new Set(autos.map((a: Automation) => a.page_id))
+      );
+      uniquePages.forEach((pid) => {
+        fetch(`/api/pages/${pid}/subscribe`, { method: 'POST' }).catch(() => {});
+      });
     } finally {
       setLoading(false);
     }
