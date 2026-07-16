@@ -76,9 +76,14 @@ export async function GET(req: NextRequest) {
           const fromId = isIG ? (c as any).username : (c as any).from?.id;
           const fromName = isIG ? (c as any).username : (c as any).from?.name;
           if (debug) {
+            const ct = isIG ? (c as any).timestamp : (c as any).created_time;
+            const seenD = await sql!`SELECT 1 FROM processed_comments WHERE automation_id=${a.id} AND comment_id=${commentId} LIMIT 1`;
             debugComments.push({
-              automation: a.name, post: postId, comment: text,
-              from: fromName, time: isIG ? (c as any).timestamp : (c as any).created_time,
+              comment: text, from: fromName, time: ct,
+              automation_created: a.created_at,
+              is_newer_than_automation: ct && a.created_at ? Date.parse(ct) >= Date.parse(a.created_at) : null,
+              already_processed: seenD.length > 0,
+              keyword_match: a.keywords?.length ? keywordMatch(text, a.keywords, a.match_type) : '(any)',
             });
           }
           if (!commentId || !text) continue;
