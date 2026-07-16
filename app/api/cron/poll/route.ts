@@ -6,6 +6,7 @@ import {
   sendPrivateReply,
   listInstagramComments,
   replyToInstagramComment,
+  sendInstagramPrivateReply,
   listPagePosts,
   listInstagramMedia,
 } from '@/lib/meta';
@@ -132,10 +133,14 @@ export async function GET(req: NextRequest) {
             }
           }
 
-          if (a.dm_enabled && a.dm_message && !isIG) {
+          if (a.dm_enabled && a.dm_message) {
             try {
               const msg = a.dm_link ? `${a.dm_message}\n\n${a.dm_link}` : a.dm_message;
-              await sendPrivateReply(commentId, msg, pageToken);
+              if (isIG) {
+                await sendInstagramPrivateReply(tokenRow.ig_id, commentId, msg, pageToken);
+              } else {
+                await sendPrivateReply(commentId, msg, pageToken);
+              }
               dmStatus = 'sent';
             } catch (e: any) {
               dmStatus = 'failed';

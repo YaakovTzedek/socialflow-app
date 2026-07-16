@@ -30,6 +30,7 @@ const REQUIRED_SCOPES = [
   'pages_messaging',
   'instagram_basic',
   'instagram_manage_comments',
+  'instagram_manage_messages', // for Instagram comment → DM
   'business_management',
 ];
 // Merge any env-provided scopes with the required set (env can't drop required ones).
@@ -347,6 +348,34 @@ export async function sendPrivateReply(
   const data = await res.json();
   if (!res.ok || data.error) {
     throw new Error(data.error?.message || `DM failed (${res.status})`);
+  }
+  return data;
+}
+
+/**
+ * Send a private reply (DM) to the author of an Instagram comment.
+ * Instagram comment→DM flow. Requires instagram_manage_messages.
+ */
+export async function sendInstagramPrivateReply(
+  igUserId: string,
+  commentId: string,
+  message: string,
+  pageToken: string
+): Promise<{ id?: string }> {
+  const url = `${GRAPH_BASE}/${igUserId}/messages`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      recipient: { comment_id: commentId },
+      message: { text: message },
+      access_token: pageToken,
+    }),
+    cache: 'no-store',
+  });
+  const data = await res.json();
+  if (!res.ok || data.error) {
+    throw new Error(data.error?.message || `IG DM failed (${res.status})`);
   }
   return data;
 }
