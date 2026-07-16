@@ -31,9 +31,11 @@ export async function GET(req: NextRequest) {
   }
   if (!hasDb) return NextResponse.json({ error: 'no_db' });
 
+  const debug = req.nextUrl.searchParams.get('debug') === '1';
   await ensureSchema();
   const automations = await sql!`SELECT * FROM automations WHERE status = 'active'`;
   const summary: any[] = [];
+  const debugComments: any[] = [];
 
   for (const a of automations) {
     const tokenRow = (
@@ -73,6 +75,12 @@ export async function GET(req: NextRequest) {
           const text = isIG ? (c as any).text : (c as any).message;
           const fromId = isIG ? (c as any).username : (c as any).from?.id;
           const fromName = isIG ? (c as any).username : (c as any).from?.name;
+          if (debug) {
+            debugComments.push({
+              automation: a.name, post: postId, comment: text,
+              from: fromName, time: isIG ? (c as any).timestamp : (c as any).created_time,
+            });
+          }
           if (!commentId || !text) continue;
 
           // Dedupe — already handled?
@@ -150,5 +158,9 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ran_at: new Date().toISOString(), summary });
+  return NextResponse.json({
+    ran_at: new Date().toISOString(),
+    summary,
+    ...(debug ? { debug_comments: debugComments } : {}),
+  });
 }
