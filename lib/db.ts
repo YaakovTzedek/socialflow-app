@@ -72,6 +72,16 @@ export async function ensureSchema() {
     )
   `;
 
+  // Tracks comments already processed by the poller (dedupe across runs).
+  await sql`
+    CREATE TABLE IF NOT EXISTS processed_comments (
+      automation_id TEXT NOT NULL,
+      comment_id    TEXT NOT NULL,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (automation_id, comment_id)
+    )
+  `;
+
   // Raw log of every incoming webhook POST — for diagnosing delivery.
   await sql`
     CREATE TABLE IF NOT EXISTS webhook_events (
