@@ -50,7 +50,24 @@ export async function GET(req: NextRequest) {
     SELECT object, body, created_at FROM webhook_events
     ORDER BY created_at DESC LIMIT 15`;
 
+  // Inspect the stored page token's granted scopes (does it have IG messaging?)
+  let tokenScopes: any = null;
+  try {
+    const pt = (await sql!`SELECT access_token FROM page_tokens LIMIT 1`)[0];
+    if (pt) {
+      const appToken = `${process.env.META_APP_ID}|${process.env.META_APP_SECRET}`;
+      const r = await fetch(
+        `https://graph.facebook.com/${V}/debug_token?input_token=${pt.access_token}&access_token=${appToken}`
+      );
+      const dt = await r.json();
+      tokenScopes = dt.data?.scopes || dt.error?.message || 'unknown';
+    }
+  } catch (e: any) {
+    tokenScopes = e.message;
+  }
+
   return NextResponse.json({
+    page_token_scopes: tokenScopes,
     raw_webhook_count: rawEvents.length,
     raw_webhooks: rawEvents,
     automations_count: automations.length,
