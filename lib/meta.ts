@@ -32,6 +32,7 @@ const REQUIRED_SCOPES = [
   'instagram_manage_comments',
   'instagram_manage_messages', // for Instagram comment → DM
   'instagram_content_publish', // publish reels/photos straight from the app
+  'instagram_manage_insights', // reel metrics (views/reach/watch time) for ranking hooks
   'business_management',
 ];
 // Merge any env-provided scopes with the required set (env can't drop required ones).
