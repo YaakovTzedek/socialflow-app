@@ -55,13 +55,15 @@ export async function GET(req: NextRequest) {
       if (a.post_scope === 'specific_post' && a.post_id) {
         postIds = [a.post_id];
       } else {
-        // all_posts → scan the most recent posts/media
+        // all_posts → scan the most recent posts/media. The window has to be wide enough to
+        // survive a burst of publishing: 9 trial reels in one afternoon pushed a reel that was
+        // still collecting comments out of a 10-item window, and its commenters got nothing.
         if (isIG && tokenRow.ig_id) {
           const media = await listInstagramMedia(tokenRow.ig_id, pageToken);
-          postIds = media.slice(0, 10).map((m) => m.id);
+          postIds = media.slice(0, 25).map((m) => m.id);
         } else {
           const posts = await listPagePosts(a.page_id, pageToken);
-          postIds = posts.slice(0, 10).map((p) => p.id);
+          postIds = posts.slice(0, 25).map((p) => p.id);
         }
       }
 
