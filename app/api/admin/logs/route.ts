@@ -9,8 +9,8 @@ export async function GET(req: NextRequest) {
   if (!hasDb) return NextResponse.json({ error: 'no_db' }, { status: 503 });
   await ensureSchema();
   const rows = await sql!`
-    SELECT t.created_at, a.name, t.platform, t.comment_text, t.from_name,
-           t.matched_keyword, t.public_status, t.dm_status, t.error
+    SELECT t.created_at, a.name, t.platform, t.comment_text, t.commenter_name,
+           t.matched_keyword, t.public_reply_status, t.dm_status, t.error_message
     FROM trigger_logs t LEFT JOIN automations a ON a.id = t.automation_id
     ORDER BY t.created_at DESC LIMIT 25`;
   return NextResponse.json({ rows });
