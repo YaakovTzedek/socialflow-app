@@ -363,7 +363,11 @@ export async function sendInstagramPrivateReply(
   message: string,
   pageToken: string
 ): Promise<{ id?: string }> {
-  const url = `${GRAPH_BASE}/${igUserId}/messages`;
+  // Instagram private replies go through the PAGE-scoped inbox (`me/messages`) with the page
+  // token. Posting to `{ig-user-id}/messages` returns "(#3) Application does not have the
+  // capability to make this API call" even when instagram_manage_messages is granted.
+  void igUserId;
+  const url = `${GRAPH_BASE}/me/messages`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
