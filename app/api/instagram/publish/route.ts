@@ -3,7 +3,9 @@ import { sql, ensureSchema, hasDb } from '@/lib/db';
 
 /**
  * POST /api/instagram/publish?key=...
- * Body: { page_id, video_url, caption, cover_url?, share_to_feed? }
+ * Body: { page_id, video_url, caption, cover_url?, share_to_feed?, trial? }
+ *   trial: true            -> publish as a TRIAL reel (non-followers only), Instagram graduates it
+ *   trial: 'MANUAL'        -> trial reel you graduate yourself in the app
  *
  * Publishes a Reel through the Instagram Graph API using the stored page token:
  * create a REELS container -> poll until FINISHED -> publish. The video must sit on a
@@ -20,7 +22,7 @@ export async function POST(req: NextRequest) {
   }
   if (!hasDb) return NextResponse.json({ error: 'no_db' }, { status: 503 });
 
-  const { page_id, video_url, caption = '', cover_url, share_to_feed = true } = await req.json();
+  const { page_id, video_url, caption = '', cover_url, share_to_feed = true, trial } = await req.json();
   if (!page_id || !video_url) return NextResponse.json({ error: 'page_id and video_url are required' }, { status: 400 });
 
   await ensureSchema();
@@ -35,6 +37,12 @@ export async function POST(req: NextRequest) {
     access_token: pt.access_token,
   };
   if (cover_url) body.cover_url = cover_url;
+  if (trial) {
+    // Trial reels go only to non-followers; SS_PERFORMANCE lets Instagram graduate the winner
+    // to the full audience automatically after ~72h, MANUAL leaves that call to us.
+    const strategy = trial === 'MANUAL' ? 'MANUAL' : 'SS_PERFORMANCE';
+    body.trial_params = JSON.stringify({ graduation_strategy: strategy });
+  }
 
   const create = await fetch(`${GRAPH}/${pt.ig_id}/media`, {
     method: 'POST',
