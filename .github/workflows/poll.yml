@@ -1,0 +1,24 @@
+# Runs the comment→reply→DM engine around the clock, so it no longer depends on Yaakov's Mac
+# being awake. GitHub's cron granularity is 5 minutes and runs can be delayed under load, so the
+# job also pings twice per run, ~2.5 minutes apart, to halve the worst-case wait.
+name: poll-comments
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Poll (first pass)
+        run: |
+          curl -sS -m 120 -o /dev/null -w "first: %{http_code}\n" \
+            "https://socialflow-app-delta.vercel.app/api/cron/poll?key=${{ secrets.CRON_KEY }}"
+      - name: Wait
+        run: sleep 150
+      - name: Poll (second pass)
+        run: |
+          curl -sS -m 120 -o /dev/null -w "second: %{http_code}\n" \
+            "https://socialflow-app-delta.vercel.app/api/cron/poll?key=${{ secrets.CRON_KEY }}"
