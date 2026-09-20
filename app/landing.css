@@ -214,4 +214,13 @@
   .sf-how, .sf-features, .sf-problem, .sf-mcp, .sf-log { margin-bottom: 56px; }
   .sf-faq { padding-bottom: 56px; }
   .sf-footer-in { flex-direction: column; align-items: flex-start; }
+  /* log: one card per event instead of a 6-column table that needs sideways scrolling */
+  .sf-row-h { display: none; }
+  .sf-row { min-width: 0; grid-template-columns: 1fr auto; gap: 6px 10px; padding: 12px 14px; }
+  .sf-row .sf-time { grid-column: 2; grid-row: 1; justify-content: flex-start; font-size: 12px; }
+  .sf-row .sf-user { grid-column: 1; grid-row: 1; }
+  .sf-row .sf-comment { grid-column: 1 / -1; white-space: normal; }
+  .sf-row .sf-kw { grid-column: 1 / -1; font-size: 13px; }
+  .sf-row .sf-kw::before { content: "מילת מפתח: "; color: var(--faint); }
+  .sf-log-note { font-size: 13px; }
 }
