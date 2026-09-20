@@ -44,6 +44,9 @@
 .sf-btn { display: inline-flex; align-items: center; gap: 10px; font-family: Assistant, sans-serif; font-weight: 700; border-radius: 13px; border: 0; cursor: pointer; white-space: nowrap; }
 .sf-btn-primary { background: linear-gradient(90deg, #3ff2ff, #2ad8ff); color: var(--ink); box-shadow: 0 0 34px rgba(63, 242, 255, .35); transition: filter .15s, box-shadow .15s; }
 .sf-btn-primary:hover { filter: brightness(1.08); box-shadow: 0 0 44px rgba(63, 242, 255, .5); color: var(--ink); }
+.sf a.sf-btn-primary, .sf a.sf-btn-primary:hover { color: var(--ink); }
+.sf a.sf-btn-ghost { color: #c9d8f0; }
+.sf a.sf-btn-ghost:hover { color: #fff; }
 .sf-btn-ghost { font-weight: 700; font-size: 17px; padding: 16px 24px; border-radius: 13px; border: 1px solid rgba(143, 163, 200, .3); color: #c9d8f0; }
 .sf-btn-ghost:hover { border-color: rgba(63, 242, 255, .5); color: #fff; }
 .sf-fb { width: 24px; height: 24px; border-radius: 7px; background: #1877f2; color: #fff; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; }
@@ -192,11 +195,23 @@
 .sf-copy { font-size: 14px; color: var(--faint); }
 
 @media (max-width: 640px) {
+  .sf-nav-in { padding: 10px 14px; gap: 10px 12px; }
+  .sf-logo { order: 1; }
+  .sf-nav .sf-btn-primary { order: 2; margin-inline-start: auto; font-size: 14px; padding: 9px 14px; }
+  .sf-nav-links { order: 3; flex-basis: 100%; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; gap: 2px; margin: 0 -14px; padding: 0 14px; }
+  .sf-nav-links::-webkit-scrollbar { display: none; }
+  .sf-nav-links a { white-space: nowrap; font-size: 14px; padding: 6px 10px; }
   .sf-h1 { font-size: 64px; }
   .sf-sec-h .sf-display { font-size: 44px; }
   .sf-problem, .sf-mcp { padding: 28px 20px; }
   .sf-problem .sf-display, .sf-mcp .sf-display { font-size: 48px; }
   .sf-cta { padding: 40px 20px; }
   .sf-cta .sf-display { font-size: 54px; }
-  .sf-hero { padding-top: 40px; }
+  .sf-hero { padding-top: 40px; gap: 32px; }
+  .sf-hero-cta .sf-btn-primary, .sf-hero-cta .sf-btn-ghost { width: 100%; justify-content: center; text-align: center; }
+  .sf-flow { padding: 18px; }
+  .sf-facts { padding-bottom: 48px; }
+  .sf-how, .sf-features, .sf-problem, .sf-mcp, .sf-log { margin-bottom: 56px; }
+  .sf-faq { padding-bottom: 56px; }
+  .sf-footer-in { flex-direction: column; align-items: flex-start; }
 }
