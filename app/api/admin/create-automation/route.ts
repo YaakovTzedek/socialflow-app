@@ -39,13 +39,20 @@ export async function POST(req: NextRequest) {
   if (!pt) return NextResponse.json({ error: 'no_page_token' }, { status: 404 });
 
   // Resolve the shortcode → IG media id via permalink match (skipped for all_posts).
+  // A caller that already knows the media id (e.g. from /api/admin/media, which
+  // lists up to 100 items) can pass `media_id` and skip the 25-item lookup, so
+  // older and pinned posts can get automations too.
   let match: { id: string; permalink?: string } | null = null;
   if (scope === 'specific_post') {
-    const media = await listInstagramMedia(pt.ig_id, pt.access_token);
-    match = media.find((m) => (m.permalink || '').includes(shortcode)) || null;
-    if (!match) {
-      const recent = media.map((m) => ({ id: m.id, permalink: m.permalink }));
-      return NextResponse.json({ error: 'media_not_found', hint: 'Post not in recent media', recent });
+    if (body.media_id) {
+      match = { id: String(body.media_id) };
+    } else {
+      const media = await listInstagramMedia(pt.ig_id, pt.access_token);
+      match = media.find((m) => (m.permalink || '').includes(shortcode)) || null;
+      if (!match) {
+        const recent = media.map((m) => ({ id: m.id, permalink: m.permalink }));
+        return NextResponse.json({ error: 'media_not_found', hint: 'Post not in recent media', recent });
+      }
     }
   }
 

@@ -40,6 +40,7 @@ for (const item of plan) {
     platform: 'instagram',
     scope: item.shortcode === '*' ? 'all_posts' : 'specific_post',
     shortcode: item.shortcode === '*' ? undefined : item.shortcode,
+    media_id: item.media_id || undefined,
     keywords: item.keywords || [],
     public_replies: item.public_replies || [],
     dm_message: item.dm_message,

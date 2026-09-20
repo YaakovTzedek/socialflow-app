@@ -2,7 +2,12 @@
   {
     "name": "AI tools carousel (DdegK_-jKWU): AI → הרשימה המלאה",
     "shortcode": "DdegK_-jKWU",
-    "keywords": ["ai", "אי איי", "איי", "אי"],
+    "keywords": [
+      "ai",
+      "אי איי",
+      "איי",
+      "אי"
+    ],
     "public_replies": [
       "שלחתי לך את הרשימה המלאה בפרטי 🙌",
       "מחכה לך בהודעות, שם הרשימה המלאה 👀",
@@ -10,6 +15,209 @@
     ],
     "dm_message": "היי, זה יעקב. הנה קובץ הרשימה המלאה מהקרוסלה: שמונה משימות יומיומיות, ולכל אחת הכלים למתחילים והכלי שאני פותח כשצריך לעבוד ברמה מקצועית. כולל גילוי נאות על שלושת הכלים שהם שלי 😅\n\nאפשר לשמור את העמוד או להדפיס אותו, והוא מתעדכן כשהבחירה שלי משתנה.",
     "dm_link": "https://tzedek.me/ai-tools-by-task?utm_source=instagram&utm_medium=dm&utm_campaign=ai-tools-carousel",
-    "since": "2026-09-19T00:00:00Z"
+    "since": "2026-09-19T00:00:00Z",
+    "media_id": "18190758472393311"
+  },
+  {
+    "name": "SaaS reels (all): SAAS → מדריך בניית SaaS",
+    "shortcode": "*",
+    "keywords": [
+      "saas",
+      "סאס",
+      "סאאס"
+    ],
+    "public_replies": [
+      "שלחתי לך את המדריך בפרטי 🙌",
+      "אצלך בפרטי, המדריך המלא 👀"
+    ],
+    "dm_message": "היי, זה יעקב. הנה המדריך המלא לבניית SaaS עם קלוד קוד, כולל השיטה של שני האפיונים לפני שורת קוד אחת. ואם תרצה לראות את זה קורה בשידור חי, ההקלטה של מפגש המבוא (שעתיים ועשר דקות) ב-97 ש\"ח:\nhttps://tzedek.me/claude-code-intro-recording?utm_source=instagram&utm_medium=dm&utm_campaign=saas-reel",
+    "dm_link": "https://tzedek.me/blog/build-saas-with-claude-code?utm_source=instagram&utm_medium=dm&utm_campaign=saas-reel"
+  },
+  {
+    "name": "Grok Bot reel (DdPOvdKsSeW): any → מדריך גרוק בוט",
+    "shortcode": "DdPOvdKsSeW",
+    "keywords": [],
+    "public_replies": [
+      "תודה! שלחתי לך את המדריך המלא בפרטי 🙌"
+    ],
+    "dm_message": "היי, זה יעקב. הנה המדריך המלא לגרוק בוט (Grok Bot): מה הוא באמת עושה לעסק, איך מפעילים אותו בוואטסאפ, ומה מותר לו לעשות לבד. יש גם קורס אינטראקטיבי קצר ב-9.90 עם תעודה.",
+    "dm_link": "https://tzedek.me/blog/grok-bot-guide?utm_source=instagram&utm_medium=dm&utm_campaign=grok-bot-reel",
+    "media_id": "18124266638310439"
+  },
+  {
+    "name": "ChatGPT 360 room (DdGH2TKsaVD): any → קורס ChatGPT",
+    "shortcode": "DdGH2TKsaVD",
+    "keywords": [],
+    "public_replies": [
+      "תודה! שלחתי לך בפרטי איך עושים את זה 🙌"
+    ],
+    "dm_message": "היי, זה יעקב. הטריק מהסרטון הוא חלק מקורס ChatGPT 2026: מצ'אט לעבודה, קורס אינטראקטיבי קצר בעברית ב-9.90 עם תרגול בכל שיעור ותעודה. השיעור הראשון פתוח חינם.",
+    "dm_link": "https://tzedek.me/course/chatgpt-2026?utm_source=instagram&utm_medium=dm&utm_campaign=chatgpt-360-reel",
+    "media_id": "18043913699817025"
+  },
+  {
+    "name": "OpenAI prompting reel (DdDhZ4gsAWl): any → קורס הנדסת פרומפטים",
+    "shortcode": "DdDhZ4gsAWl",
+    "keywords": [],
+    "public_replies": [
+      "תודה! שלחתי לך בפרטי את ההמשך 🙌"
+    ],
+    "dm_message": "היי, זה יעקב. ההמשך של הסרטון הוא קורס הנדסת פרומפטים 2026: לכתוב הוראה שמחזירה תשובה נכונה בכל פעם. קורס אינטראקטיבי קצר בעברית ב-9.90, שיעור ראשון חינם.",
+    "dm_link": "https://tzedek.me/course/prompts-2026?utm_source=instagram&utm_medium=dm&utm_campaign=prompting-reel",
+    "media_id": "17956925991218012"
+  },
+  {
+    "name": "Lead-response AI worker (Dc_mYU4MRb9): any → סוכן מכירות",
+    "shortcode": "Dc_mYU4MRb9",
+    "keywords": [],
+    "public_replies": [
+      "תודה! שלחתי לך בפרטי את המדריך 🙌"
+    ],
+    "dm_message": "היי, זה יעקב. הנה המדריך לעובד AI שחוזר לכל ליד תוך דקה, בנוי על גרוק בוט: מה הוא עונה, מה הוא לא עונה לבד, ואיך מחברים אותו לוואטסאפ של העסק.",
+    "dm_link": "https://tzedek.me/blog/grok-bot-ai-sales-agent?utm_source=instagram&utm_medium=dm&utm_campaign=lead-worker-reel",
+    "media_id": "17901886869354438"
+  },
+  {
+    "name": "Lead-response AI worker B (Dc_lhWeMjuj): any → סוכן מכירות",
+    "shortcode": "Dc_lhWeMjuj",
+    "keywords": [],
+    "public_replies": [
+      "תודה! שלחתי לך בפרטי את המדריך 🙌"
+    ],
+    "dm_message": "היי, זה יעקב. הנה המדריך לעובד AI שחוזר לכל ליד תוך דקה, בנוי על גרוק בוט: מה הוא עונה, מה הוא לא עונה לבד, ואיך מחברים אותו לוואטסאפ של העסק.",
+    "dm_link": "https://tzedek.me/blog/grok-bot-ai-sales-agent?utm_source=instagram&utm_medium=dm&utm_campaign=lead-worker-reel",
+    "media_id": "18022244612861143"
+  },
+  {
+    "name": "Agents vs chat (Dc6snBDsyAQ): any → סוכן AI מול צ'אט",
+    "shortcode": "Dc6snBDsyAQ",
+    "keywords": [],
+    "public_replies": [
+      "תודה! שלחתי לך בפרטי את ההסבר המלא 🙌"
+    ],
+    "dm_message": "היי, זה יעקב. הנה ההסבר המלא על ההבדל בין צ'אט לסוכן AI, עם המקרה האמיתי של סוכן שקיבל יותר מדי סמכות ומה למדנו ממנו.",
+    "dm_link": "https://tzedek.me/blog/ai-agent-vs-chat?utm_source=instagram&utm_medium=dm&utm_campaign=agents-reel",
+    "media_id": "17881233876510994"
+  },
+  {
+    "name": "Claude Fable reel (DcxfCfys2Wj): any → מדריך Claude",
+    "shortcode": "DcxfCfys2Wj",
+    "keywords": [],
+    "public_replies": [
+      "תודה! שלחתי לך בפרטי את המדריך המרכזי 🙌"
+    ],
+    "dm_message": "היי, זה יעקב. הנה המדריך המרכזי ל-Claude (קלוד) בעברית: המודלים, מה חדש, ואיך מתחילים לעבוד איתו נכון.",
+    "dm_link": "https://tzedek.me/claude?utm_source=instagram&utm_medium=dm&utm_campaign=fable-reel",
+    "media_id": "17967197814177663"
+  },
+  {
+    "name": "Sensitive docs reel (DctSEo0Mv98): any → BalmasAI",
+    "shortcode": "DctSEo0Mv98",
+    "keywords": [],
+    "public_replies": [
+      "תודה! שלחתי לך בפרטי את המדריך 🙌"
+    ],
+    "dm_message": "היי, זה יעקב. הנה המדריך המלא לעבודה בטוחה עם מסמכים רגישים ב-AI, כולל השיטה שמסתירה פרטים מזהים לפני שהטקסט יוצא למודל.",
+    "dm_link": "https://tzedek.me/blog/balmas-ai-guide?utm_source=instagram&utm_medium=dm&utm_campaign=balmas-reel",
+    "media_id": "18034401113829496"
+  },
+  {
+    "name": "Claude Code update reel (DcoddMRMLbr): any → קלוד קוד",
+    "shortcode": "DcoddMRMLbr",
+    "keywords": [],
+    "public_replies": [
+      "תודה! שלחתי לך בפרטי את המדריך 🙌"
+    ],
+    "dm_message": "היי, זה יעקב. הנה המדריך המלא לקלוד קוד (Claude Code) בעברית, כולל החידושים מהסרטון ואיך מתחילים בלי להיות מתכנת.",
+    "dm_link": "https://tzedek.me/claude-code?utm_source=instagram&utm_medium=dm&utm_campaign=cc-update-reel",
+    "media_id": "17904907839552811"
+  },
+  {
+    "name": "Claude Design site reel (DbFXEOJsyr-): any → קורס Claude Design",
+    "shortcode": "DbFXEOJsyr-",
+    "keywords": [],
+    "public_replies": [
+      "תודה! שלחתי לך בפרטי איך עושים את זה 🙌"
+    ],
+    "dm_message": "היי, זה יעקב. איך מעצבים אתר ב-Claude Design ואז נותנים לו גם לבנות אותו: קורס אינטראקטיבי קצר בעברית ב-9.90, שיעור ראשון חינם.",
+    "dm_link": "https://tzedek.me/course/claude-design-2026?utm_source=instagram&utm_medium=dm&utm_campaign=claude-design-reel",
+    "media_id": "18156997975485575"
+  },
+  {
+    "name": "Air force lecture reel (DbD0ZF7MXtk): any → הרצאות AI",
+    "shortcode": "DbD0ZF7MXtk",
+    "keywords": [],
+    "public_replies": [
+      "תודה רבה! שלחתי לך בפרטי פרטים על ההרצאות 🙌"
+    ],
+    "dm_message": "היי, זה יעקב. תודה על המילים. אם זה רלוונטי לארגון שלך, הנה העמוד על הרצאות AI לארגונים, הנהלות וכנסים, עם מה שמשתתפים לוקחים איתם.",
+    "dm_link": "https://tzedek.me/ai-lectures?utm_source=instagram&utm_medium=dm&utm_campaign=airforce-reel",
+    "media_id": "18111727018757485"
+  },
+  {
+    "name": "NotebookLM reel (DbDFBRvMhQ-): any → קורס NotebookLM",
+    "shortcode": "DbDFBRvMhQ-",
+    "keywords": [],
+    "public_replies": [
+      "תודה! שלחתי לך בפרטי את ההמשך 🙌"
+    ],
+    "dm_message": "היי, זה יעקב. השדרוג של NotebookLM מהסרטון, צעד אחר צעד: קורס אינטראקטיבי קצר בעברית ב-9.90, שיעור ראשון חינם.",
+    "dm_link": "https://tzedek.me/course/notebooklm-2026?utm_source=instagram&utm_medium=dm&utm_campaign=notebooklm-reel",
+    "media_id": "18123434995757913"
+  },
+  {
+    "name": "Base44/Lovable SEO carousel (Da9ofB9jHio): any → GEO",
+    "shortcode": "Da9ofB9jHio",
+    "keywords": [],
+    "public_replies": [
+      "תודה! שלחתי לך בפרטי את המדריך 🙌"
+    ],
+    "dm_message": "היי, זה יעקב. בניתם אתר ב-Base44 או ב-Lovable? הנה איך דואגים שגם גוגל וגם ChatGPT ימצאו אותו: המדריך ל-GEO, הופעה בתשובות של מנועי AI.",
+    "dm_link": "https://tzedek.me/geo?utm_source=instagram&utm_medium=dm&utm_campaign=base44-seo-carousel",
+    "media_id": "18060761537758505"
+  },
+  {
+    "name": "Mail server post (Da2BmacsHMb): any → קלוד קוד",
+    "shortcode": "Da2BmacsHMb",
+    "keywords": [],
+    "public_replies": [
+      "אצלך בפרטי 🙌"
+    ],
+    "dm_message": "היי, זה יעקב. איך בניתי לעצמי שרת מיילים אישי עם קלוד קוד, ואיך מתחילים בעצמכם: המדריך המלא לקלוד קוד בעברית, וקהילת קלוד קוד הגדולה בישראל לשאלות.",
+    "dm_link": "https://tzedek.me/claude-code?utm_source=instagram&utm_medium=dm&utm_campaign=mail-server-post",
+    "media_id": "18097585835207908"
+  },
+  {
+    "name": "WordPress post (DXq4TfDDBRe): any → בניית אתר עם קלוד קוד",
+    "shortcode": "DXq4TfDDBRe",
+    "keywords": [],
+    "public_replies": [
+      "אצלך בפרטי 🙌"
+    ],
+    "dm_message": "היי, זה יעקב. במקום לעבוד קשה בוורדפרס: המדריך המלא לבניית אתר עם קלוד קוד ב-2026, מהאפיון ועד האתר החי.",
+    "dm_link": "https://tzedek.me/blog/build-website-claude-code-2026?utm_source=instagram&utm_medium=dm&utm_campaign=wordpress-post",
+    "media_id": "18089902115216938"
+  },
+  {
+    "name": "100 AI tools challenge (DKe8jsUKxMC): any → כלי AI לפי משימה",
+    "shortcode": "DKe8jsUKxMC",
+    "keywords": [],
+    "public_replies": [
+      "אצלך בפרטי 🙌"
+    ],
+    "dm_message": "היי, זה יעקב. אתגר 100 הכלים גדל לרשימה מסודרת: הכלים שכדאי לפתוח לכל משימה, למתחילים ולמקצוענים, בעמוד אחד.",
+    "dm_link": "https://tzedek.me/ai-tools-by-task?utm_source=instagram&utm_medium=dm&utm_campaign=100-tools-reel",
+    "media_id": "17842513854505182"
+  },
+  {
+    "name": "100 AI tools ep2 (DKhZJQNKAnt): any → כלי AI לפי משימה",
+    "shortcode": "DKhZJQNKAnt",
+    "keywords": [],
+    "public_replies": [
+      "אצלך בפרטי 🙌"
+    ],
+    "dm_message": "היי, זה יעקב. אתגר 100 הכלים גדל לרשימה מסודרת: הכלים שכדאי לפתוח לכל משימה, למתחילים ולמקצוענים, בעמוד אחד.",
+    "dm_link": "https://tzedek.me/ai-tools-by-task?utm_source=instagram&utm_medium=dm&utm_campaign=100-tools-reel",
+    "media_id": "18068090285508692"
   }
 ]
