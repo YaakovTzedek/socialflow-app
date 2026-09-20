@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'SocialFlow — ניהול תגובות בפייסבוק',
-  description: 'חבר דפי פייסבוק, עיין בפוסטים והגב לתגובות ישירות מהמערכת',
+  title: 'SocialFlow: כל תגובה הופכת לליד, אוטומטית',
+  description: 'אוטומציה לתגובות בפייסבוק ובאינסטגרם: תגובה ציבורית, הודעה פרטית עם הקישור, וליד נקלט. ניהול גם מתוך Claude ו-ChatGPT דרך MCP.',
 };
 
 export default function RootLayout({
