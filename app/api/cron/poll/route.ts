@@ -76,10 +76,12 @@ export async function GET(req: NextRequest) {
   const tokenCache = new Map<string, { access_token: string; ig_id: string | null }>();
   const usernameCache = new Map<string, string>();
 
-  for (const a of automations) {
+  // Automations run 4 at a time: each one is mostly waiting on Meta, and the
+  // dedupe rows are claimed per comment, so concurrent automations are safe.
+  const processAutomation = async (a: any) => {
     if (Date.now() - started > TIME_BUDGET_MS) {
       summary.push({ automation: a.name, skipped: 'time_budget' });
-      continue;
+      return;
     }
     let tokenRow = tokenCache.get(a.page_id);
     if (!tokenRow) {
@@ -93,7 +95,7 @@ export async function GET(req: NextRequest) {
     }
     if (!tokenRow) {
       summary.push({ automation: a.name, skipped: 'no_page_token' });
-      continue;
+      return;
     }
     const pageToken = tokenRow.access_token;
     const isIG = a.platform === 'instagram';
@@ -265,7 +267,8 @@ export async function GET(req: NextRequest) {
     } catch (e: any) {
       summary.push({ automation: a.name, error: e.message });
     }
-  }
+  };
+  await mapPool(automations, 4, processAutomation);
 
   return NextResponse.json({
     ran_at: new Date().toISOString(),
