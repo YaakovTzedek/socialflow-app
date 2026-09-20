@@ -15,6 +15,12 @@ import {
 export const maxDuration = 60;
 
 const CRON_KEY = process.env.CRON_KEY || 'socialflow_verify_2026';
+// Vercel kills the function at 60s. Stop starting new automations after this
+// and return what was done; the next run picks up where this one rotated to.
+const TIME_BUDGET_MS = 45_000;
+// Meta calls per automation run in parallel (comments for 25 posts one by one
+// took 20-40s and was the main reason runs timed out on 20.9.2026).
+const META_CONCURRENCY = 6;
 
 function keywordMatch(text: string, keywords: string[], matchType: string): string | null {
   const t = (text || '').toLowerCase();
@@ -26,21 +32,42 @@ function keywordMatch(text: string, keywords: string[], matchType: string): stri
   return null;
 }
 
+async function mapPool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i]);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}
+
 // GET /api/cron/poll?key=...  → poll comments for all active automations and act
 //
 // Query budget matters here: this runs every few minutes around the clock, and
 // the first database (Neon free tier) died of it — one SELECT per comment per
 // automation per pass burned the plan's compute quota in two days. Now it is
-// ONE lookup per post (comment_id = ANY(...)) and one batched baseline insert.
+// ONE dedupe lookup per automation (comment_id = ANY(...)) and one batched
+// baseline insert. Two pollers (GitHub Actions + the Mac launchd job) can
+// overlap, so a comment is CLAIMED in processed_comments before anything is
+// sent: whoever inserts the row first answers, the other skips.
 export async function GET(req: NextRequest) {
   if (req.nextUrl.searchParams.get('key') !== CRON_KEY) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
   if (!hasDb) return NextResponse.json({ error: 'no_db' });
 
+  const started = Date.now();
   const debug = req.nextUrl.searchParams.get('debug') === '1';
   await ensureSchema();
-  const automations = await sql!`SELECT * FROM automations WHERE status = 'active'`;
+  const all = await sql!`SELECT * FROM automations WHERE status = 'active' ORDER BY created_at`;
+  // Rotate the starting point every run so a slow pass never starves the same
+  // automations twice in a row.
+  const offset = all.length ? Math.floor(started / 180_000) % all.length : 0;
+  const automations = [...all.slice(offset), ...all.slice(0, offset)];
   const summary: any[] = [];
   const debugComments: any[] = [];
 
@@ -50,6 +77,10 @@ export async function GET(req: NextRequest) {
   const usernameCache = new Map<string, string>();
 
   for (const a of automations) {
+    if (Date.now() - started > TIME_BUDGET_MS) {
+      summary.push({ automation: a.name, skipped: 'time_budget' });
+      continue;
+    }
     let tokenRow = tokenCache.get(a.page_id);
     if (!tokenRow) {
       const row = (
@@ -98,21 +129,29 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      let matched = 0;
-      for (const postId of postIds) {
-        const comments = isIG
-          ? await listInstagramComments(postId, pageToken)
-          : await listComments(postId, pageToken);
-        if (comments.length === 0) continue;
-
-        // One dedupe lookup for the whole post.
-        const ids = comments.map((c) => c.id).filter(Boolean);
+      // Fetch every post's comments in parallel, then dedupe in ONE query.
+      const perPost = await mapPool(postIds, META_CONCURRENCY, async (postId) => {
+        try {
+          const comments = isIG
+            ? await listInstagramComments(postId, pageToken)
+            : await listComments(postId, pageToken);
+          return { postId, comments };
+        } catch (e: any) {
+          return { postId, comments: [], error: e.message as string };
+        }
+      });
+      const allIds = perPost.flatMap((p) => p.comments.map((c) => c.id).filter(Boolean));
+      const seen = new Set<string>();
+      if (allIds.length) {
         const seenRows = await sql!`
           SELECT comment_id FROM processed_comments
-          WHERE automation_id = ${a.id} AND comment_id = ANY(${ids})`;
-        const seen = new Set(seenRows.map((r: any) => r.comment_id as string));
-        const toBaseline: string[] = [];
+          WHERE automation_id = ${a.id} AND comment_id = ANY(${allIds})`;
+        for (const r of seenRows) seen.add(r.comment_id as string);
+      }
 
+      let matched = 0;
+      const toBaseline: string[] = [];
+      for (const { postId, comments } of perPost) {
         for (const c of comments) {
           const commentId = c.id;
           const text = isIG ? (c as any).text : (c as any).message;
@@ -161,6 +200,13 @@ export async function GET(req: NextRequest) {
           if (!isIG && fromId && fromId === a.page_id) continue;
           if (isIG && ourIgUsername && (fromId || '').toLowerCase() === ourIgUsername) continue;
 
+          // Claim the comment before sending anything: a concurrent poller that
+          // reaches the same comment gets no row back and skips it.
+          const claimed = await sql!`
+            INSERT INTO processed_comments (automation_id, comment_id)
+            VALUES (${a.id}, ${commentId}) ON CONFLICT DO NOTHING RETURNING comment_id`;
+          if (claimed.length === 0) continue;
+
           let publicStatus = 'skipped';
           let dmStatus = 'skipped';
           let err: string | null = null;
@@ -194,10 +240,6 @@ export async function GET(req: NextRequest) {
             }
           }
 
-          // Mark processed + log + bump counter.
-          await sql!`
-            INSERT INTO processed_comments (automation_id, comment_id)
-            VALUES (${a.id}, ${commentId}) ON CONFLICT DO NOTHING`;
           await sql!`UPDATE automations SET trigger_count = trigger_count + 1 WHERE id = ${a.id}`;
           await sql!`
             INSERT INTO trigger_logs (automation_id, platform, post_id, comment_id,
@@ -207,15 +249,19 @@ export async function GET(req: NextRequest) {
               ${fromName || ''}, ${text}, ${kw}, ${publicStatus}, ${dmStatus}, ${err})`;
           matched++;
         }
-
-        if (toBaseline.length > 0) {
-          const rows = toBaseline.map((id) => ({ automation_id: a.id, comment_id: id }));
-          await sql!`
-            INSERT INTO processed_comments ${sql!(rows, 'automation_id', 'comment_id')}
-            ON CONFLICT DO NOTHING`;
-        }
       }
-      summary.push({ automation: a.name, platform: a.platform, posts_scanned: postIds.length, new_matches: matched });
+
+      if (toBaseline.length > 0) {
+        const rows = toBaseline.map((id) => ({ automation_id: a.id, comment_id: id }));
+        await sql!`
+          INSERT INTO processed_comments ${sql!(rows, 'automation_id', 'comment_id')}
+          ON CONFLICT DO NOTHING`;
+      }
+      const fetchErrors = perPost.filter((p) => p.error).length;
+      summary.push({
+        automation: a.name, platform: a.platform, posts_scanned: postIds.length, new_matches: matched,
+        ...(fetchErrors ? { fetch_errors: fetchErrors } : {}),
+      });
     } catch (e: any) {
       summary.push({ automation: a.name, error: e.message });
     }
@@ -223,6 +269,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     ran_at: new Date().toISOString(),
+    took_ms: Date.now() - started,
     summary,
     ...(debug ? { debug_comments: debugComments } : {}),
   });
