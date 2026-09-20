@@ -76,10 +76,6 @@ const GptIcon = () => (
 export function Landing({ error }: { error?: string }) {
   return (
     <div className="sf">
-      {/* Fonts: same pair as the design system and tzedek.me */}
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      <link href="https://fonts.googleapis.com/css2?family=Karantina:wght@300;400;700&family=Assistant:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
 
       <nav className="sf-nav">
         <div className="sf-nav-in">
