@@ -21,9 +21,15 @@ export async function POST(req: NextRequest) {
     name,
     public_replies = [],
     dm_message,
+    dm_link = null,
     keywords = [],
     scope = shortcode ? 'specific_post' : 'all_posts',
     platform = 'instagram',
+    // ISO timestamp. Backdates created_at so comments posted BEFORE the automation
+    // existed are still processed (catch-up after an outage or a DB migration).
+    // Threads that already carry a reply from our own account are still skipped
+    // by the poller, so this never produces a second reply.
+    since = null,
   } = body;
 
   await ensureSchema();
@@ -44,15 +50,16 @@ export async function POST(req: NextRequest) {
   }
 
   const id = randomUUID();
+  const createdAt = since ? new Date(since) : new Date();
   await sql!`
     INSERT INTO automations (
       id, owner_id, name, platform, page_id, ig_id, post_id, post_scope,
       keywords, match_type, public_reply_enabled, public_replies,
-      dm_enabled, dm_message, dm_link, once_per_user, status
+      dm_enabled, dm_message, dm_link, once_per_user, status, created_at
     ) VALUES (
       ${id}, ${pt.owner_id}, ${name}, ${platform}, ${page_id}, ${pt.ig_id},
       ${match ? match.id : null}, ${scope}, ${keywords}, 'contains', true,
-      ${public_replies}, true, ${dm_message}, null, true, 'active'
+      ${public_replies}, true, ${dm_message}, ${dm_link}, true, 'active', ${createdAt}
     )`;
 
   return NextResponse.json({
