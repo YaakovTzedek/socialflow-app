@@ -423,7 +423,7 @@ export async function listInstagramComments(
   const data = await graphGet<{ data: InstagramComment[] }>(
     `${mediaId}/comments`,
     {
-      fields: 'id,text,username,timestamp,like_count',
+      fields: 'id,text,username,timestamp,like_count,replies{username}',
       limit: '50',
       access_token: pageToken,
     }
@@ -453,4 +453,13 @@ export async function replyToInstagramComment(
     message,
     access_token: pageToken,
   });
+}
+
+/** The IG business account's own username (used to recognise threads we already answered). */
+export async function getInstagramUsername(igUserId: string, pageToken: string): Promise<string> {
+  const data = await graphGet<{ username?: string }>(`${igUserId}`, {
+    fields: 'username',
+    access_token: pageToken,
+  });
+  return data.username || '';
 }

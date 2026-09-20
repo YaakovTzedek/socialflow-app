@@ -9,6 +9,7 @@ import {
   sendInstagramPrivateReply,
   listPagePosts,
   listInstagramMedia,
+  getInstagramUsername,
 } from '@/lib/meta';
 
 export const maxDuration = 60;
@@ -26,6 +27,11 @@ function keywordMatch(text: string, keywords: string[], matchType: string): stri
 }
 
 // GET /api/cron/poll?key=...  → poll comments for all active automations and act
+//
+// Query budget matters here: this runs every few minutes around the clock, and
+// the first database (Neon free tier) died of it — one SELECT per comment per
+// automation per pass burned the plan's compute quota in two days. Now it is
+// ONE lookup per post (comment_id = ANY(...)) and one batched baseline insert.
 export async function GET(req: NextRequest) {
   if (req.nextUrl.searchParams.get('key') !== CRON_KEY) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
@@ -38,16 +44,41 @@ export async function GET(req: NextRequest) {
   const summary: any[] = [];
   const debugComments: any[] = [];
 
+  // Per-run caches: page tokens and our own IG username (to spot threads we
+  // already answered, e.g. before a database migration wiped the dedupe table).
+  const tokenCache = new Map<string, { access_token: string; ig_id: string | null }>();
+  const usernameCache = new Map<string, string>();
+
   for (const a of automations) {
-    const tokenRow = (
-      await sql!`SELECT access_token, ig_id FROM page_tokens WHERE page_id = ${a.page_id} LIMIT 1`
-    )[0];
+    let tokenRow = tokenCache.get(a.page_id);
+    if (!tokenRow) {
+      const row = (
+        await sql!`SELECT access_token, ig_id FROM page_tokens WHERE page_id = ${a.page_id} LIMIT 1`
+      )[0] as { access_token: string; ig_id: string | null } | undefined;
+      if (row) {
+        tokenRow = row;
+        tokenCache.set(a.page_id, row);
+      }
+    }
     if (!tokenRow) {
       summary.push({ automation: a.name, skipped: 'no_page_token' });
       continue;
     }
-    const pageToken = tokenRow.access_token as string;
+    const pageToken = tokenRow.access_token;
     const isIG = a.platform === 'instagram';
+
+    let ourIgUsername = '';
+    if (isIG && tokenRow.ig_id) {
+      ourIgUsername = usernameCache.get(tokenRow.ig_id) || '';
+      if (!ourIgUsername) {
+        try {
+          ourIgUsername = (await getInstagramUsername(tokenRow.ig_id, pageToken)).toLowerCase();
+          usernameCache.set(tokenRow.ig_id, ourIgUsername);
+        } catch {
+          /* best effort */
+        }
+      }
+    }
 
     try {
       // Resolve which posts/media to scan.
@@ -72,38 +103,50 @@ export async function GET(req: NextRequest) {
         const comments = isIG
           ? await listInstagramComments(postId, pageToken)
           : await listComments(postId, pageToken);
+        if (comments.length === 0) continue;
+
+        // One dedupe lookup for the whole post.
+        const ids = comments.map((c) => c.id).filter(Boolean);
+        const seenRows = await sql!`
+          SELECT comment_id FROM processed_comments
+          WHERE automation_id = ${a.id} AND comment_id = ANY(${ids})`;
+        const seen = new Set(seenRows.map((r: any) => r.comment_id as string));
+        const toBaseline: string[] = [];
 
         for (const c of comments) {
           const commentId = c.id;
           const text = isIG ? (c as any).text : (c as any).message;
           const fromId = isIG ? (c as any).username : (c as any).from?.id;
           const fromName = isIG ? (c as any).username : (c as any).from?.name;
+          const cTime = isIG ? (c as any).timestamp : (c as any).created_time;
+          const olderThanAutomation =
+            !!cTime && !!a.created_at && Date.parse(cTime) < Date.parse(a.created_at);
+          // Instagram returns each comment's replies; if one is ours the thread was
+          // already answered (by an earlier run, or by Yaakov by hand) — never twice.
+          const answeredByUs =
+            isIG && ourIgUsername
+              ? ((c as any).replies?.data || []).some(
+                  (r: any) => (r.username || '').toLowerCase() === ourIgUsername
+                )
+              : false;
+
           if (debug) {
-            const ct = isIG ? (c as any).timestamp : (c as any).created_time;
-            const seenD = await sql!`SELECT 1 FROM processed_comments WHERE automation_id=${a.id} AND comment_id=${commentId} LIMIT 1`;
             debugComments.push({
-              comment: text, from: fromName, time: ct,
+              comment: text, from: fromName, time: cTime,
               automation_created: a.created_at,
-              is_newer_than_automation: ct && a.created_at ? Date.parse(ct) >= Date.parse(a.created_at) : null,
-              already_processed: seenD.length > 0,
+              is_newer_than_automation: cTime && a.created_at ? !olderThanAutomation : null,
+              already_processed: seen.has(commentId),
+              answered_by_us: answeredByUs,
               keyword_match: a.keywords?.length ? keywordMatch(text, a.keywords, a.match_type) : '(any)',
             });
           }
           if (!commentId || !text) continue;
+          if (seen.has(commentId)) continue;
 
-          // Dedupe — already handled?
-          const seen = await sql!`
-            SELECT 1 FROM processed_comments
-            WHERE automation_id = ${a.id} AND comment_id = ${commentId} LIMIT 1`;
-          if (seen.length > 0) continue;
-
-          // Skip comments created before the automation existed (baseline old
-          // comments as processed so we never reply to pre-existing threads).
-          const cTime = isIG ? (c as any).timestamp : (c as any).created_time;
-          if (cTime && a.created_at && Date.parse(cTime) < Date.parse(a.created_at)) {
-            await sql!`
-              INSERT INTO processed_comments (automation_id, comment_id)
-              VALUES (${a.id}, ${commentId}) ON CONFLICT DO NOTHING`;
+          // Baseline: comments older than the automation, or threads we already
+          // answered, are recorded as processed and never replied to.
+          if (olderThanAutomation || answeredByUs) {
+            toBaseline.push(commentId);
             continue;
           }
 
@@ -114,8 +157,9 @@ export async function GET(req: NextRequest) {
             if (!kw) continue;
           }
 
-          // Don't reply to the page's own comments (FB).
+          // Don't reply to our own comments.
           if (!isIG && fromId && fromId === a.page_id) continue;
+          if (isIG && ourIgUsername && (fromId || '').toLowerCase() === ourIgUsername) continue;
 
           let publicStatus = 'skipped';
           let dmStatus = 'skipped';
@@ -139,7 +183,7 @@ export async function GET(req: NextRequest) {
             try {
               const msg = a.dm_link ? `${a.dm_message}\n\n${a.dm_link}` : a.dm_message;
               if (isIG) {
-                await sendInstagramPrivateReply(tokenRow.ig_id, commentId, msg, pageToken);
+                await sendInstagramPrivateReply(tokenRow.ig_id || '', commentId, msg, pageToken);
               } else {
                 await sendPrivateReply(commentId, msg, pageToken);
               }
@@ -162,6 +206,13 @@ export async function GET(req: NextRequest) {
             VALUES (${a.id}, ${a.platform}, ${postId}, ${commentId}, ${String(fromId || '')},
               ${fromName || ''}, ${text}, ${kw}, ${publicStatus}, ${dmStatus}, ${err})`;
           matched++;
+        }
+
+        if (toBaseline.length > 0) {
+          const rows = toBaseline.map((id) => ({ automation_id: a.id, comment_id: id }));
+          await sql!`
+            INSERT INTO processed_comments ${sql!(rows, 'automation_id', 'comment_id')}
+            ON CONFLICT DO NOTHING`;
         }
       }
       summary.push({ automation: a.name, platform: a.platform, posts_scanned: postIds.length, new_matches: matched });

@@ -1,16 +1,48 @@
-import { neon } from '@neondatabase/serverless';
+import postgres from 'postgres';
 
 /**
- * Postgres connection (Neon / Vercel Postgres).
+ * Postgres connection (Supabase, or any Postgres reachable over TCP).
  * Reads the connection string from DATABASE_URL or POSTGRES_URL.
- * Vercel Postgres injects POSTGRES_URL automatically when you connect a DB.
+ *
+ * History: the app started on Neon (Vercel Postgres) over its HTTP driver. On
+ * 20.9.2026 the Neon free plan hit its quota ("HTTP status 402 ... exceeded the
+ * quota") and every query — and therefore every route — failed for hours. The
+ * 3-minute poller keeps a database awake around the clock, which is exactly
+ * what a compute-hours quota punishes. Supabase has no such meter, so the app
+ * moved there; postgres.js keeps the same `sql\`...\`` tagged-template shape the
+ * routes already use (rows come back as an array).
+ *
+ * Supabase notes: use the transaction pooler URL (port 6543). Transaction
+ * pooling does not support prepared statements, hence prepare:false. One
+ * connection per serverless invocation is plenty and avoids pool exhaustion.
  */
+// SOCIALFLOW_DATABASE_URL wins so the Supabase pooler URL can coexist with the
+// DATABASE_URL/POSTGRES_URL that the (dead) Neon integration still injects.
 const connectionString =
-  process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
+  process.env.SOCIALFLOW_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
 
 export const hasDb = !!connectionString;
 
-export const sql = connectionString ? neon(connectionString) : null;
+/**
+ * All SocialFlow tables live in their own schema so the app can share a
+ * Postgres project with other products without name collisions (okdoc, for
+ * one, has its own `automations` table). DB_SCHEMA defaults to "socialflow";
+ * it is applied as the connection's search_path, so every query below stays
+ * unqualified. Use the pooler in SESSION mode (port 5432) so the startup
+ * search_path sticks; prepare:false also keeps transaction mode working.
+ */
+const schema = process.env.DB_SCHEMA || 'socialflow';
+
+export const sql = connectionString
+  ? postgres(connectionString, {
+      ssl: 'require',
+      prepare: false,
+      max: 1,
+      idle_timeout: 20,
+      connect_timeout: 15,
+      connection: { search_path: schema },
+    })
+  : null;
 
 let initialized = false;
 
@@ -18,6 +50,8 @@ let initialized = false;
 export async function ensureSchema() {
   if (!sql) throw new Error('Database not configured (set DATABASE_URL).');
   if (initialized) return;
+
+  await sql.unsafe(`CREATE SCHEMA IF NOT EXISTS "${schema.replace(/"/g, '')}"`);
 
   await sql`
     CREATE TABLE IF NOT EXISTS automations (
