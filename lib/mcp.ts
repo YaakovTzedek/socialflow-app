@@ -14,7 +14,8 @@
  */
 import { randomUUID } from 'crypto';
 import { sql, ensureSchema } from './db';
-import { listInstagramMedia, listPagePosts, getPostsInfoCached } from './meta';
+import { listInstagramMedia, listPagePosts, getPostsInfoCached, createInstagramContainer, waitForContainer, publishInstagramContainer, getMediaPermalink, publishFacebookPost, type IgPublishKind } from './meta';
+import { getEntitlement } from './entitlements';
 import { getMessages, negotiate, isLocale, type Locale, type Messages } from './i18n';
 
 export const PROTOCOL_VERSION = '2025-06-18';
@@ -57,6 +58,17 @@ function toolsFor(m: Messages) {
     { name: 'delete_automation', description: T.delete_automation, inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'], additionalProperties: false } },
     { name: 'get_activity', description: T.get_activity, inputSchema: { type: 'object', properties: { automation_id: { type: 'string' }, limit: { type: 'integer', minimum: 1, maximum: 200, default: 50 }, since_hours: { type: 'integer', minimum: 1, maximum: 720, description: A.since_hours } }, additionalProperties: false } },
     { name: 'get_report', description: T.get_report, inputSchema: { type: 'object', properties: { period: { type: 'string', enum: ['today', '7d', '30d'], default: '7d' } }, additionalProperties: false } },
+    { name: 'publish_post', description: T.publish_post, inputSchema: { type: 'object', properties: {
+        page_id: { type: 'string', description: A.page_id },
+        platform: { type: 'string', enum: ['instagram', 'facebook'], description: A.platform },
+        media_type: { type: 'string', enum: ['image', 'carousel', 'video', 'reel', 'story', 'text', 'link'], description: A.media_type },
+        caption: { type: 'string', description: A.caption },
+        image_url: { type: 'string', description: A.image_url },
+        image_urls: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 10, description: A.image_urls },
+        video_url: { type: 'string', description: A.video_url },
+        cover_url: { type: 'string', description: A.cover_url },
+        link: { type: 'string', description: A.link },
+      }, required: ['page_id', 'platform', 'media_type'], additionalProperties: false } },
   ];
 }
 
@@ -221,6 +233,59 @@ async function toolGetReport(owner: string, a: Json) {
   return { period, since: start.toISOString(), totals: tot, automations: counts, top_automations: top };
 }
 
+/**
+ * Publish a post. Instagram goes through the container → publish flow (video
+ * and reel containers are processed asynchronously, so we wait for FINISHED);
+ * Facebook posts a photo, a text update or a link. Gated on the plan's
+ * `publishing` capability so the tool is inert on anything under Pro even if
+ * the transport ever lets a lower plan reach MCP.
+ */
+async function toolPublishPost(owner: string, a: Json, m: Messages) {
+  const ent = await getEntitlement(owner);
+  if (!ent.plan.limits.publishing) throw new Error(m.server.mcpPublishNeedsPro);
+
+  const t = await pageToken(owner, String(a.page_id));
+  if (!t) throw new Error(m.server.mcpPageNotReady);
+
+  const kind = String(a.media_type || '');
+  const caption = a.caption ? String(a.caption) : undefined;
+
+  if (a.platform === 'facebook') {
+    if (kind === 'video' || kind === 'reel' || kind === 'carousel' || kind === 'story') throw new Error(m.server.mcpPublishNoFbMedia);
+    const imageUrl = a.image_url ? String(a.image_url) : undefined;
+    if (!imageUrl && !caption && !a.link) throw new Error(m.server.mcpPublishNeedsText);
+    const res = await publishFacebookPost(String(a.page_id), t.access_token, { message: caption, imageUrl, link: a.link ? String(a.link) : undefined });
+    return { published: true, platform: 'facebook', post_id: res.id, permalink: res.permalink, note: m.server.mcpPublishedNote };
+  }
+
+  if (!t.ig_id) throw new Error(m.server.mcpNoIg);
+  const ig = t.ig_id;
+  let containerId: string;
+
+  if (kind === 'carousel') {
+    const urls = Array.isArray(a.image_urls) ? (a.image_urls as unknown[]).map(String) : [];
+    if (urls.length < 2 || urls.length > 10) throw new Error(m.server.mcpPublishNeedsCarousel);
+    const children: string[] = [];
+    for (const url of urls) children.push(await createInstagramContainer(ig, t.access_token, { kind: 'image', imageUrl: url, isCarouselItem: true }));
+    containerId = await createInstagramContainer(ig, t.access_token, { kind: 'carousel', children, caption });
+  } else if (kind === 'video' || kind === 'reel') {
+    if (!a.video_url) throw new Error(m.server.mcpPublishNeedsVideo);
+    containerId = await createInstagramContainer(ig, t.access_token, { kind: kind as IgPublishKind, videoUrl: String(a.video_url), coverUrl: a.cover_url ? String(a.cover_url) : undefined, caption });
+    await waitForContainer(containerId, t.access_token);
+  } else if (kind === 'story') {
+    if (!a.image_url && !a.video_url) throw new Error(m.server.mcpPublishNeedsImage);
+    containerId = await createInstagramContainer(ig, t.access_token, { kind: 'story', imageUrl: a.image_url ? String(a.image_url) : undefined, videoUrl: a.video_url ? String(a.video_url) : undefined });
+    if (a.video_url) await waitForContainer(containerId, t.access_token);
+  } else {
+    if (!a.image_url) throw new Error(m.server.mcpPublishNeedsImage);
+    containerId = await createInstagramContainer(ig, t.access_token, { kind: 'image', imageUrl: String(a.image_url), caption });
+  }
+
+  const published = await publishInstagramContainer(ig, containerId, t.access_token);
+  const permalink = await getMediaPermalink(published.id, t.access_token);
+  return { published: true, platform: 'instagram', post_id: published.id, permalink, note: m.server.mcpPublishedNote };
+}
+
 async function callTool(owner: string, name: string, args: Json, m: Messages) {
   switch (name) {
     case 'list_pages': return toolListPages(owner, m);
@@ -232,6 +297,7 @@ async function callTool(owner: string, name: string, args: Json, m: Messages) {
     case 'delete_automation': return toolDeleteAutomation(owner, args);
     case 'get_activity': return toolGetActivity(owner, args);
     case 'get_report': return toolGetReport(owner, args);
+    case 'publish_post': return toolPublishPost(owner, args, m);
     default: throw Object.assign(new Error(`Unknown tool: ${name}`), { code: -32602 });
   }
 }

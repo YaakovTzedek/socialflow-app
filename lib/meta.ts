@@ -541,3 +541,98 @@ export async function getPostsInfoCached(
   }
   return out;
 }
+
+/* ------------------------------------------------------------------------ */
+/* Publishing                                                                 */
+/* ------------------------------------------------------------------------ */
+
+export type IgPublishKind = 'image' | 'video' | 'reel' | 'carousel' | 'story';
+
+/**
+ * Instagram publishing is two calls: create a container, then publish it.
+ * Video and reel containers are processed asynchronously, so the container has
+ * to report FINISHED before it can be published; we poll status_code with a
+ * ceiling instead of waiting forever.
+ *
+ * Media must sit on a public HTTPS URL that Meta can fetch. Requires the
+ * instagram_content_publish permission on the connected account.
+ */
+export async function createInstagramContainer(
+  igUserId: string,
+  pageToken: string,
+  opts: { kind: IgPublishKind; imageUrl?: string; videoUrl?: string; caption?: string; children?: string[]; coverUrl?: string; isCarouselItem?: boolean }
+): Promise<string> {
+  const body: Record<string, string> = { access_token: pageToken };
+  if (opts.caption) body.caption = opts.caption;
+  if (opts.kind === 'carousel') {
+    body.media_type = 'CAROUSEL';
+    body.children = (opts.children || []).join(',');
+  } else if (opts.kind === 'reel') {
+    body.media_type = 'REELS';
+    body.video_url = String(opts.videoUrl);
+    if (opts.coverUrl) body.cover_url = opts.coverUrl;
+  } else if (opts.kind === 'story') {
+    body.media_type = 'STORIES';
+    if (opts.videoUrl) body.video_url = opts.videoUrl; else body.image_url = String(opts.imageUrl);
+  } else if (opts.kind === 'video') {
+    body.media_type = 'VIDEO';
+    body.video_url = String(opts.videoUrl);
+  } else {
+    body.image_url = String(opts.imageUrl);
+  }
+  if (opts.isCarouselItem) { body.is_carousel_item = 'true'; delete body.caption; }
+  const res = await graphPost<{ id: string }>(`${igUserId}/media`, body);
+  return res.id;
+}
+
+/** Wait until an Instagram container finishes processing (video and reel only). */
+export async function waitForContainer(containerId: string, pageToken: string, tries = 20, delayMs = 3000): Promise<void> {
+  for (let i = 0; i < tries; i++) {
+    const s = await graphGet<{ status_code?: string; status?: string }>(containerId, { fields: 'status_code,status', access_token: pageToken });
+    if (s.status_code === 'FINISHED') return;
+    if (s.status_code === 'ERROR' || s.status_code === 'EXPIRED') throw new Error(`Instagram media processing ${s.status_code}: ${s.status || ''}`.trim());
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  throw new Error('Instagram media is still processing. Try publishing the container again in a minute.');
+}
+
+export async function publishInstagramContainer(igUserId: string, containerId: string, pageToken: string): Promise<{ id: string }> {
+  return graphPost(`${igUserId}/media_publish`, { creation_id: containerId, access_token: pageToken });
+}
+
+/** Permalink of a freshly published item, for the tool result. */
+export async function getMediaPermalink(mediaId: string, pageToken: string): Promise<string | null> {
+  try {
+    const d = await graphGet<{ permalink?: string }>(mediaId, { fields: 'permalink', access_token: pageToken });
+    return d.permalink || null;
+  } catch { return null; }
+}
+
+/**
+ * Publish to a Facebook page: a photo when an image URL is given, otherwise a
+ * text or link post. Requires pages_manage_posts on the page.
+ */
+export async function publishFacebookPost(
+  pageId: string,
+  pageToken: string,
+  opts: { message?: string; imageUrl?: string; link?: string }
+): Promise<{ id: string; permalink: string | null }> {
+  let id: string;
+  if (opts.imageUrl) {
+    const body: Record<string, string> = { url: opts.imageUrl, access_token: pageToken };
+    if (opts.message) body.caption = opts.message;
+    const res = await graphPost<{ id: string; post_id?: string }>(`${pageId}/photos`, body);
+    id = res.post_id || res.id;
+  } else {
+    const body: Record<string, string> = { message: String(opts.message || ''), access_token: pageToken };
+    if (opts.link) body.link = opts.link;
+    const res = await graphPost<{ id: string }>(`${pageId}/feed`, body);
+    id = res.id;
+  }
+  let permalink: string | null = null;
+  try {
+    const d = await graphGet<{ permalink_url?: string }>(id, { fields: 'permalink_url', access_token: pageToken });
+    permalink = d.permalink_url ? (d.permalink_url.startsWith('http') ? d.permalink_url : `https://www.facebook.com${d.permalink_url}`) : null;
+  } catch { /* the post is live either way */ }
+  return { id, permalink };
+}
