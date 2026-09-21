@@ -150,7 +150,7 @@ export function Landing({ error }: { error?: string }) {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div className="sf-hero-cta" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
               <LoginLink className="sf-btn sf-btn-primary sf-btn-lg">
                 {H.startFree}
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={arrowPath} /></svg>
@@ -445,7 +445,7 @@ export function Landing({ error }: { error?: string }) {
               <div className="sf-hand sf-hand-end">{H.hand3}</div>
             </div>
             <div className="sf-footer-bottom">
-              <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 15, flex: 1 }}>
+              <div className="sf-footer-links" style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 15, flex: 1 }}>
                 <Link href={p('/terms')}>{H.footerTerms}</Link>
                 <Link href={p('/privacy')}>{H.footerPrivacy}</Link>
                 <Link href={p('/data-deletion')}>{H.footerDeletion}</Link>

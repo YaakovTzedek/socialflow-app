@@ -164,7 +164,22 @@ html:not([lang="he"]) .sf-kw-grid .sf-display { font-size: 32px; }
 html[lang="ar"] .sf-hand, html[lang="ja"] .sf-hand, html[lang="ar"] .sf-sign { font-family: var(--font-body, sans-serif); transform: none; }
 
 @media (max-width: 860px) {
-  .sf-hero { padding-block: 48px 32px; gap: 36px; }
+  .sf-hero { padding-block: 40px 28px; gap: 34px; }
+  .sf-nav-links { display: none; }
+  .sf-nav-in { gap: 10px; flex-wrap: nowrap; }
+  .sf-nav-in > :first-child { margin-inline-end: auto; }
+  .sf-btn-sm { font-size: 14px; padding-inline: 16px; }
+  .sf-hero-cta { flex-direction: column; align-items: stretch !important; gap: 12px !important; }
+  .sf-hero-cta .sf-btn { justify-content: center; width: 100%; font-size: 17px; }
+  .sf-hero > :first-child { gap: 20px !important; }
+  .sf-hero p { font-size: 19px !important; }
+  .sf-footer-bottom { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .sf-footer-links { flex: none !important; }
+  .sf-faq-q { padding: 16px 18px; font-size: 17px; }
+  .sf-faq-a { padding: 0 18px 18px 18px; font-size: 15px; }
+  .sf-shell { padding-inline: 18px; }
+  .sf-hand { font-size: 27px; }
+  .sf-sign { font-size: 38px; }
   .sf-ribbon { padding: 24px; }
   .sf-cta { padding: 30px; }
   .sf-app-body { grid-template-columns: 1fr; }
