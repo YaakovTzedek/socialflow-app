@@ -14,7 +14,7 @@
  */
 import { randomUUID } from 'crypto';
 import { sql, ensureSchema } from './db';
-import { listInstagramMedia, listPagePosts, getPostsInfo } from './meta';
+import { listInstagramMedia, listPagePosts, getPostsInfoCached } from './meta';
 
 export const PROTOCOL_VERSION = '2025-06-18';
 const SERVER_INFO = { name: 'socialflow', version: '1.0.0' };
@@ -158,7 +158,7 @@ async function pageToken(owner: string, pageId: string) {
 async function toolListPages(owner: string) {
   const [cache] = await sql!`SELECT payload FROM pages_cache WHERE owner_id = ${owner}`;
   const tokens = await sql!`SELECT page_id, page_name, ig_id FROM page_tokens WHERE owner_id = ${owner}`;
-  const pages: any[] = (cache?.payload as any[]) || [];
+  const raw = cache?.payload; const pages: any[] = (typeof raw === 'string' ? JSON.parse(raw) : raw) || [];
   if (!pages.length && !tokens.length) {
     return { pages: [], note: 'עדיין לא נמצאו דפים. פתחו את הדשבורד של SocialFlow פעם אחת (הוא שומר את רשימת הדפים), ואז נסו שוב.' };
   }
@@ -215,7 +215,7 @@ async function toolListAutomations(owner: string, a: Json) {
   const posts: Record<string, any> = {};
   const groups = new Map<string, { page_id: string; platform: 'facebook' | 'instagram'; ids: string[] }>();
   for (const r of rows as any[]) if (r.post_id) { const k = `${r.page_id}:${r.platform}`; const g = groups.get(k) || { page_id: r.page_id as string, platform: r.platform as 'facebook' | 'instagram', ids: [] as string[] }; g.ids.push(r.post_id as string); groups.set(k, g); }
-  await Promise.all(Array.from(groups.values()).map(async (g) => { const t = await pageToken(owner, g.page_id); if (t) Object.assign(posts, await getPostsInfo(g.ids, t.access_token, g.platform)); }));
+  await Promise.all(Array.from(groups.values()).map(async (g) => { const t = await pageToken(owner, g.page_id); if (t) Object.assign(posts, await getPostsInfoCached(sql, g.ids, t.access_token, g.platform)); }));
   return { count: rows.length, automations: (rows as any[]).map((r) => ({ ...shape(r, st.get(r.id)), post_permalink: r.post_id ? posts[r.post_id]?.permalink || null : null, post_comments: r.post_id ? posts[r.post_id]?.comments_count ?? null : null })) };
 }
 

@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { sql, ensureSchema, hasDb } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { requireUserToken, getPageToken } from '@/lib/auth-helpers';
-import { listPages, getPostsInfo, type PostInfo } from '@/lib/meta';
+import { listPages, getPostsInfoCached, type PostInfo } from '@/lib/meta';
 
 // GET /api/automations → list the current user's automations
 export async function GET() {
@@ -58,7 +58,7 @@ export async function GET() {
         Array.from(groups.values()).map(async (g) => {
           const token = tokens.get(g.page_id);
           if (!token) return;
-          Object.assign(posts, await getPostsInfo(g.post_ids, token, g.platform));
+          Object.assign(posts, await getPostsInfoCached(sql, g.post_ids, token, g.platform));
         })
       );
     }

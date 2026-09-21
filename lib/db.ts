@@ -50,10 +50,12 @@ let initialized = false;
 export async function ensureSchema() {
   if (!sql) throw new Error('Database not configured (set DATABASE_URL).');
   if (initialized) return;
-
-  await sql.unsafe(`CREATE SCHEMA IF NOT EXISTS "${schema.replace(/"/g, '')}"`);
-
-  await sql`
+  const schemaName = schema.replace(/"/g, '');
+  // One round trip for the whole DDL: every statement is IF NOT EXISTS, and the
+  // database sits in another region, so nine sequential trips on each cold
+  // start cost about a second on their own.
+  await sql.unsafe(`
+    CREATE SCHEMA IF NOT EXISTS "${schemaName}";
     CREATE TABLE IF NOT EXISTS automations (
       id              TEXT PRIMARY KEY,
       owner_id        TEXT NOT NULL,
@@ -75,10 +77,7 @@ export async function ensureSchema() {
       status          TEXT NOT NULL DEFAULT 'active',
       trigger_count   INTEGER NOT NULL DEFAULT 0,
       created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-    )
-  `;
-
-  await sql`
+    );
     CREATE TABLE IF NOT EXISTS trigger_logs (
       id              SERIAL PRIMARY KEY,
       automation_id   TEXT NOT NULL,
@@ -93,41 +92,25 @@ export async function ensureSchema() {
       dm_status       TEXT,
       error_message   TEXT,
       created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-    )
-  `;
-
-  // Tracks which commenters already got a DM for a given automation (once_per_user).
-  await sql`
+    );
     CREATE TABLE IF NOT EXISTS dm_sent (
       automation_id TEXT NOT NULL,
       commenter_id  TEXT NOT NULL,
       created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
       PRIMARY KEY (automation_id, commenter_id)
-    )
-  `;
-
-  // Tracks comments already processed by the poller (dedupe across runs).
-  await sql`
+    );
     CREATE TABLE IF NOT EXISTS processed_comments (
       automation_id TEXT NOT NULL,
       comment_id    TEXT NOT NULL,
       created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
       PRIMARY KEY (automation_id, comment_id)
-    )
-  `;
-
-  // Raw log of every incoming webhook POST — for diagnosing delivery.
-  await sql`
+    );
     CREATE TABLE IF NOT EXISTS webhook_events (
       id         SERIAL PRIMARY KEY,
       object     TEXT,
       body       TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    )
-  `;
-
-  // Stores the page access token per page so the webhook (no user session) can act.
-  await sql`
+    );
     CREATE TABLE IF NOT EXISTS page_tokens (
       page_id      TEXT PRIMARY KEY,
       owner_id     TEXT NOT NULL,
@@ -135,22 +118,17 @@ export async function ensureSchema() {
       access_token TEXT NOT NULL,
       ig_id        TEXT,
       updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
-    )
-  `;
-
-  // Cached /api/pages payload per user: Meta's page listing walks every
-  // Business Portfolio and takes 10-20s for agency accounts, so the app
-  // serves this and refreshes it in the background.
-  await sql`
+    );
     CREATE TABLE IF NOT EXISTS pages_cache (
       owner_id   TEXT PRIMARY KEY,
       payload    JSONB NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    )
-  `;
-
-  // MCP / API keys minted on /mcp. Revoked keys stay for the audit trail.
-  await sql`
+    );
+    CREATE TABLE IF NOT EXISTS post_cache (
+      post_id    TEXT PRIMARY KEY,
+      payload    JSONB NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
     CREATE TABLE IF NOT EXISTS api_keys (
       key          TEXT PRIMARY KEY,
       owner_id     TEXT NOT NULL,
@@ -158,8 +136,8 @@ export async function ensureSchema() {
       created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
       last_used_at TIMESTAMPTZ,
       revoked_at   TIMESTAMPTZ
-    )
-  `;
-
+    );
+    CREATE INDEX IF NOT EXISTS trigger_logs_automation_idx ON trigger_logs (automation_id, created_at DESC);
+  `);
   initialized = true;
 }

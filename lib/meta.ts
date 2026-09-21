@@ -506,3 +506,38 @@ export async function getPostsInfo(
   }
   return out;
 }
+
+
+/** getPostsInfo through the post_cache table (10-minute freshness). Pass the app's sql tag. */
+export async function getPostsInfoCached(
+  db: any,
+  ids: string[],
+  pageToken: string,
+  platform: 'facebook' | 'instagram',
+  freshMs = 10 * 60 * 1000
+): Promise<Record<string, PostInfo>> {
+  const uniq = Array.from(new Set(ids.filter(Boolean)));
+  if (!uniq.length) return {};
+  const out: Record<string, PostInfo> = {};
+  const rows = await db`SELECT post_id, payload, updated_at FROM post_cache WHERE post_id = ANY(${uniq})`;
+  const now = Date.now();
+  const stale: string[] = [];
+  const seen = new Set<string>();
+  for (const r of rows as any[]) {
+    seen.add(r.post_id);
+    const payload = typeof r.payload === 'string' ? JSON.parse(r.payload) : r.payload;
+    out[r.post_id] = payload;
+    if (now - new Date(r.updated_at).getTime() > freshMs) stale.push(r.post_id);
+  }
+  const missing = uniq.filter((id) => !seen.has(id));
+  const toFetch = [...missing, ...stale];
+  if (toFetch.length) {
+    const fresh = await getPostsInfo(toFetch, pageToken, platform);
+    for (const [id, info] of Object.entries(fresh)) {
+      out[id] = info;
+      db`INSERT INTO post_cache (post_id, payload, updated_at) VALUES (${id}, ${db.json(info)}, now())
+         ON CONFLICT (post_id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = now()`.catch(() => {});
+    }
+  }
+  return out;
+}

@@ -32,7 +32,7 @@ async function fetchAndStore(token: string, ownerId: string | null) {
     try {
       await ensureSchema();
       await sql!`
-        INSERT INTO pages_cache (owner_id, payload, updated_at) VALUES (${ownerId}, ${JSON.stringify(safe)}::jsonb, now())
+        INSERT INTO pages_cache (owner_id, payload, updated_at) VALUES (${ownerId}, ${sql!.json(safe as any)}, now())
         ON CONFLICT (owner_id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = now()
       `;
     } catch { /* cache is best effort */ }
@@ -56,12 +56,13 @@ export async function GET(req: NextRequest) {
       await ensureSchema();
       const [row] = await sql!`SELECT payload, updated_at FROM pages_cache WHERE owner_id = ${ownerId}`;
       if (row) {
+        const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload; // tolerate rows written by the first (double-encoded) version
         const age = Date.now() - new Date(row.updated_at).getTime();
-        if (age < FRESH_MS) return NextResponse.json({ pages: row.payload, cached: true, age_ms: age });
+        if (age < FRESH_MS) return NextResponse.json({ pages: payload, cached: true, age_ms: age });
         if (age < STALE_MS) {
           // Next 14 has no server-side "after": the client sees stale:true and
           // fires /api/pages?refresh=1 in the background.
-          return NextResponse.json({ pages: row.payload, cached: true, stale: true, age_ms: age });
+          return NextResponse.json({ pages: payload, cached: true, stale: true, age_ms: age });
         }
       }
     }
