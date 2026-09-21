@@ -55,7 +55,11 @@ async function mapPool<T, R>(items: T[], limit: number, fn: (item: T) => Promise
 // overlap, so a comment is CLAIMED in processed_comments before anything is
 // sent: whoever inserts the row first answers, the other skips.
 export async function GET(req: NextRequest) {
-  if (req.nextUrl.searchParams.get('key') !== CRON_KEY) {
+  // Two callers: manual/launchd/GitHub pass ?key=..., Vercel Cron sends
+  // "Authorization: Bearer <CRON_SECRET>" (set in the project env).
+  const bearer = req.headers.get('authorization') || '';
+  const vercelCronOk = !!process.env.CRON_SECRET && bearer === `Bearer ${process.env.CRON_SECRET}`;
+  if (req.nextUrl.searchParams.get('key') !== CRON_KEY && !vercelCronOk) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
   if (!hasDb) return NextResponse.json({ error: 'no_db' });
