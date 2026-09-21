@@ -224,3 +224,4 @@
   .sf-row .sf-kw::before { content: "מילת מפתח: "; color: var(--faint); }
   .sf-log-note { font-size: 13px; }
 }
+.sf .sf-btn-primary, .sf .sf-btn-primary:hover, .sf a.sf-btn-primary { color: #fff !important; }

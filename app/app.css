@@ -362,3 +362,6 @@
 .sfa-modal-bg { position: fixed; inset: 0; background: rgba(3, 6, 25, .72); display: grid; place-items: center; z-index: 50; padding: 16px; overflow: auto; }
 .sfa-modal { width: min(640px, 100%); background: var(--card); border: 1px solid rgba(255, 77, 125, .35); border-radius: 18px; padding: 22px; max-height: 92vh; overflow: auto; }
 @media (max-width: 800px) { .sfa-bill-grid { grid-template-columns: 1fr; } }
+
+/* primary buttons always white on the Instagram gradient (a later accent rule was tinting the text) */
+.sfa .sfa-btn-primary, .sfa .sfa-btn-primary:hover, .sfa-side-card a, .sfa-side-card a:hover { color: #fff !important; }
