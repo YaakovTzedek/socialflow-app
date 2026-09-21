@@ -47,24 +47,24 @@ export interface CatalogEntry {
 
 export const PLAN_CATALOG: Record<PlanId, CatalogEntry> = {
   free: {
-    tier: 'free', name: 'חינמי', sellable: true, priceIls: 0, priceIlsYear: 0, priceUsd: 0, priceUsdYear: 0,
+    tier: 'free', name: 'Free', sellable: true, priceIls: 0, priceIlsYear: 0, priceUsd: 0, priceUsdYear: 0,
     limits: { activeAutomations: 3, dmsPerMonth: 300, accounts: 1, seats: 1, logDays: 7, mcp: false, branding: true },
-    blurb: 'להתחיל בלי כרטיס: 3 אוטומציות פעילות ו-300 הודעות פרטיות בחודש.',
+    blurb: 'Start without a card: 3 active automations and 300 private messages a month.',
   },
   creator: {
     tier: 'creator', name: 'Creator', sellable: true, priceIls: 49, priceIlsYear: 490, priceUsd: 12, priceUsdYear: 120,
     limits: { activeAutomations: null, dmsPerMonth: 3000, accounts: 2, seats: 1, logDays: 90, mcp: false, branding: false },
-    blurb: 'ליוצרים ולעסקים קטנים: אוטומציות ללא הגבלה, 3,000 הודעות בחודש, בלי מיתוג.',
+    blurb: 'For creators and small businesses: unlimited automations, 3,000 messages a month, no branding.',
   },
   pro: {
     tier: 'pro', name: 'Pro', sellable: true, priceIls: 99, priceIlsYear: 990, priceUsd: 24, priceUsdYear: 240,
     limits: { activeAutomations: null, dmsPerMonth: 20000, accounts: 5, seats: 3, logDays: 365, mcp: true, branding: false },
-    blurb: 'למי שחי על זה: 20,000 הודעות, 5 חשבונות, וניהול מתוך Claude ו-ChatGPT דרך MCP.',
+    blurb: 'For people who live on this: 20,000 messages, 5 accounts, and management from Claude and ChatGPT through MCP.',
   },
   agency: {
     tier: 'agency', name: 'Agency', sellable: true, priceIls: 249, priceIlsYear: 2490, priceUsd: 59, priceUsdYear: 590,
     limits: { activeAutomations: null, dmsPerMonth: 100000, accounts: 15, seats: 10, logDays: 365, mcp: true, branding: false },
-    blurb: 'לסוכנויות: 15 חשבונות, 10 משתמשים, 100,000 הודעות בחודש.',
+    blurb: 'For agencies: 15 accounts, 10 users, 100,000 messages a month.',
   },
 };
 

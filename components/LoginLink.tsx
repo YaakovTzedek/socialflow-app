@@ -1,23 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useI18n } from './I18nProvider';
 
 /**
- * Plain <a> to /api/auth/login (server 307 to Facebook).
- * Not a next/link: the router follows the redirect with a JS navigation, and on
- * iPhone/Android that hands facebook.com to the Facebook app (universal link),
- * which never returns to our callback. A plain tap stays in the browser; on touch
- * devices we also open a new tab, which is what proved to work on Yaakov's phone.
+ * Plain anchor to the Facebook login. A client-side navigation to the OAuth
+ * URL opens the Facebook app on phones and strands the flow, so this is a real
+ * link; on mobile it opens in a new tab so the app tab keeps the session.
+ * The locale rides along so the callback lands on the right language.
  */
-export function LoginLink({ className, children }: { className?: string; children: React.ReactNode }) {
+export function LoginLink({ children, className }: { children: React.ReactNode; className?: string }) {
+  const { locale, p } = useI18n();
   const [mobile, setMobile] = useState(false);
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
-  }, []);
-  return (
-    <a href="/api/auth/login" className={className} target={mobile ? '_blank' : undefined} rel={mobile ? 'noopener' : undefined}>
-      {children}
-    </a>
-  );
+  useEffect(() => { setMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)); }, []);
+  const href = `/api/auth/login?next=${encodeURIComponent(p('/dashboard'))}&locale=${locale}`;
+  return <a href={href} className={className} target={mobile ? '_blank' : undefined} rel={mobile ? 'noopener' : undefined}>{children}</a>;
 }

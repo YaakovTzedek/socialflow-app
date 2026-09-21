@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 import { getSession } from '@/lib/session';
 import { sql, hasDb, ensureSchema } from '@/lib/db';
+import { isLocale } from '@/lib/i18n/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,9 +22,10 @@ export async function POST(req: NextRequest) {
   if (!session.userId) return NextResponse.json({ error: 'not_authenticated' }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const label = String(body.label || 'MCP').slice(0, 60);
+  const locale = isLocale(body.locale) ? body.locale : (req.cookies.get('sf_locale')?.value || 'en');
   const key = 'sf_' + randomBytes(24).toString('base64url');
   await ensureSchema();
-  await sql!`INSERT INTO api_keys (key, owner_id, label) VALUES (${key}, ${session.userId}, ${label})`;
+  await sql!`INSERT INTO api_keys (key, owner_id, label, locale) VALUES (${key}, ${session.userId}, ${label}, ${locale})`;
   return NextResponse.json({ key, label });
 }
 

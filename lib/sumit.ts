@@ -11,6 +11,7 @@
  * order, no real tax document). Flip it only when the real keys are in place.
  */
 import { PLAN_CATALOG, TRIAL, priceFor, type Interval, type PlanId } from './plans';
+import { INVOICE_LANG, isLocale, type Locale } from './i18n/config';
 
 const SUMIT_BASE = 'https://api.sumit.co.il';
 
@@ -42,18 +43,20 @@ export interface SubscribeResult {
 }
 
 export async function createSubscription(opts: {
-  planId: PlanId; interval: Interval; currency: 'ILS' | 'USD'; trial: boolean;
+  planId: PlanId; interval: Interval; currency: 'ILS' | 'USD'; trial: boolean; locale?: string;
   singleUseToken: string; payerName: string; payerEmail: string; payerPhone?: string;
 }): Promise<SubscribeResult | { success: false; error: string; declined?: boolean }> {
   const plan = PLAN_CATALOG[opts.planId];
   const price = priceFor(opts.planId, opts.interval, opts.currency);
   const months = opts.interval === 'year' ? 12 : 1;
   const testMode = billingTestMode();
-  const label = `SocialFlow ${plan.name} (${opts.interval === 'year' ? 'שנתי' : 'חודשי'})`;
+  const locale: Locale = isLocale(opts.locale) ? opts.locale : 'en';
+  const he = locale === 'he';
+  const label = `SocialFlow ${plan.name} (${opts.interval === 'year' ? (he ? 'שנתי' : 'yearly') : (he ? 'חודשי' : 'monthly')})`;
 
   const items = opts.trial
     ? [
-        { Item: { Name: `SocialFlow ${plan.name}: 30 ימי ניסיון`, SearchMode: 0 }, Quantity: 1, UnitPrice: opts.currency === 'USD' ? TRIAL.priceUsd : TRIAL.priceIls, Currency: opts.currency, Duration_Days: TRIAL.days, Recurrence: 1, Description: 'חודש ראשון' },
+        { Item: { Name: `SocialFlow ${plan.name}: ${he ? '30 ימי ניסיון' : '30-day trial'}`, SearchMode: 0 }, Quantity: 1, UnitPrice: opts.currency === 'USD' ? TRIAL.priceUsd : TRIAL.priceIls, Currency: opts.currency, Duration_Days: TRIAL.days, Recurrence: 1, Description: he ? 'חודש ראשון' : 'First month' },
         { Item: { Name: label, SearchMode: 0 }, Quantity: 1, UnitPrice: price, Currency: opts.currency, Date_Start: plusDays(TRIAL.days), Duration_Months: months, Recurrence: 0 },
       ]
     : [{ Item: { Name: label, SearchMode: 0 }, Quantity: 1, UnitPrice: price, Currency: opts.currency, Duration_Months: months, Recurrence: 0 }];
@@ -67,7 +70,7 @@ export async function createSubscription(opts: {
       Items: items,
       VATIncluded: true,
       DocumentType: 'InvoiceAndReceipt',
-      DocumentLanguage: opts.currency === 'USD' ? 'English' : 'Hebrew',
+      DocumentLanguage: INVOICE_LANG[locale],
       UpdateCustomerByEmail: !testMode,
       UpdateCustomerByEmail_AttachDocument: !testMode,
       AuthoriseOnly: testMode,
@@ -76,7 +79,7 @@ export async function createSubscription(opts: {
   const data = await res.json().catch(() => ({}));
   if (data.Status !== 0) return { success: false, error: data.UserErrorMessage || `Sumit status ${data.Status}` };
   const payment = data.Data?.Payment;
-  if (payment && payment.ValidPayment === false) return { success: false, error: payment.StatusDescription || 'החיוב נדחה', declined: true };
+  if (payment && payment.ValidPayment === false) return { success: false, error: payment.StatusDescription || (he ? 'החיוב נדחה' : 'The charge was declined'), declined: true };
   const ids = data.Data?.RecurringCustomerItemIDs as (number | string)[] | undefined;
   return {
     success: true,

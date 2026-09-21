@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, ensureSchema, hasDb } from '@/lib/db';
 import { quotaExhaustedOwners, getEntitlement } from '@/lib/entitlements';
+import { getMessages } from '@/lib/i18n';
 import {
   listComments,
   replyToComment,
@@ -78,9 +79,15 @@ export async function GET(req: NextRequest) {
   // Plan metering: an owner past this month's DM quota is skipped entirely
   // (comments are not claimed, so an upgrade catches up on them).
   const exhausted = await quotaExhaustedOwners(all.map((a: any) => a.owner_id));
-  const brandingCache = new Map<string, boolean>();
-  const needsBranding = async (owner: string) => {
-    if (!brandingCache.has(owner)) { try { brandingCache.set(owner, (await getEntitlement(owner)).plan.limits.branding); } catch { brandingCache.set(owner, false); } }
+  const brandingCache = new Map<string, string | null>();
+  const brandingLine = async (owner: string) => {
+    if (!brandingCache.has(owner)) {
+      try {
+        const branding = (await getEntitlement(owner)).plan.limits.branding;
+        const [pref] = await sql!`SELECT locale FROM owner_prefs WHERE owner_id = ${owner}`;
+        brandingCache.set(owner, branding ? getMessages(pref?.locale).server.brandingLine : null);
+      } catch { brandingCache.set(owner, null); }
+    }
     return brandingCache.get(owner)!;
   };
 
@@ -247,7 +254,8 @@ export async function GET(req: NextRequest) {
           if (a.dm_enabled && a.dm_message) {
             try {
               let msg = a.dm_link ? `${a.dm_message}\n\n${a.dm_link}` : a.dm_message;
-              if (await needsBranding(a.owner_id)) msg += '\n\nנשלח עם SocialFlow · socialflow-app-delta.vercel.app';
+              const bl = await brandingLine(a.owner_id);
+              if (bl) msg += '\n\n' + bl;
               if (isIG) {
                 await sendInstagramPrivateReply(tokenRow.ig_id || '', commentId, msg, pageToken);
               } else {

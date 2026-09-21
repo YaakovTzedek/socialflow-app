@@ -6,6 +6,8 @@ import {
 } from '@/lib/meta';
 import { getSession } from '@/lib/session';
 import { getBaseUrl, getRedirectUri } from '@/lib/url';
+import { sql, hasDb, ensureSchema } from '@/lib/db';
+import { isLocale, localePath, type Locale } from '@/lib/i18n/config';
 
 export async function GET(req: NextRequest) {
   const baseUrl = getBaseUrl();
@@ -54,8 +56,17 @@ export async function GET(req: NextRequest) {
 
     // Back to where the login started (e.g. the OAuth consent screen), same-origin paths only.
     let next = '';
-    try { const st = JSON.parse(Buffer.from(searchParams.get('state') || '', 'base64url').toString('utf8')); if (typeof st?.n === 'string' && st.n.startsWith('/') && !st.n.startsWith('//')) next = st.n; } catch { /* ignore */ }
-    return NextResponse.redirect(`${baseUrl}${next || '/dashboard'}`);
+    let locale = 'en';
+    try {
+      const st = JSON.parse(Buffer.from(searchParams.get('state') || '', 'base64url').toString('utf8'));
+      if (typeof st?.n === 'string' && st.n.startsWith('/') && !st.n.startsWith('//')) next = st.n;
+      if (isLocale(st?.l)) locale = st.l;
+    } catch { /* ignore */ }
+    // Remember the user's language server-side (DM branding, MCP defaults).
+    if (hasDb) { try { await ensureSchema(); await sql!`INSERT INTO owner_prefs (owner_id, locale) VALUES (${me.id}, ${locale}) ON CONFLICT (owner_id) DO UPDATE SET locale = EXCLUDED.locale, updated_at = now()`; } catch { /* best effort */ } }
+    const res = NextResponse.redirect(`${baseUrl}${next || localePath(locale as Locale, '/dashboard')}`);
+    res.cookies.set('sf_locale', locale, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' });
+    return res;
   } catch (e: any) {
     return NextResponse.redirect(
       `${baseUrl}/?error=${encodeURIComponent(e.message || 'auth_failed')}`

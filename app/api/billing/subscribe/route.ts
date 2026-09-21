@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     if (used) return NextResponse.json({ error: 'trial_used' }, { status: 400 });
   }
 
-  const result = await createSubscription({ planId, interval, currency, trial, singleUseToken, payerName: String(payerName), payerEmail: String(payerEmail), payerPhone: payerPhone ? String(payerPhone) : undefined });
+  const result = await createSubscription({ planId, interval, currency, trial, locale: typeof body.locale === 'string' ? body.locale : req.cookies.get('sf_locale')?.value, singleUseToken, payerName: String(payerName), payerEmail: String(payerEmail), payerPhone: payerPhone ? String(payerPhone) : undefined });
   if (!result.success) return NextResponse.json({ error: result.error, declined: !!result.declined }, { status: 402 });
 
   // Replace any previous live subscription (upgrade/downgrade): cancel the old standing order best effort.

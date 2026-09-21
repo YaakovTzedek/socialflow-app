@@ -174,6 +174,12 @@ export async function ensureSchema() {
       note       TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS owner_prefs (
+      owner_id   TEXT PRIMARY KEY,
+      locale     TEXT NOT NULL DEFAULT 'en',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS locale TEXT;
     CREATE INDEX IF NOT EXISTS trigger_logs_automation_idx ON trigger_logs (automation_id, created_at DESC);
   `);
   initialized = true;
