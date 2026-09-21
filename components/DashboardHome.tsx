@@ -136,8 +136,8 @@ export default function DashboardHome({ userName }: { userName: string }) {
             <div className="sfa-h">30 הימים האחרונים</div>
             <div className="sfa-legend">
               <span><i style={{ background: '#2b8bff' }} />תגובות שטופלו</span>
-              <span><i style={{ background: '#3ff2ff' }} />תגובות ציבוריות</span>
-              <span><i style={{ background: '#7c5cff' }} />הודעות פרטיות</span>
+              <span><i style={{ background: '#ff4d7d' }} />תגובות ציבוריות</span>
+              <span><i style={{ background: '#a04ad6' }} />הודעות פרטיות</span>
             </div>
           </div>
           {chart.total === 0 && !loading ? (
@@ -145,14 +145,14 @@ export default function DashboardHome({ userName }: { userName: string }) {
           ) : (
             <>
               <svg viewBox="0 0 900 260" width="100%" height="240" preserveAspectRatio="none" style={{ display: 'block', overflow: 'visible' }} aria-label="גרף פעילות 30 יום">
-                <defs><linearGradient id="sfa-afill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3ff2ff" stopOpacity=".2" /><stop offset="1" stopColor="#3ff2ff" stopOpacity="0" /></linearGradient></defs>
+                <defs><linearGradient id="sfa-afill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ff4d7d" stopOpacity=".2" /><stop offset="1" stopColor="#ff4d7d" stopOpacity="0" /></linearGradient></defs>
                 <g stroke="rgba(143,163,200,.15)" strokeWidth="1">
                   {[18, 80, 142, 204, 252].map((y) => <line key={y} x1="0" y1={y} x2="900" y2={y} />)}
                 </g>
                 <path d={`${lineA} L900 250 L0 250 Z`} fill="url(#sfa-afill)" />
                 <path d={lineA} fill="none" stroke="#2b8bff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                <path d={chart.lineB} fill="none" stroke="#3ff2ff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                <path d={chart.lineC} fill="none" stroke="#7c5cff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                <path d={chart.lineB} fill="none" stroke="#ff4d7d" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                <path d={chart.lineC} fill="none" stroke="#a04ad6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               <div className="sfa-axis">{chart.axis.map((a) => <span key={a}>{a}</span>)}</div>
               {logs.length >= 100 && <div className="sfa-sub" style={{ marginTop: 8 }}>מוצגות 100 הפעולות האחרונות.</div>}

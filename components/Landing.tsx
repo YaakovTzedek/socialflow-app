@@ -16,14 +16,14 @@ function Logo({ size = 42 }: { size?: number }) {
   return (
     <svg width={size} height={h} viewBox="0 0 112 80" fill="none" aria-hidden="true">
       <defs>
-        <linearGradient id="sf-lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#2b6cff" /><stop offset="1" stopColor="#3ff2ff" /></linearGradient>
-        <linearGradient id="sf-lg2" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3ff2ff" /><stop offset="1" stopColor="#1fb8ff" /></linearGradient>
+        <linearGradient id="sf-lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#833ab4" /><stop offset="1" stopColor="#ff4d7d" /></linearGradient>
+        <linearGradient id="sf-lg2" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ff4d7d" /><stop offset="1" stopColor="#f77737" /></linearGradient>
       </defs>
       <path d="M6 16c0-6 5-11 11-11h27c6 0 11 5 11 11v18c0 6-5 11-11 11H28l-11 10V45c-6 0-11-5-11-11V16z" fill="url(#sf-lg1)" />
-      <circle cx="20" cy="26" r="3.6" fill="#0a1030" /><circle cx="31" cy="26" r="3.6" fill="#0a1030" /><circle cx="42" cy="26" r="3.6" fill="#0a1030" />
+      <circle cx="20" cy="26" r="3.6" fill="#150a22" /><circle cx="31" cy="26" r="3.6" fill="#150a22" /><circle cx="42" cy="26" r="3.6" fill="#150a22" />
       <path d="M34 47c14 12 22 4 34 4" stroke="url(#sf-lg2)" strokeWidth="9" strokeLinecap="round" fill="none" opacity=".85" />
       <path d="M60 22c0-6 5-11 11-11h24c6 0 11 5 11 11v22c0 6-5 11-11 11h-4l-10 9v-9h-10c-6 0-11-5-11-11V22z" fill="url(#sf-lg2)" />
-      <circle cx="83" cy="28" r="6" fill="#0a1030" /><path d="M72 46c1.6-7 5.6-10.5 11-10.5S92.4 39 94 46H72z" fill="#0a1030" />
+      <circle cx="83" cy="28" r="6" fill="#150a22" /><path d="M72 46c1.6-7 5.6-10.5 11-10.5S92.4 39 94 46H72z" fill="#150a22" />
     </svg>
   );
 }
@@ -68,8 +68,8 @@ const ClaudeIcon = () => (
   </span>
 );
 const GptIcon = () => (
-  <span className="sf-conn-i" style={{ background: '#0b1a16' }}>
-    <svg width="18" height="18" viewBox="0 0 24 24" stroke="#e8f1ff" strokeWidth="1.6" fill="none"><path d="M12 3.2 18.5 7v8L12 18.8 5.5 15V7L12 3.2z" /><path d="M12 3.2v15.6M5.5 7l13 8M18.5 7l-13 8" /></svg>
+  <span className="sf-conn-i" style={{ background: '#150a22' }}>
+    <svg width="18" height="18" viewBox="0 0 24 24" stroke="#f7eefb" strokeWidth="1.6" fill="none"><path d="M12 3.2 18.5 7v8L12 18.8 5.5 15V7L12 3.2z" /><path d="M12 3.2v15.6M5.5 7l13 8M18.5 7l-13 8" /></svg>
   </span>
 );
 
@@ -103,7 +103,7 @@ export function Landing({ error }: { error?: string }) {
         </div>
 
         <div className="sf-flow" aria-label="דוגמה לתהליך">
-          <div className="sf-flow-h"><span>התהליך המלא · 4 שלבים</span><span><i style={{ background: '#3ff2ff' }} /><i style={{ background: '#7c5cff' }} /></span></div>
+          <div className="sf-flow-h"><span>התהליך המלא · 4 שלבים</span><span><i style={{ background: '#ff4d7d' }} /><i style={{ background: '#a04ad6' }} /></span></div>
           <div className="sf-msg"><span className="sf-av sf-av-fb">f</span><div className="sf-bubble sf-bubble-user"><small>גולש בפייסבוק</small>מעניין! אפשר לקבל פרטים?</div><span className="sf-step-n">1</span></div>
           <div className="sf-msg"><span className="sf-av sf-av-sf" /><div className="sf-bubble sf-bubble-public"><small>SocialFlow · תגובה ציבורית</small>תודה על התגובה! שלחנו לך את כל הפרטים בהודעה פרטית 💙</div><span className="sf-step-n">2</span></div>
           <div className="sf-msg"><span className="sf-av sf-av-ig" /><div className="sf-bubble sf-bubble-dm"><small>SocialFlow · הודעה פרטית</small>היי! הנה הקישור שהבטחנו: <a href="#how">הקישור שלך</a></div><span className="sf-step-n">3</span></div>
@@ -120,7 +120,7 @@ export function Landing({ error }: { error?: string }) {
       <section className="sf-wrap">
         <div className="sf-problem">
           <div>
-            <div className="sf-eyebrow" style={{ color: '#7c5cff' }}>הבעיה</div>
+            <div className="sf-eyebrow" style={{ color: '#a04ad6' }}>הבעיה</div>
             <div className="sf-display">"הגיבו X ואשלח לכם"<br />ואז מתחיל הבלגן.</div>
             <p>הפוסט עובד, ותוך שעה יש עשרות תגובות שמחכות לתשובה.<br />אתה עונה ידנית אחת אחת, שולח קישורים בהודעות פרטיות, ומפספס חצי מהן.<br />מי שלא קיבל תשובה תוך כמה דקות כבר גלל הלאה, והליד הלך.</p>
           </div>
@@ -140,7 +140,7 @@ export function Landing({ error }: { error?: string }) {
       <section id="mcp" className="sf-wrap">
         <div className="sf-mcp">
           <div>
-            <div className="sf-eyebrow" style={{ color: '#3ff2ff' }}>MCP</div>
+            <div className="sf-eyebrow" style={{ color: '#ff4d7d' }}>MCP</div>
             <div className="sf-display">תנהל את הכול מתוך הצ'אט</div>
             <p>SocialFlow מתחבר כשרת MCP ל-Claude ול-ChatGPT. אתה כותב מה שאתה רוצה בעברית, והאוטומציה נוצרת, מתעדכנת או נעצרת. גם הדוחות מגיעים באותה שיחה.</p>
             <div className="sf-conns">

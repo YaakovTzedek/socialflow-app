@@ -125,10 +125,10 @@ export default function PostCard({ post, pageId, platform }: { post: NormalizedP
             <div key={c.id} className="sfa-cmt">
               <span className="sfa-initials">{c.author.replace(/^@/, '').slice(0, 2)}</span>
               <div className="sfa-bubble sfa-bubble-dm" style={{ flex: 1 }}>
-                <small>{c.author} <span style={{ color: '#6c7ea0', fontWeight: 400 }}>· {formatDate(c.created_time)}</span></small>
+                <small>{c.author} <span style={{ color: '#8d74a3', fontWeight: 400 }}>· {formatDate(c.created_time)}</span></small>
                 <span style={{ whiteSpace: 'pre-wrap' }}>{c.text}</span>
                 <div className="sfa-cmt-acts">
-                  <span style={{ color: '#8fa3c8' }}>👍 {c.likes ?? 0}</span>
+                  <span style={{ color: '#b39ac6' }}>👍 {c.likes ?? 0}</span>
                   <button type="button" onClick={() => setReplyingTo(replyingTo === c.id ? null : c.id)}>תשובה</button>
                 </div>
                 {replyingTo === c.id && (

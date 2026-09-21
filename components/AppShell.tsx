@@ -31,14 +31,14 @@ function Logo() {
   return (
     <svg width="38" height="27" viewBox="0 0 112 80" fill="none" aria-hidden="true">
       <defs>
-        <linearGradient id="sfa-lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#2b6cff" /><stop offset="1" stopColor="#3ff2ff" /></linearGradient>
-        <linearGradient id="sfa-lg2" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3ff2ff" /><stop offset="1" stopColor="#1fb8ff" /></linearGradient>
+        <linearGradient id="sfa-lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#833ab4" /><stop offset="1" stopColor="#ff4d7d" /></linearGradient>
+        <linearGradient id="sfa-lg2" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ff4d7d" /><stop offset="1" stopColor="#f77737" /></linearGradient>
       </defs>
       <path d="M6 16c0-6 5-11 11-11h27c6 0 11 5 11 11v18c0 6-5 11-11 11H28l-11 10V45c-6 0-11-5-11-11V16z" fill="url(#sfa-lg1)" />
-      <circle cx="20" cy="26" r="3.6" fill="#0a1030" /><circle cx="31" cy="26" r="3.6" fill="#0a1030" /><circle cx="42" cy="26" r="3.6" fill="#0a1030" />
+      <circle cx="20" cy="26" r="3.6" fill="#150a22" /><circle cx="31" cy="26" r="3.6" fill="#150a22" /><circle cx="42" cy="26" r="3.6" fill="#150a22" />
       <path d="M34 47c14 12 22 4 34 4" stroke="url(#sfa-lg2)" strokeWidth="9" strokeLinecap="round" fill="none" opacity=".85" />
       <path d="M60 22c0-6 5-11 11-11h24c6 0 11 5 11 11v22c0 6-5 11-11 11h-4l-10 9v-9h-10c-6 0-11-5-11-11V22z" fill="url(#sfa-lg2)" />
-      <circle cx="83" cy="28" r="6" fill="#0a1030" /><path d="M72 46c1.6-7 5.6-10.5 11-10.5S92.4 39 94 46H72z" fill="#0a1030" />
+      <circle cx="83" cy="28" r="6" fill="#150a22" /><path d="M72 46c1.6-7 5.6-10.5 11-10.5S92.4 39 94 46H72z" fill="#150a22" />
     </svg>
   );
 }
@@ -87,7 +87,7 @@ export default function AppShell({
               router.push(q.trim() ? `/logs?q=${encodeURIComponent(q.trim())}` : '/logs');
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8fa3c8" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b39ac6" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="חיפוש תגובה, מגיב או מילת מפתח ביומן" aria-label="חיפוש ביומן" />
           </form>
           <div className="sfa-spacer" />
