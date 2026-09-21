@@ -4,6 +4,7 @@ import '../globals.css';
 import '../app.css';
 import { I18nProvider } from '@/components/I18nProvider';
 import { LOCALES, DEFAULT_LOCALE, FONT_LINKS, FONT_STACK, dirOf, getMessages, isLocale, prefixOf, type Locale } from '@/lib/i18n';
+import { landingJsonLd } from '@/lib/seo';
 
 const BASE = (process.env.NEXT_PUBLIC_BASE_URL || 'https://isocialflow.com').replace(/\/$/, '');
 
@@ -22,7 +23,8 @@ export async function generateMetadata({ params }: { params: { locale: string } 
     title: m.meta.title,
     description: m.meta.description,
     alternates: { canonical: `${BASE}${prefixOf(locale) || '/'}`, languages },
-    openGraph: { title: m.meta.title, description: m.meta.description, locale, siteName: 'SocialFlow', type: 'website' },
+    openGraph: { title: m.meta.title, description: m.meta.description, url: `${BASE}${prefixOf(locale) || '/'}`, locale, siteName: 'SocialFlow', type: 'website' },
+    robots: { index: true, follow: true, googleBot: { index: true, follow: true, 'max-snippet': -1, 'max-image-preview': 'large', 'max-video-preview': -1 } },
   };
 }
 
@@ -39,6 +41,10 @@ export default function LocaleLayout({ children, params }: { children: React.Rea
         <link href={FONT_LINKS[locale]} rel="stylesheet" />
       </head>
       <body className="font-sans antialiased">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(landingJsonLd(locale, messages)) }}
+        />
         <I18nProvider locale={locale} messages={messages}>{children}</I18nProvider>
       </body>
     </html>
