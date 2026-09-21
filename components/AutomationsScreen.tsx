@@ -52,7 +52,8 @@ export default function AutomationsScreen() {
 
   const toggle = async (a: Automation) => {
     const status = a.status === 'active' ? 'paused' : 'active';
-    await fetch(`/api/automations/${a.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+    const res = await fetch(`/api/automations/${a.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+    if (res.status === 402) { const d = await res.json().catch(() => ({})); showToast(`הגעת למגבלת ${d.limit} האוטומציות הפעילות של החבילה החינמית. שדרוג בעמוד "חבילה וחיוב".`); return; }
     setAutos((prev) => prev.map((x) => (x.id === a.id ? { ...x, status } : x)));
   };
   const remove = async (a: Automation) => {
@@ -221,6 +222,7 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
         }),
       });
       const data = await res.json();
+      if (res.status === 402 && data.error === 'plan_limit') throw new Error(`הגעת למגבלת ${data.limit} האוטומציות הפעילות של החבילה החינמית. שדרוג בעמוד "חבילה וחיוב".`);
       if (!res.ok) throw new Error(data.error || 'failed');
       onSaved();
     } catch (e: any) { onError(e.message); } finally { setSaving(false); }

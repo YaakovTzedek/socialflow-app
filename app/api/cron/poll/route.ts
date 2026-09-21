@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, ensureSchema, hasDb } from '@/lib/db';
+import { quotaExhaustedOwners, getEntitlement } from '@/lib/entitlements';
 import {
   listComments,
   replyToComment,
@@ -74,6 +75,14 @@ export async function GET(req: NextRequest) {
   const automations = [...all.slice(offset), ...all.slice(0, offset)];
   const summary: any[] = [];
   const debugComments: any[] = [];
+  // Plan metering: an owner past this month's DM quota is skipped entirely
+  // (comments are not claimed, so an upgrade catches up on them).
+  const exhausted = await quotaExhaustedOwners(all.map((a: any) => a.owner_id));
+  const brandingCache = new Map<string, boolean>();
+  const needsBranding = async (owner: string) => {
+    if (!brandingCache.has(owner)) { try { brandingCache.set(owner, (await getEntitlement(owner)).plan.limits.branding); } catch { brandingCache.set(owner, false); } }
+    return brandingCache.get(owner)!;
+  };
 
   // Per-run caches: page tokens and our own IG username (to spot threads we
   // already answered, e.g. before a database migration wiped the dedupe table).
@@ -85,6 +94,10 @@ export async function GET(req: NextRequest) {
   const processAutomation = async (a: any) => {
     if (Date.now() - started > TIME_BUDGET_MS) {
       summary.push({ automation: a.name, skipped: 'time_budget' });
+      return;
+    }
+    if (exhausted.has(a.owner_id)) {
+      summary.push({ automation: a.name, skipped: 'dm_quota' });
       return;
     }
     let tokenRow = tokenCache.get(a.page_id);
@@ -233,7 +246,8 @@ export async function GET(req: NextRequest) {
 
           if (a.dm_enabled && a.dm_message) {
             try {
-              const msg = a.dm_link ? `${a.dm_message}\n\n${a.dm_link}` : a.dm_message;
+              let msg = a.dm_link ? `${a.dm_message}\n\n${a.dm_link}` : a.dm_message;
+              if (await needsBranding(a.owner_id)) msg += '\n\nנשלח עם SocialFlow · socialflow-app-delta.vercel.app';
               if (isIG) {
                 await sendInstagramPrivateReply(tokenRow.ig_id || '', commentId, msg, pageToken);
               } else {

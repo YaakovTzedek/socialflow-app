@@ -137,6 +137,43 @@ export async function ensureSchema() {
       last_used_at TIMESTAMPTZ,
       revoked_at   TIMESTAMPTZ
     );
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id                 SERIAL PRIMARY KEY,
+      owner_id           TEXT NOT NULL,
+      plan_id            TEXT NOT NULL,
+      interval           TEXT NOT NULL DEFAULT 'month',
+      status             TEXT NOT NULL DEFAULT 'active',
+      trial_ends_at      TIMESTAMPTZ,
+      current_period_end TIMESTAMPTZ,
+      sumit_customer_id  TEXT,
+      sumit_recurring_id TEXT,
+      payer_name         TEXT,
+      payer_email        TEXT,
+      amount_agorot      INTEGER NOT NULL DEFAULT 0,
+      currency           TEXT NOT NULL DEFAULT 'ILS',
+      created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+      canceled_at        TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS subscriptions_owner_idx ON subscriptions (owner_id, status);
+    CREATE TABLE IF NOT EXISTS invoices (
+      id                SERIAL PRIMARY KEY,
+      owner_id          TEXT NOT NULL,
+      subscription_id   INTEGER,
+      sumit_document_id TEXT,
+      sumit_payment_id  TEXT,
+      amount_agorot     INTEGER NOT NULL DEFAULT 0,
+      currency          TEXT NOT NULL DEFAULT 'ILS',
+      pdf_url           TEXT,
+      status            TEXT NOT NULL DEFAULT 'paid',
+      raw               JSONB,
+      created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS plan_overrides (
+      owner_id   TEXT PRIMARY KEY,
+      plan_id    TEXT NOT NULL,
+      note       TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
     CREATE INDEX IF NOT EXISTS trigger_logs_automation_idx ON trigger_logs (automation_id, created_at DESC);
   `);
   initialized = true;

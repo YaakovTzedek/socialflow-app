@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, ensureSchema, hasDb } from '@/lib/db';
 import { getSession } from '@/lib/session';
+import { automationActivationBlock } from '@/lib/entitlements';
 
 // PATCH /api/automations/:id → update status (active/paused) or fields
 export async function PATCH(
@@ -26,6 +27,10 @@ export async function PATCH(
     if (patch.match_type && !['contains', 'exact'].includes(String(patch.match_type))) delete patch.match_type;
     if ('keywords' in patch) patch.keywords = Array.isArray(patch.keywords) ? patch.keywords.map((k: unknown) => String(k).trim()).filter(Boolean) : [];
     if ('public_replies' in patch) patch.public_replies = Array.isArray(patch.public_replies) ? patch.public_replies.map((k: unknown) => String(k).trim()).filter(Boolean) : [];
+    if (patch.status === 'active') {
+      const block = await automationActivationBlock(session.userId, params.id);
+      if (block) return NextResponse.json({ error: 'plan_limit', reason: block.reason, limit: block.limit, plan: block.plan }, { status: 402 });
+    }
     if (Object.keys(patch).length) {
       await sql!`
         UPDATE automations SET ${sql!(patch as any, ...Object.keys(patch))}

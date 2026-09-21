@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasDb } from './db';
 import { handleRpc, resolveApiKey, PROTOCOL_VERSION } from './mcp';
+import { getEntitlement } from './entitlements';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -36,6 +37,10 @@ export async function mcpPost(req: NextRequest, urlKey?: string) {
   const user = await resolveApiKey(keyFrom(req, urlKey));
   if (!user) {
     return NextResponse.json({ jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Unauthorized: missing or revoked API key. Create one at /mcp.' } }, { status: 401, headers: { ...CORS, 'WWW-Authenticate': 'Bearer realm="socialflow"' } });
+  }
+  const ent = await getEntitlement(user.owner_id);
+  if (!ent.plan.limits.mcp) {
+    return NextResponse.json({ jsonrpc: '2.0', id: null, error: { code: -32002, message: 'MCP זמין מחבילת Pro ומעלה. שדרוג ב-/billing.' } }, { status: 402, headers: CORS });
   }
   let body: unknown;
   try { body = await req.json(); } catch { return NextResponse.json({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } }, { status: 400, headers: CORS }); }

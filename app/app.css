@@ -340,3 +340,25 @@
 .sfa-howto pre code { background: none; border: 0; padding: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .sfa-examples { margin: 0; padding-right: 20px; color: #c9d8f0; font-size: 15px; line-height: 1.8; }
 @media (max-width: 900px) { .sfa-mcp-grid { grid-template-columns: 1fr; } }
+
+/* /billing */
+.sfa-bill-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.sfa-plan-now { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 26px; color: #fff; margin-bottom: 8px; }
+.sfa-usage { display: grid; gap: 12px; }
+.sfa-usage .lbl { display: flex; justify-content: space-between; font-size: 14px; color: #c9d8f0; margin-bottom: 4px; }
+.sfa-usage .lbl b { color: #fff; font-variant-numeric: tabular-nums; }
+.sfa-usage .bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,.07); overflow: hidden; }
+.sfa-usage .bar i { display: block; height: 100%; background: linear-gradient(90deg, #2b6cff, #3ff2ff); border-radius: 999px; }
+.sfa-usage .bar i.hot { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+.sfa-plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 14px; }
+.sfa-plan { position: relative; border: 1px solid var(--line); border-radius: 14px; padding: 16px; background: rgba(255,255,255,.02); display: flex; flex-direction: column; gap: 8px; }
+.sfa-plan.hi { border-color: rgba(63, 242, 255, .5); background: rgba(63, 242, 255, .05); }
+.sfa-plan.cur { border-color: rgba(34, 197, 94, .5); }
+.sfa-plan h3 { margin: 0; color: #fff; font-size: 18px; }
+.sfa-plan .price b { font-size: 30px; color: #fff; font-variant-numeric: tabular-nums; }
+.sfa-plan .price span { color: var(--dim); font-size: 14px; }
+.sfa-plan ul { margin: 0; padding-right: 18px; font-size: 13.5px; color: #c9d8f0; line-height: 1.7; flex: 1; }
+.sfa-plan-badge { position: absolute; top: -10px; right: 14px; font-size: 11px; letter-spacing: .08em; background: #3ff2ff; color: #06092a; padding: 3px 10px; border-radius: 999px; font-weight: 700; }
+.sfa-modal-bg { position: fixed; inset: 0; background: rgba(3, 6, 25, .72); display: grid; place-items: center; z-index: 50; padding: 16px; overflow: auto; }
+.sfa-modal { width: min(640px, 100%); background: var(--card); border: 1px solid rgba(63, 242, 255, .35); border-radius: 18px; padding: 22px; max-height: 92vh; overflow: auto; }
+@media (max-width: 800px) { .sfa-bill-grid { grid-template-columns: 1fr; } }

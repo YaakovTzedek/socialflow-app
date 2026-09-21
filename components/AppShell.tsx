@@ -18,6 +18,7 @@ const NAV: { href: string; label: string; icon: string }[] = [
   { href: '/logs', label: 'יומן פעילות', icon: '☰' },
   { href: '/posts', label: 'פוסטים ותגובות', icon: '◎' },
   { href: '/mcp', label: 'חיבור MCP', icon: '⇄' },
+  { href: '/billing', label: 'חבילה וחיוב', icon: '◈' },
 ];
 
 export function initials(name: string) {
