@@ -211,19 +211,19 @@ async function listBusinessPages(userToken: string): Promise<FacebookPage[]> {
     const biz = await bizRes.json();
     if (biz.error || !biz.data) return out;
 
+    // All businesses and both edges in parallel: sequential walking took 10-20s
+    // on agency accounts with many portfolios.
+    const jobs: Promise<FacebookPage[]>[] = [];
     for (const b of biz.data as Array<{ id: string }>) {
       for (const edge of ['owned_pages', 'client_pages']) {
-        try {
-          const start = new URL(`${GRAPH_BASE}/${b.id}/${edge}`);
-          start.searchParams.set('fields', PAGE_FIELDS);
-          start.searchParams.set('limit', '100');
-          start.searchParams.set('access_token', userToken);
-          out.push(...(await fetchAllPages(start)));
-        } catch {
-          /* ignore individual edge failures */
-        }
+        const start = new URL(`${GRAPH_BASE}/${b.id}/${edge}`);
+        start.searchParams.set('fields', PAGE_FIELDS);
+        start.searchParams.set('limit', '100');
+        start.searchParams.set('access_token', userToken);
+        jobs.push(fetchAllPages(start).catch(() => [] as FacebookPage[]));
       }
     }
+    for (const pages of await Promise.all(jobs)) out.push(...pages);
   } catch {
     /* business_management not granted — ignore, /me/accounts is the fallback */
   }
@@ -462,4 +462,47 @@ export async function getInstagramUsername(igUserId: string, pageToken: string):
     access_token: pageToken,
   });
   return data.username || '';
+}
+
+
+/* ---------------------------------------------------------------------------
+ * Post summary for the automations list: one batched Graph call per 50 ids
+ * (`/?ids=a,b,c`) instead of one request per automation.
+ * ------------------------------------------------------------------------- */
+export interface PostInfo {
+  id: string;
+  permalink?: string;
+  comments_count?: number | null;
+  like_count?: number | null;
+  text?: string;
+  image?: string;
+}
+
+export async function getPostsInfo(
+  ids: string[],
+  pageToken: string,
+  platform: 'facebook' | 'instagram'
+): Promise<Record<string, PostInfo>> {
+  const out: Record<string, PostInfo> = {};
+  const uniq = Array.from(new Set(ids.filter(Boolean)));
+  for (let i = 0; i < uniq.length; i += 50) {
+    const chunk = uniq.slice(i, i + 50);
+    const fields =
+      platform === 'instagram'
+        ? 'id,permalink,comments_count,like_count,caption,thumbnail_url,media_url,media_type'
+        : 'id,permalink_url,message,story,full_picture,comments.summary(true).limit(0),likes.summary(true).limit(0)';
+    try {
+      const data = await graphGet<Record<string, any>>('', { ids: chunk.join(','), fields, access_token: pageToken });
+      for (const [id, m] of Object.entries(data)) {
+        if (!m || typeof m !== 'object') continue;
+        out[id] =
+          platform === 'instagram'
+            ? { id, permalink: m.permalink, comments_count: m.comments_count ?? null, like_count: m.like_count ?? null, text: m.caption || '', image: m.thumbnail_url || (m.media_type === 'IMAGE' ? m.media_url : undefined) }
+            : { id, permalink: m.permalink_url, comments_count: m.comments?.summary?.total_count ?? null, like_count: m.likes?.summary?.total_count ?? null, text: m.message || m.story || '', image: m.full_picture };
+      }
+    } catch {
+      // best effort: a failed batch leaves those automations without post info
+    }
+  }
+  return out;
 }

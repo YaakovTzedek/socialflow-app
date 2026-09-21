@@ -15,13 +15,25 @@ export async function PATCH(
   try {
     await ensureSchema();
     const body = await req.json();
-    if (body.status) {
+    const EDITABLE = [
+      'name', 'keywords', 'match_type', 'public_reply_enabled', 'public_replies',
+      'dm_enabled', 'dm_message', 'dm_link', 'once_per_user', 'status',
+    ] as const;
+    const patch: Record<string, unknown> = {};
+    for (const k of EDITABLE) if (k in body) patch[k] = body[k];
+    if (typeof patch.name === 'string' && !patch.name.trim()) delete patch.name;
+    if (patch.status && !['active', 'paused'].includes(String(patch.status))) delete patch.status;
+    if (patch.match_type && !['contains', 'exact'].includes(String(patch.match_type))) delete patch.match_type;
+    if ('keywords' in patch) patch.keywords = Array.isArray(patch.keywords) ? patch.keywords.map((k: unknown) => String(k).trim()).filter(Boolean) : [];
+    if ('public_replies' in patch) patch.public_replies = Array.isArray(patch.public_replies) ? patch.public_replies.map((k: unknown) => String(k).trim()).filter(Boolean) : [];
+    if (Object.keys(patch).length) {
       await sql!`
-        UPDATE automations SET status = ${body.status}
+        UPDATE automations SET ${sql!(patch as any, ...Object.keys(patch))}
         WHERE id = ${params.id} AND owner_id = ${session.userId}
       `;
     }
-    return NextResponse.json({ success: true });
+    const [row] = await sql!`SELECT * FROM automations WHERE id = ${params.id} AND owner_id = ${session.userId}`;
+    return NextResponse.json({ success: true, automation: row || null });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

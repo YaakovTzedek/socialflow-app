@@ -25,20 +25,27 @@ export default function DashboardHome({ userName }: { userName: string }) {
   const [autos, setAutos] = useState<Automation[]>([]);
   const [logs, setLogs] = useState<Log[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pagesLoading, setPagesLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const [p, a, l] = await Promise.all([
-          fetch('/api/pages').then((r) => r.json()),
+        // Pages come from Meta and are the slow part: don't hold the KPIs for them.
+        const pagesReq = fetch('/api/pages').then((r) => r.json()).then((p) => {
+          if (p.error && !p.pages) throw new Error(p.error);
+          setPages(p.pages || []);
+          setPagesLoading(false);
+          if (p.stale) fetch('/api/pages?refresh=1').then((r) => r.json()).then((f) => { if (f.pages) setPages(f.pages); }).catch(() => {});
+        });
+        const [a, l] = await Promise.all([
           fetch('/api/automations').then((r) => r.json()),
           fetch('/api/logs').then((r) => r.json()),
         ]);
-        if (p.error && !p.pages) throw new Error(p.error);
-        setPages(p.pages || []);
         setAutos(a.automations || []);
         setLogs(l.logs || []);
+        setLoading(false);
+        await pagesReq.catch((e) => { setPagesLoading(false); throw e; });
       } catch (e: any) {
         setError(e.message);
       } finally {
@@ -157,7 +164,7 @@ export default function DashboardHome({ userName }: { userName: string }) {
           <div className="sfa-card">
             <div className="sfa-eyebrow">חשבונות מחוברים</div>
             <div className="sfa-stack">
-              {loading ? <div className="sfa-loading"><span className="sfa-spinner" />טוען…</div> : pages.length === 0 ? (
+              {pagesLoading ? <div className="sfa-loading"><span className="sfa-spinner" />טוען…</div> : pages.length === 0 ? (
                 <div className="sfa-sub">לא נמצאו דפים. ודא שיש לך הרשאות ניהול לפחות לדף פייסבוק אחד.</div>
               ) : pages.map((p) => (
                 <div key={p.id} className="sfa-stack">

@@ -138,5 +138,16 @@ export async function ensureSchema() {
     )
   `;
 
+  // Cached /api/pages payload per user: Meta's page listing walks every
+  // Business Portfolio and takes 10-20s for agency accounts, so the app
+  // serves this and refreshes it in the background.
+  await sql`
+    CREATE TABLE IF NOT EXISTS pages_cache (
+      owner_id   TEXT PRIMARY KEY,
+      payload    JSONB NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+
   initialized = true;
 }

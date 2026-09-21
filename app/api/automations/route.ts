@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { sql, ensureSchema, hasDb } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { requireUserToken, getPageToken } from '@/lib/auth-helpers';
-import { listPages } from '@/lib/meta';
+import { listPages, getPostsInfo, type PostInfo } from '@/lib/meta';
 
 // GET /api/automations → list the current user's automations
 export async function GET() {
@@ -21,7 +21,54 @@ export async function GET() {
       WHERE owner_id = ${session.userId}
       ORDER BY created_at DESC
     `;
-    return NextResponse.json({ automations: rows });
+    const ids = rows.map((r: any) => r.id as string);
+
+    // Per-automation counters straight from the trigger log (one query).
+    const statRows = ids.length
+      ? await sql!`
+          SELECT automation_id,
+                 count(*)::int AS triggers,
+                 count(*) FILTER (WHERE dm_status = 'sent')::int AS dms_sent,
+                 count(*) FILTER (WHERE public_reply_status = 'sent')::int AS replies_sent,
+                 count(*) FILTER (WHERE dm_status = 'failed' OR public_reply_status = 'failed')::int AS failed,
+                 max(created_at) AS last_at
+          FROM trigger_logs
+          WHERE automation_id = ANY(${ids})
+          GROUP BY automation_id
+        `
+      : ([] as any[]);
+    const stats = new Map<string, any>(statRows.map((r: any) => [r.automation_id, r]));
+
+    // Post details (permalink, comment count, thumbnail): one batched Graph call
+    // per page+platform, with the stored page token so it works without Meta round-trips per row.
+    const posts: Record<string, PostInfo> = {};
+    const groups = new Map<string, { page_id: string; platform: 'facebook' | 'instagram'; post_ids: string[] }>();
+    for (const r of rows as any[]) {
+      if (!r.post_id) continue;
+      const key = `${r.page_id}:${r.platform}`;
+      const g = groups.get(key) || { page_id: r.page_id as string, platform: r.platform as 'facebook' | 'instagram', post_ids: [] as string[] };
+      g.post_ids.push(r.post_id);
+      groups.set(key, g);
+    }
+    if (groups.size) {
+      const pageIds = Array.from(new Set(Array.from(groups.values()).map((g) => g.page_id)));
+      const tokenRows = await sql!`SELECT page_id, access_token FROM page_tokens WHERE page_id = ANY(${pageIds})`;
+      const tokens = new Map<string, string>(tokenRows.map((t: any) => [t.page_id, t.access_token]));
+      await Promise.all(
+        Array.from(groups.values()).map(async (g) => {
+          const token = tokens.get(g.page_id);
+          if (!token) return;
+          Object.assign(posts, await getPostsInfo(g.post_ids, token, g.platform));
+        })
+      );
+    }
+
+    const automations = (rows as any[]).map((r) => ({
+      ...r,
+      stats: stats.get(r.id) || { triggers: 0, dms_sent: 0, replies_sent: 0, failed: 0, last_at: null },
+      post: r.post_id ? posts[r.post_id] || null : null,
+    }));
+    return NextResponse.json({ automations });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

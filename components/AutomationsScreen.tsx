@@ -10,7 +10,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
  */
 
 interface Page { id: string; name: string; picture?: string; instagram?: { id: string; username?: string; picture?: string } | null }
-interface Automation { id: string; name: string; platform: string; page_id: string; page_name?: string; post_id?: string; post_scope: string; keywords: string[]; match_type: string; public_reply_enabled: boolean; public_replies: string[]; dm_enabled: boolean; dm_message?: string; dm_link?: string; once_per_user: boolean; status: string; trigger_count: number; created_at: string }
+interface Stats { triggers: number; dms_sent: number; replies_sent: number; failed: number; last_at: string | null }
+interface PostInfo { id: string; permalink?: string; comments_count?: number | null; like_count?: number | null; text?: string; image?: string }
+interface Automation { id: string; name: string; platform: string; page_id: string; page_name?: string; post_id?: string; post_scope: string; keywords: string[]; match_type: string; public_reply_enabled: boolean; public_replies: string[]; dm_enabled: boolean; dm_message?: string; dm_link?: string; once_per_user: boolean; status: string; trigger_count: number; created_at: string; stats?: Stats; post?: PostInfo | null }
 interface Target { key: string; platform: 'facebook' | 'instagram'; page_id: string; ig_id: string | null; name: string; picture?: string }
 interface PostItem { id: string; text: string; image?: string; likes?: number | null; comments?: number | null }
 
@@ -26,17 +28,23 @@ export default function AutomationsScreen() {
   const [dbError, setDbError] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [building, setBuilding] = useState(params?.get('new') === '1');
+  const [editing, setEditing] = useState<string | null>(null);
 
   const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(null), 3000); };
 
   const load = async () => {
     setLoading(true);
     try {
-      const [p, a] = await Promise.all([fetch('/api/pages').then((r) => r.json()), fetch('/api/automations').then((r) => r.json())]);
-      setPages(p.pages || []);
+      const pagesReq = fetch('/api/pages').then((r) => r.json()).then((p) => {
+        setPages(p.pages || []);
+        if (p.stale) fetch('/api/pages?refresh=1').then((r) => r.json()).then((f) => { if (f.pages) setPages(f.pages); }).catch(() => {});
+      }).catch(() => {});
+      const a = await fetch('/api/automations').then((r) => r.json());
       if (a.error === 'db_not_configured') setDbError(true);
       const list: Automation[] = a.automations || [];
       setAutos(list);
+      setLoading(false);
+      await pagesReq;
       Array.from(new Set(list.map((x) => x.page_id))).forEach((pid) => { fetch(`/api/pages/${pid}/subscribe`, { method: 'POST' }).catch(() => {}); });
     } finally { setLoading(false); }
   };
@@ -90,7 +98,10 @@ export default function AutomationsScreen() {
             <div className="sfa-empty"><b>עדיין אין אוטומציות</b>צור את הראשונה: בוחרים פוסט, מילות מפתח, ומה לענות.</div>
           ) : (
             <div className="sfa-stack" style={{ gap: 12 }}>
-              {autos.map((a) => (
+              {autos.map((a) => {
+                const st = a.stats || { triggers: 0, dms_sent: 0, replies_sent: 0, failed: 0, last_at: null };
+                const last = st.last_at ? new Date(st.last_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
+                return (
                 <div key={a.id} className={`sfa-auto${a.status === 'active' ? '' : ' paused'}`}>
                   <span className={`sfa-plat sfa-plat-lg ${a.platform === 'instagram' ? 'sfa-plat-ig' : 'sfa-plat-fb'}`}>{a.platform === 'instagram' ? '◎' : 'f'}</span>
                   <div>
@@ -100,16 +111,46 @@ export default function AutomationsScreen() {
                       <span>· {a.post_scope === 'all_posts' ? 'כל הפוסטים' : 'פוסט ספציפי'}</span>
                       {a.public_reply_enabled && <span>· תגובה ציבורית</span>}
                       {a.dm_enabled && <span>· הודעה פרטית</span>}
-                      <span>· הופעלה {a.trigger_count} פעמים</span>
+                      <span>· {a.match_type === 'exact' ? 'התאמה מדויקת' : 'מכיל את המילה'}</span>
                     </div>
                     <div className="kws">{a.keywords?.length ? a.keywords.map((k) => <span key={k}>{k}</span>) : <span>כל תגובה</span>}</div>
+                    {a.post_scope !== 'all_posts' && (
+                      <div className="post">
+                        {a.post?.image ? <img src={a.post.image} alt="" /> : <span className="ph">▦</span>}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p>{a.post?.text || (a.post ? '(ללא כיתוב)' : `פוסט ${a.post_id}`)}</p>
+                          <div className="meta" style={{ marginTop: 4 }}>
+                            {a.post?.comments_count != null && <span>💬 {a.post.comments_count} תגובות בפוסט</span>}
+                            {a.post?.like_count != null && <span>· ❤️ {a.post.like_count}</span>}
+                          </div>
+                        </div>
+                        {a.post?.permalink && <a href={a.post.permalink} target="_blank" rel="noreferrer">צפייה בפוסט ↗</a>}
+                      </div>
+                    )}
+                    <div className="counters">
+                      <span>הופעלה <b>{st.triggers}</b> פעמים</span>
+                      <span className={st.dms_sent ? 'ok' : ''}>✉️ <b>{st.dms_sent}</b> הודעות פרטיות נשלחו</span>
+                      <span className={st.replies_sent ? 'ok' : ''}>💬 <b>{st.replies_sent}</b> תגובות ציבוריות</span>
+                      {st.failed > 0 && <span className="bad">⚠ <b>{st.failed}</b> נכשלו</span>}
+                      {last && <span>אחרונה: {last}</span>}
+                    </div>
+                    {editing === a.id && (
+                      <Editor
+                        a={a}
+                        onCancel={() => setEditing(null)}
+                        onSaved={(updated) => { setAutos((prev) => prev.map((x) => (x.id === a.id ? { ...x, ...updated } : x))); setEditing(null); showToast('האוטומציה עודכנה'); }}
+                        onError={(m) => showToast('שגיאה: ' + m)}
+                      />
+                    )}
                   </div>
                   <div className="acts">
+                    <button type="button" className="sfa-btn sfa-btn-cyan sfa-btn-sm" onClick={() => setEditing(editing === a.id ? null : a.id)}>{editing === a.id ? 'סגירה' : 'עריכה'}</button>
                     <button type="button" className="sfa-btn sfa-btn-ghost sfa-btn-sm" onClick={() => toggle(a)}>{a.status === 'active' ? 'השהיה' : 'הפעלה'}</button>
                     <button type="button" className="sfa-btn sfa-btn-danger sfa-btn-sm" onClick={() => remove(a)}>מחיקה</button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </>
@@ -316,5 +357,98 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
         </div>
       </div>
     </>
+  );
+}
+
+
+/** Inline editor for an existing automation (everything except the target post). */
+function Editor({ a, onCancel, onSaved, onError }: { a: Automation; onCancel: () => void; onSaved: (u: Partial<Automation>) => void; onError: (m: string) => void }) {
+  const [name, setName] = useState(a.name);
+  const [keywords, setKeywords] = useState<string[]>(a.keywords || []);
+  const [kwInput, setKwInput] = useState('');
+  const [matchType, setMatchType] = useState<'contains' | 'exact'>((a.match_type as any) || 'contains');
+  const [publicOn, setPublicOn] = useState(a.public_reply_enabled);
+  const [replies, setReplies] = useState<string[]>(a.public_replies?.length ? a.public_replies : ['']);
+  const [dmOn, setDmOn] = useState(a.dm_enabled);
+  const [dmMessage, setDmMessage] = useState(a.dm_message || '');
+  const [dmLink, setDmLink] = useState(a.dm_link || '');
+  const [oncePerUser, setOncePerUser] = useState(a.once_per_user);
+  const [saving, setSaving] = useState(false);
+
+  const addKeyword = () => {
+    const parts = kwInput.split(',').map((x) => x.trim()).filter(Boolean);
+    if (!parts.length) return;
+    setKeywords((k) => Array.from(new Set([...k, ...parts])));
+    setKwInput('');
+  };
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const body = {
+        name: name.trim() || a.name, keywords, match_type: matchType,
+        public_reply_enabled: publicOn, public_replies: replies.map((r) => r.trim()).filter(Boolean),
+        dm_enabled: dmOn, dm_message: dmOn ? dmMessage.trim() || null : null, dm_link: dmOn ? dmLink.trim() || null : null,
+        once_per_user: oncePerUser,
+      };
+      const res = await fetch(`/api/automations/${a.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'failed');
+      onSaved(data.automation || body);
+    } catch (e: any) { onError(e.message); } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="sfa-editor" onClick={(e) => e.stopPropagation()}>
+      <div className="row">
+        <div>
+          <label className="sfa-label">שם האוטומציה</label>
+          <input className="sfa-input" value={name} onChange={(e) => setName(e.target.value)} />
+        </div>
+        <div>
+          <label className="sfa-label">סוג התאמה</label>
+          <select className="sfa-select" value={matchType} onChange={(e) => setMatchType(e.target.value as any)}>
+            <option value="contains">התגובה מכילה את המילה</option><option value="exact">התגובה זהה למילה</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className="sfa-label">מילות מפתח (ריק = כל תגובה)</label>
+        <div className="sfa-chips">
+          {keywords.map((k, i) => <span key={k} className="sfa-chip">{k}<button type="button" onClick={() => setKeywords((ks) => ks.filter((_, j) => j !== i))} aria-label={`הסר ${k}`}>✕</button></span>)}
+          <span className="sfa-chip-add">
+            <input value={kwInput} onChange={(e) => setKwInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(); } }} placeholder="+ הוסף מילה" />
+            {kwInput && <button type="button" className="sfa-btn sfa-btn-cyan sfa-btn-sm" style={{ padding: '4px 10px' }} onClick={addKeyword}>הוסף</button>}
+          </span>
+        </div>
+      </div>
+      <div>
+        <div className="sfa-step-h" style={{ marginBottom: 6 }}><div>תגובות ציבוריות</div><button type="button" className={`sfa-toggle${publicOn ? ' on' : ''}`} onClick={() => setPublicOn((v) => !v)} aria-label="תגובה ציבורית"><span /></button></div>
+        {publicOn && (
+          <div className="sfa-stack">
+            {replies.map((r, i) => (
+              <div key={i} className="sfa-reply"><b>{i + 1}</b><input value={r} onChange={(e) => setReplies((rs) => rs.map((x, j) => (j === i ? e.target.value : x)))} placeholder="נוסח תגובה" />{replies.length > 1 && <button type="button" onClick={() => setReplies((rs) => rs.filter((_, j) => j !== i))} aria-label="הסר נוסח">✕</button>}</div>
+            ))}
+            <button type="button" className="sfa-btn sfa-btn-dashed sfa-btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => setReplies((rs) => [...rs, ''])}>+ הוסף נוסח</button>
+          </div>
+        )}
+      </div>
+      <div>
+        <div className="sfa-step-h" style={{ marginBottom: 6 }}><div>ההודעה הפרטית</div><button type="button" className={`sfa-toggle${dmOn ? ' on' : ''}`} onClick={() => setDmOn((v) => !v)} aria-label="הודעה פרטית"><span /></button></div>
+        {dmOn && (
+          <>
+            <textarea className="sfa-textarea" value={dmMessage} onChange={(e) => setDmMessage(e.target.value)} placeholder="היי! הנה הקישור שביקשת:" />
+            <div className="sfa-vars">{VARS.map((v) => <button type="button" key={v} onClick={() => setDmMessage((m) => (m ? m + ' ' : '') + v)}>{v}</button>)}</div>
+            <label className="sfa-label" style={{ marginTop: 10 }}>קישור שיצורף להודעה</label>
+            <input className="sfa-input" dir="ltr" value={dmLink} onChange={(e) => setDmLink(e.target.value)} placeholder="https://" />
+          </>
+        )}
+      </div>
+      <div className="sfa-setting"><div><strong>פעם אחת לכל מגיב</strong><small>הודעה פרטית אחת בלבד לכל אדם.</small></div><button type="button" className={`sfa-toggle${oncePerUser ? ' on' : ''}`} onClick={() => setOncePerUser((v) => !v)} aria-label="פעם אחת לכל מגיב"><span /></button></div>
+      <div className="foot">
+        <button type="button" className="sfa-btn sfa-btn-primary" onClick={save} disabled={saving}>{saving ? 'שומר…' : 'שמירת שינויים'}</button>
+        <button type="button" className="sfa-btn sfa-btn-ghost" onClick={onCancel} disabled={saving}>ביטול</button>
+      </div>
+    </div>
   );
 }
