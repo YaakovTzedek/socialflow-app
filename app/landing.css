@@ -16,7 +16,7 @@
   --line-strong: rgba(255, 255, 255, 0.14);
   --ok: #22c55e;
   --ok-text: #5ef0a0;
-  direction: rtl;
+  direction: inherit;
   min-height: 100vh;
   overflow-x: hidden;
   color: var(--text);
