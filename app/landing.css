@@ -61,7 +61,7 @@
 .sf-pill .sf-dot { width: 8px; height: 8px; }
 .sf-chip { display: flex; align-items: center; gap: 9px; background: rgba(255, 255, 255, .04); border: 1px solid var(--line); border-radius: 999px; padding-inline: 16px; padding-block: 9px; }
 .sf-trustline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 15px; color: var(--muted); }
-.sf-trustline i { font-style: normal; color: var(--faint); margin-inline-end: 10px; }
+.sf-trustline i { font-style: normal; color: var(--faint); margin-inline-start: 10px; }
 .sf-error { background: rgba(239, 68, 68, .12); border: 1px solid rgba(239, 68, 68, .5); color: #ff9b9b; border-radius: 12px; padding: 10px 14px; font-size: 15px; }
 
 /* hero */
@@ -186,4 +186,14 @@ html[lang="ar"] .sf-hand, html[lang="ja"] .sf-hand, html[lang="ar"] .sf-sign { f
   .sf-app-nav { flex-direction: row; flex-wrap: wrap; border-inline-end: 0; border-block-end: 1px solid var(--line); }
   .sf-float-comment { inset-inline-start: -10px; }
   .sf-hand-end { text-align: start; }
+}
+
+@media (max-width: 560px) {
+  .sf-brand svg { width: 34px; height: auto; }
+  .sf-brand span { font-size: 17px; }
+  .sf-brand { gap: 7px !important; }
+  .sf-nav-in { gap: 7px; }
+  .sf-btn-sm { font-size: 13px; padding-inline: 13px; padding-block: 9px; }
+  .sfa-lang select { padding: 6px 8px; font-size: 12px; }
+  .sf-trustline { font-size: 14px; }
 }

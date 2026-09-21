@@ -120,7 +120,7 @@ export function Landing({ error }: { error?: string }) {
         {/* NAV */}
         <div className="sf-nav">
           <div className="sf-shell sf-nav-in">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Logo /><Wordmark /></div>
+            <div className="sf-brand" style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Logo /><Wordmark /></div>
             <div className="sf-nav-links">
               <a href="#how">{H.navHow}</a>
               <a href="#features">{H.navFeatures}</a>
@@ -156,12 +156,12 @@ export function Landing({ error }: { error?: string }) {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={arrowPath} /></svg>
               </LoginLink>
               <a href="#how" className="sf-btn sf-btn-ghost sf-btn-lg">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="#F04B7E" aria-hidden="true" style={rtl ? undefined : { transform: 'scaleX(-1)' }}><path d="M8 5.5v13l11-6.5z" /></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#F04B7E" aria-hidden="true" style={rtl ? { transform: 'scaleX(-1)' } : undefined}><path d="M8 5.5v13l11-6.5z" /></svg>
                 {H.watchDemo}
               </a>
             </div>
 
-            <div className="sf-trustline">{H.trust.map((x, i) => <span key={x}>{i > 0 && <i>·</i>}{x}</span>)}</div>
+            <div className="sf-trustline">{H.trust.map((x, i) => <span key={x}>{x}{i < H.trust.length - 1 && <i>·</i>}</span>)}</div>
           </div>
 
           {/* HERO VISUAL */}
