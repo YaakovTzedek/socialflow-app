@@ -122,12 +122,12 @@ export default function McpScreen() {
           <div className="sfa-howto">
             <ol>
               <li>ב-claude.ai: הגדרות ← Connectors ← &quot;Add custom connector&quot;.</li>
-              <li>שם: SocialFlow. כתובת: מדביקים את הכתובת עם המפתח:</li>
+              <li>שם: SocialFlow. כתובת השרת:</li>
             </ol>
-            <pre dir="ltr"><code>{urlWithKey}</code></pre>
-            <button type="button" className="sfa-btn sfa-btn-cyan sfa-btn-sm" onClick={() => copy(urlWithKey, 'הכתובת הועתקה')}>העתקת הכתובת</button>
+            <pre dir="ltr"><code>{url}</code></pre>
+            <button type="button" className="sfa-btn sfa-btn-cyan sfa-btn-sm" onClick={() => copy(url, 'הכתובת הועתקה')}>העתקת הכתובת</button>
             <ol start={3}>
-              <li>שומרים, ובשיחה חדשה מפעילים את SocialFlow בתפריט הכלים. הכתובת מכילה את המפתח, אז לא צריך OAuth.</li>
+              <li>לוחצים Connect: נפתח מסך התחברות של SocialFlow, מאשרים, וזהו. לא צריך להדביק מפתח (החיבור נעשה ב-OAuth, והוא מופיע ברשימת המפתחות כאן ואפשר לבטל אותו).</li>
             </ol>
           </div>
         )}
@@ -137,10 +137,11 @@ export default function McpScreen() {
               <li>ב-ChatGPT: Settings ← Connectors ← Advanced ← מפעילים &quot;Developer mode&quot;.</li>
               <li>לוחצים Create, שם: SocialFlow, כתובת השרת:</li>
             </ol>
-            <pre dir="ltr"><code>{urlWithKey}</code></pre>
-            <button type="button" className="sfa-btn sfa-btn-cyan sfa-btn-sm" onClick={() => copy(urlWithKey, 'הכתובת הועתקה')}>העתקת הכתובת</button>
+            <pre dir="ltr"><code>{url}</code></pre>
+            <button type="button" className="sfa-btn sfa-btn-cyan sfa-btn-sm" onClick={() => copy(url, 'הכתובת הועתקה')}>העתקת הכתובת</button>
             <ol start={3}>
-              <li>Authentication: &quot;No authentication&quot; (המפתח כבר בתוך הכתובת). מאשרים, ובשיחה בוחרים את SocialFlow תחת Developer mode.</li>
+              <li>Authentication: <b>OAuth</b>. לוחצים Create, ChatGPT מעביר למסך אישור של SocialFlow, מאשרים, וחוזרים. בשיחה בוחרים את SocialFlow תחת Developer mode.</li>
+              <li>חלופה בלי OAuth: הכתובת עם המפתח בפנים <code dir="ltr">{urlWithKey}</code> עם &quot;No authentication&quot;.</li>
             </ol>
           </div>
         )}

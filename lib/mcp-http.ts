@@ -36,7 +36,7 @@ export async function mcpPost(req: NextRequest, urlKey?: string) {
   if (!hasDb) return NextResponse.json({ jsonrpc: '2.0', id: null, error: { code: -32000, message: 'db_not_configured' } }, { status: 503, headers: CORS });
   const user = await resolveApiKey(keyFrom(req, urlKey));
   if (!user) {
-    return NextResponse.json({ jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Unauthorized: missing or revoked API key. Create one at /mcp.' } }, { status: 401, headers: { ...CORS, 'WWW-Authenticate': 'Bearer realm="socialflow"' } });
+    return NextResponse.json({ jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Unauthorized: missing or revoked API key. Create one at /mcp.' } }, { status: 401, headers: { ...CORS, 'WWW-Authenticate': `Bearer realm="socialflow", resource_metadata="${(process.env.NEXT_PUBLIC_BASE_URL || 'https://socialflow-app-delta.vercel.app').replace(/\/$/, '')}/.well-known/oauth-protected-resource"` } });
   }
   const ent = await getEntitlement(user.owner_id);
   if (!ent.plan.limits.mcp) {

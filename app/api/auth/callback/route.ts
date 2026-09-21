@@ -52,7 +52,10 @@ export async function GET(req: NextRequest) {
     session.tokenExpiresAt = Date.now() + (long.expires_in ?? 5184000) * 1000;
     await session.save();
 
-    return NextResponse.redirect(`${baseUrl}/dashboard`);
+    // Back to where the login started (e.g. the OAuth consent screen), same-origin paths only.
+    let next = '';
+    try { const st = JSON.parse(Buffer.from(searchParams.get('state') || '', 'base64url').toString('utf8')); if (typeof st?.n === 'string' && st.n.startsWith('/') && !st.n.startsWith('//')) next = st.n; } catch { /* ignore */ }
+    return NextResponse.redirect(`${baseUrl}${next || '/dashboard'}`);
   } catch (e: any) {
     return NextResponse.redirect(
       `${baseUrl}/?error=${encodeURIComponent(e.message || 'auth_failed')}`
