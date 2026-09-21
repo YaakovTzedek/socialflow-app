@@ -1,0 +1,382 @@
+/**
+ * SocialFlow MCP server (Streamable HTTP, JSON responses).
+ *
+ * One endpoint, JSON-RPC 2.0 over POST, no SSE: every MCP client that speaks
+ * Streamable HTTP (Claude Code, claude.ai custom connectors, ChatGPT developer
+ * mode, Cursor) accepts a plain `application/json` reply. Auth is an API key
+ * the user mints on /mcp, sent as `Authorization: Bearer <key>` or embedded in
+ * the URL (/api/mcp/<key>) for clients that cannot set headers.
+ *
+ * Tools read and write the same tables the app uses, so an automation created
+ * from a chat shows up in the dashboard and is picked up by the poller on its
+ * next pass. The page access token comes from page_tokens (stored when the user
+ * created an automation in the app), never from the chat.
+ */
+import { randomUUID } from 'crypto';
+import { sql, ensureSchema } from './db';
+import { listInstagramMedia, listPagePosts, getPostsInfo } from './meta';
+
+export const PROTOCOL_VERSION = '2025-06-18';
+const SERVER_INFO = { name: 'socialflow', version: '1.0.0' };
+
+type Json = Record<string, unknown>;
+type Rpc = { jsonrpc: '2.0'; id?: string | number | null; method: string; params?: Json };
+
+export interface McpUser { owner_id: string; key: string }
+
+/** Resolve an API key to its owner (null when unknown). Touches last_used_at. */
+export async function resolveApiKey(key: string | null | undefined): Promise<McpUser | null> {
+  if (!key || !sql) return null;
+  await ensureSchema();
+  const [row] = await sql`SELECT key, owner_id FROM api_keys WHERE key = ${key} AND revoked_at IS NULL LIMIT 1`;
+  if (!row) return null;
+  sql`UPDATE api_keys SET last_used_at = now() WHERE key = ${key}`.catch(() => {});
+  return { owner_id: row.owner_id as string, key: row.key as string };
+}
+
+/* ------------------------------------------------------------------------ */
+/* Tool definitions (JSON Schema for inputs)                                  */
+/* ------------------------------------------------------------------------ */
+
+const TOOLS = [
+  {
+    name: 'list_pages',
+    description: 'הדפים וחשבונות האינסטגרם המחוברים ל-SocialFlow של המשתמש: מזהה דף (page_id), שם, מזהה אינסטגרם (ig_id) ושם משתמש. משתמשים במזהים האלה בכלים האחרים.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'list_posts',
+    description: 'הפוסטים או הרילס האחרונים של דף פייסבוק או חשבון אינסטגרם (עד 25), עם מזהה, קישור, כיתוב ומספר תגובות. נדרש כדי לבחור פוסט לאוטומציה.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        page_id: { type: 'string', description: 'מזהה הדף מתוך list_pages' },
+        platform: { type: 'string', enum: ['instagram', 'facebook'], description: 'אינסטגרם או פייסבוק' },
+        limit: { type: 'integer', minimum: 1, maximum: 25, default: 10 },
+      },
+      required: ['page_id', 'platform'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'list_automations',
+    description: 'כל האוטומציות של המשתמש עם מצב (active/paused), מילות מפתח, הפוסט, וספירות: כמה פעמים הופעלה, כמה הודעות פרטיות נשלחו, כמה תגובות ציבוריות, כשלים והפעלה אחרונה.',
+    inputSchema: {
+      type: 'object',
+      properties: { status: { type: 'string', enum: ['active', 'paused', 'all'], default: 'all' } },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_automation',
+    description: 'פרטי אוטומציה אחת לפי מזהה, כולל נוסחי התגובה וההודעה הפרטית והלוג האחרון שלה.',
+    inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'], additionalProperties: false },
+  },
+  {
+    name: 'create_automation',
+    description: 'יצירת אוטומציה חדשה: כשמישהו מגיב על הפוסט עם מילת מפתח (או כל תגובה אם אין מילים), SocialFlow עונה בציבור ושולח הודעה פרטית עם קישור. הדף חייב להופיע ב-list_pages. בלי post_id ועם all_posts=true האוטומציה חלה על כל הפוסטים בחשבון.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        page_id: { type: 'string', description: 'מזהה הדף מתוך list_pages' },
+        platform: { type: 'string', enum: ['instagram', 'facebook'] },
+        post_id: { type: 'string', description: 'מזהה הפוסט מתוך list_posts (לא נדרש כש-all_posts=true)' },
+        all_posts: { type: 'boolean', default: false },
+        name: { type: 'string', description: 'שם קצר לאוטומציה' },
+        keywords: { type: 'array', items: { type: 'string' }, description: 'מילות מפתח. רשימה ריקה = כל תגובה' },
+        match_type: { type: 'string', enum: ['contains', 'exact'], default: 'contains' },
+        public_replies: { type: 'array', items: { type: 'string' }, description: 'נוסחי תגובה ציבורית (המערכת מסובבת ביניהם)' },
+        dm_message: { type: 'string', description: 'תוכן ההודעה הפרטית' },
+        dm_link: { type: 'string', description: 'קישור שיצורף להודעה הפרטית' },
+        once_per_user: { type: 'boolean', default: true },
+        status: { type: 'string', enum: ['active', 'paused'], default: 'active' },
+      },
+      required: ['page_id', 'platform'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'update_automation',
+    description: 'עדכון אוטומציה קיימת: השהיה/הפעלה (status), שם, מילות מפתח, נוסחי תגובה, הודעה פרטית וקישור. שולחים רק את השדות שמשנים.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        status: { type: 'string', enum: ['active', 'paused'] },
+        name: { type: 'string' },
+        keywords: { type: 'array', items: { type: 'string' } },
+        match_type: { type: 'string', enum: ['contains', 'exact'] },
+        public_reply_enabled: { type: 'boolean' },
+        public_replies: { type: 'array', items: { type: 'string' } },
+        dm_enabled: { type: 'boolean' },
+        dm_message: { type: 'string' },
+        dm_link: { type: 'string' },
+        once_per_user: { type: 'boolean' },
+      },
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'delete_automation',
+    description: 'מחיקת אוטומציה לצמיתות. עדיף להשהות (update_automation עם status=paused) אלא אם המשתמש ביקש למחוק במפורש.',
+    inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'], additionalProperties: false },
+  },
+  {
+    name: 'get_activity',
+    description: 'יומן הפעילות: מי הגיב, מה כתב, איזו מילת מפתח נתפסה, האם נשלחו תגובה ציבורית והודעה פרטית, ושגיאות. אפשר לסנן לאוטומציה אחת.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        automation_id: { type: 'string' },
+        limit: { type: 'integer', minimum: 1, maximum: 200, default: 50 },
+        since_hours: { type: 'integer', minimum: 1, maximum: 720, description: 'רק פעילות מ-X השעות האחרונות' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_report',
+    description: 'דוח מסכם: תגובות שטופלו, הודעות פרטיות ותגובות ציבוריות שנשלחו, כשלים, והאוטומציות המובילות, לתקופה של היום, 7 ימים או 30 ימים.',
+    inputSchema: {
+      type: 'object',
+      properties: { period: { type: 'string', enum: ['today', '7d', '30d'], default: '7d' } },
+      additionalProperties: false,
+    },
+  },
+];
+
+/* ------------------------------------------------------------------------ */
+/* Tool implementations                                                       */
+/* ------------------------------------------------------------------------ */
+
+async function pageToken(owner: string, pageId: string) {
+  const [row] = await sql!`SELECT access_token, ig_id, page_name FROM page_tokens WHERE page_id = ${pageId} AND owner_id = ${owner} LIMIT 1`;
+  return row as { access_token: string; ig_id: string | null; page_name: string | null } | undefined;
+}
+
+async function toolListPages(owner: string) {
+  const [cache] = await sql!`SELECT payload FROM pages_cache WHERE owner_id = ${owner}`;
+  const tokens = await sql!`SELECT page_id, page_name, ig_id FROM page_tokens WHERE owner_id = ${owner}`;
+  const pages: any[] = (cache?.payload as any[]) || [];
+  if (!pages.length && !tokens.length) {
+    return { pages: [], note: 'עדיין לא נמצאו דפים. פתחו את הדשבורד של SocialFlow פעם אחת (הוא שומר את רשימת הדפים), ואז נסו שוב.' };
+  }
+  const known = new Set(tokens.map((t: any) => t.page_id));
+  return {
+    pages: pages.map((p) => ({ page_id: p.id, name: p.name, ig_id: p.instagram?.id || null, ig_username: p.instagram?.username || null, ready_for_automations: known.has(p.id) })),
+    note: 'ready_for_automations=false אומר שעדיין לא נוצרה אוטומציה לדף הזה מתוך האפליקציה; יצירה ראשונה חייבת להיעשות באפליקציה כדי לשמור את הרשאת הדף.',
+  };
+}
+
+async function toolListPosts(owner: string, a: Json) {
+  const t = await pageToken(owner, String(a.page_id));
+  if (!t) throw new Error('page_not_ready: לדף הזה אין עדיין הרשאה שמורה. צרו אוטומציה ראשונה לדף מתוך האפליקציה.');
+  const limit = Math.min(25, Math.max(1, Number(a.limit) || 10));
+  if (a.platform === 'instagram') {
+    if (!t.ig_id) throw new Error('לדף הזה לא מחובר חשבון אינסטגרם עסקי.');
+    const media = await listInstagramMedia(t.ig_id, t.access_token);
+    return { posts: media.slice(0, limit).map((m) => ({ post_id: m.id, type: m.media_type, permalink: m.permalink, caption: (m.caption || '').slice(0, 200), comments: m.comments_count ?? null, likes: m.like_count ?? null, published_at: m.timestamp })) };
+  }
+  const posts = await listPagePosts(String(a.page_id), t.access_token);
+  return { posts: posts.slice(0, limit).map((p) => ({ post_id: p.id, permalink: p.permalink_url, text: (p.message || p.story || '').slice(0, 200), comments: p.comments?.summary?.total_count ?? null, likes: p.likes?.summary?.total_count ?? null, published_at: p.created_time })) };
+}
+
+async function statsFor(ids: string[]) {
+  if (!ids.length) return new Map<string, any>();
+  const rows = await sql!`
+    SELECT automation_id, count(*)::int AS triggers,
+           count(*) FILTER (WHERE dm_status = 'sent')::int AS dms_sent,
+           count(*) FILTER (WHERE public_reply_status = 'sent')::int AS replies_sent,
+           count(*) FILTER (WHERE dm_status = 'failed' OR public_reply_status = 'failed')::int AS failed,
+           max(created_at) AS last_at
+    FROM trigger_logs WHERE automation_id = ANY(${ids}) GROUP BY automation_id`;
+  return new Map<string, any>(rows.map((r: any) => [r.automation_id, r]));
+}
+
+function shape(a: any, st?: any) {
+  return {
+    id: a.id, name: a.name, status: a.status, platform: a.platform, page_id: a.page_id, page_name: a.page_name,
+    post_id: a.post_id, post_scope: a.post_scope, keywords: a.keywords, match_type: a.match_type,
+    public_reply_enabled: a.public_reply_enabled, public_replies: a.public_replies,
+    dm_enabled: a.dm_enabled, dm_message: a.dm_message, dm_link: a.dm_link, once_per_user: a.once_per_user,
+    created_at: a.created_at,
+    stats: st || { triggers: 0, dms_sent: 0, replies_sent: 0, failed: 0, last_at: null },
+  };
+}
+
+async function toolListAutomations(owner: string, a: Json) {
+  const status = String(a.status || 'all');
+  const rows = status === 'all'
+    ? await sql!`SELECT * FROM automations WHERE owner_id = ${owner} ORDER BY created_at DESC`
+    : await sql!`SELECT * FROM automations WHERE owner_id = ${owner} AND status = ${status} ORDER BY created_at DESC`;
+  const st = await statsFor(rows.map((r: any) => r.id));
+  // permalinks, best effort, one batched call per page+platform
+  const posts: Record<string, any> = {};
+  const groups = new Map<string, { page_id: string; platform: 'facebook' | 'instagram'; ids: string[] }>();
+  for (const r of rows as any[]) if (r.post_id) { const k = `${r.page_id}:${r.platform}`; const g = groups.get(k) || { page_id: r.page_id as string, platform: r.platform as 'facebook' | 'instagram', ids: [] as string[] }; g.ids.push(r.post_id as string); groups.set(k, g); }
+  await Promise.all(Array.from(groups.values()).map(async (g) => { const t = await pageToken(owner, g.page_id); if (t) Object.assign(posts, await getPostsInfo(g.ids, t.access_token, g.platform)); }));
+  return { count: rows.length, automations: (rows as any[]).map((r) => ({ ...shape(r, st.get(r.id)), post_permalink: r.post_id ? posts[r.post_id]?.permalink || null : null, post_comments: r.post_id ? posts[r.post_id]?.comments_count ?? null : null })) };
+}
+
+async function toolGetAutomation(owner: string, a: Json) {
+  const [row] = await sql!`SELECT * FROM automations WHERE id = ${String(a.id)} AND owner_id = ${owner}`;
+  if (!row) throw new Error('not_found');
+  const st = await statsFor([row.id as string]);
+  const logs = await sql!`SELECT created_at, commenter_name, comment_text, matched_keyword, public_reply_status, dm_status, error_message FROM trigger_logs WHERE automation_id = ${row.id as string} ORDER BY created_at DESC LIMIT 20`;
+  return { automation: shape(row, st.get(row.id as string)), recent_activity: logs };
+}
+
+async function toolCreateAutomation(owner: string, a: Json) {
+  const pageId = String(a.page_id || '');
+  const platform = a.platform === 'facebook' ? 'facebook' : 'instagram';
+  const allPosts = a.all_posts === true;
+  const postId = allPosts ? null : String(a.post_id || '');
+  if (!pageId) throw new Error('page_id נדרש');
+  if (!allPosts && !postId) throw new Error('post_id נדרש (או all_posts=true)');
+  const t = await pageToken(owner, pageId);
+  if (!t) throw new Error('page_not_ready: לדף הזה אין עדיין הרשאה שמורה. צרו אוטומציה ראשונה לדף מתוך האפליקציה, ואחר כך אפשר ליצור מהצ׳אט.');
+  const keywords = Array.isArray(a.keywords) ? (a.keywords as unknown[]).map((k) => String(k).trim()).filter(Boolean) : [];
+  const replies = Array.isArray(a.public_replies) ? (a.public_replies as unknown[]).map((k) => String(k).trim()).filter(Boolean) : [];
+  const dmMessage = a.dm_message ? String(a.dm_message) : null;
+  const dmLink = a.dm_link ? String(a.dm_link) : null;
+  const name = String(a.name || (keywords[0] ? `${keywords[0]} · ${t.page_name || pageId}` : `כל תגובה · ${t.page_name || pageId}`));
+  const id = randomUUID();
+  await sql!`
+    INSERT INTO automations (id, owner_id, name, platform, page_id, page_name, ig_id, post_id, post_scope, keywords, match_type,
+      public_reply_enabled, public_replies, dm_enabled, dm_message, dm_link, once_per_user, status)
+    VALUES (${id}, ${owner}, ${name}, ${platform}, ${pageId}, ${t.page_name}, ${t.ig_id}, ${postId}, ${allPosts ? 'all_posts' : 'specific_post'},
+      ${keywords}, ${a.match_type === 'exact' ? 'exact' : 'contains'}, ${replies.length > 0}, ${replies},
+      ${!!(dmMessage || dmLink)}, ${dmMessage}, ${dmLink}, ${a.once_per_user !== false}, ${a.status === 'paused' ? 'paused' : 'active'})`;
+  const [row] = await sql!`SELECT * FROM automations WHERE id = ${id}`;
+  return { created: true, automation: shape(row), note: 'האוטומציה תטפל רק בתגובות שנכתבו מרגע היצירה. הסריקה רצה כל 2 דקות.' };
+}
+
+async function toolUpdateAutomation(owner: string, a: Json) {
+  const id = String(a.id || '');
+  const EDITABLE = ['name', 'keywords', 'match_type', 'public_reply_enabled', 'public_replies', 'dm_enabled', 'dm_message', 'dm_link', 'once_per_user', 'status'];
+  const patch: Record<string, unknown> = {};
+  for (const k of EDITABLE) if (k in a) patch[k] = a[k];
+  if ('keywords' in patch) patch.keywords = Array.isArray(patch.keywords) ? (patch.keywords as unknown[]).map((k) => String(k).trim()).filter(Boolean) : [];
+  if ('public_replies' in patch) patch.public_replies = Array.isArray(patch.public_replies) ? (patch.public_replies as unknown[]).map((k) => String(k).trim()).filter(Boolean) : [];
+  if (!Object.keys(patch).length) throw new Error('אין שדות לעדכן');
+  await sql!`UPDATE automations SET ${sql!(patch as any, ...Object.keys(patch))} WHERE id = ${id} AND owner_id = ${owner}`;
+  const [row] = await sql!`SELECT * FROM automations WHERE id = ${id} AND owner_id = ${owner}`;
+  if (!row) throw new Error('not_found');
+  return { updated: true, automation: shape(row) };
+}
+
+async function toolDeleteAutomation(owner: string, a: Json) {
+  const res = await sql!`DELETE FROM automations WHERE id = ${String(a.id || '')} AND owner_id = ${owner}`;
+  return { deleted: res.count > 0 };
+}
+
+async function toolGetActivity(owner: string, a: Json) {
+  const limit = Math.min(200, Math.max(1, Number(a.limit) || 50));
+  const sinceHours = Number(a.since_hours) || 0;
+  const since = sinceHours ? new Date(Date.now() - sinceHours * 3600 * 1000) : new Date(0);
+  const autoId = a.automation_id ? String(a.automation_id) : null;
+  const rows = autoId
+    ? await sql!`SELECT l.created_at, a.name AS automation, l.platform, l.commenter_name, l.comment_text, l.matched_keyword, l.public_reply_status, l.dm_status, l.error_message
+                 FROM trigger_logs l JOIN automations a ON a.id = l.automation_id
+                 WHERE a.owner_id = ${owner} AND l.automation_id = ${autoId} AND l.created_at >= ${since} ORDER BY l.created_at DESC LIMIT ${limit}`
+    : await sql!`SELECT l.created_at, a.name AS automation, l.platform, l.commenter_name, l.comment_text, l.matched_keyword, l.public_reply_status, l.dm_status, l.error_message
+                 FROM trigger_logs l JOIN automations a ON a.id = l.automation_id
+                 WHERE a.owner_id = ${owner} AND l.created_at >= ${since} ORDER BY l.created_at DESC LIMIT ${limit}`;
+  return { count: rows.length, activity: rows };
+}
+
+async function toolGetReport(owner: string, a: Json) {
+  const period = String(a.period || '7d');
+  const now = new Date();
+  const start = period === 'today' ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) : new Date(now.getTime() - (period === '30d' ? 30 : 7) * 86400000);
+  const [tot] = await sql!`
+    SELECT count(*)::int AS handled,
+           count(*) FILTER (WHERE l.dm_status = 'sent')::int AS dms_sent,
+           count(*) FILTER (WHERE l.public_reply_status = 'sent')::int AS replies_sent,
+           count(*) FILTER (WHERE l.dm_status = 'failed' OR l.public_reply_status = 'failed')::int AS failed,
+           count(DISTINCT l.commenter_id)::int AS unique_people
+    FROM trigger_logs l JOIN automations a ON a.id = l.automation_id
+    WHERE a.owner_id = ${owner} AND l.created_at >= ${start}`;
+  const top = await sql!`
+    SELECT a.name, a.id, count(*)::int AS handled, count(*) FILTER (WHERE l.dm_status = 'sent')::int AS dms_sent
+    FROM trigger_logs l JOIN automations a ON a.id = l.automation_id
+    WHERE a.owner_id = ${owner} AND l.created_at >= ${start}
+    GROUP BY a.id, a.name ORDER BY handled DESC LIMIT 10`;
+  const [counts] = await sql!`SELECT count(*)::int AS total, count(*) FILTER (WHERE status = 'active')::int AS active FROM automations WHERE owner_id = ${owner}`;
+  return { period, since: start.toISOString(), totals: tot, automations: counts, top_automations: top };
+}
+
+async function callTool(owner: string, name: string, args: Json) {
+  switch (name) {
+    case 'list_pages': return toolListPages(owner);
+    case 'list_posts': return toolListPosts(owner, args);
+    case 'list_automations': return toolListAutomations(owner, args);
+    case 'get_automation': return toolGetAutomation(owner, args);
+    case 'create_automation': return toolCreateAutomation(owner, args);
+    case 'update_automation': return toolUpdateAutomation(owner, args);
+    case 'delete_automation': return toolDeleteAutomation(owner, args);
+    case 'get_activity': return toolGetActivity(owner, args);
+    case 'get_report': return toolGetReport(owner, args);
+    default: throw Object.assign(new Error(`Unknown tool: ${name}`), { code: -32602 });
+  }
+}
+
+/* ------------------------------------------------------------------------ */
+/* JSON-RPC dispatch                                                          */
+/* ------------------------------------------------------------------------ */
+
+function ok(id: Rpc['id'], result: unknown) { return { jsonrpc: '2.0', id: id ?? null, result }; }
+function err(id: Rpc['id'], code: number, message: string) { return { jsonrpc: '2.0', id: id ?? null, error: { code, message } }; }
+
+/** Handle one JSON-RPC message (or a batch). Returns null for notifications. */
+export async function handleRpc(user: McpUser, body: unknown): Promise<unknown | null> {
+  if (Array.isArray(body)) {
+    const out = (await Promise.all(body.map((m) => handleOne(user, m)))).filter((x) => x !== null);
+    return out.length ? out : null;
+  }
+  return handleOne(user, body);
+}
+
+async function handleOne(user: McpUser, msg: unknown): Promise<unknown | null> {
+  const m = (msg || {}) as Rpc;
+  if (!m.method) return err(m.id, -32600, 'Invalid Request');
+  const isNotification = m.id === undefined;
+  try {
+    switch (m.method) {
+      case 'initialize':
+        return ok(m.id, {
+          protocolVersion: PROTOCOL_VERSION,
+          capabilities: { tools: { listChanged: false } },
+          serverInfo: SERVER_INFO,
+          instructions: 'SocialFlow מנהל אוטומציות תגובה→הודעה פרטית באינסטגרם ובפייסבוק. התחילו ב-list_pages, אחר כך list_posts כדי לבחור פוסט, ואז create_automation. get_report נותן סיכום, get_activity את היומן. כתבו למשתמש בעברית.',
+        });
+      case 'notifications/initialized':
+      case 'notifications/cancelled':
+      case 'notifications/progress':
+        return null;
+      case 'ping':
+        return ok(m.id, {});
+      case 'tools/list':
+        return ok(m.id, { tools: TOOLS });
+      case 'tools/call': {
+        const name = String(m.params?.name || '');
+        const args = ((m.params?.arguments as Json) || {}) as Json;
+        try {
+          await ensureSchema();
+          const result = await callTool(user.owner_id, name, args);
+          return ok(m.id, { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], structuredContent: result, isError: false });
+        } catch (e: any) {
+          if (e?.code === -32602) return err(m.id, -32602, e.message);
+          return ok(m.id, { content: [{ type: 'text', text: `שגיאה: ${e?.message || 'unknown'}` }], isError: true });
+        }
+      }
+      case 'resources/list': return ok(m.id, { resources: [] });
+      case 'prompts/list': return ok(m.id, { prompts: [] });
+      default:
+        return isNotification ? null : err(m.id, -32601, `Method not found: ${m.method}`);
+    }
+  } catch (e: any) {
+    return err(m.id, -32603, e?.message || 'Internal error');
+  }
+}

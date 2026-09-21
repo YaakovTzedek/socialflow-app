@@ -149,5 +149,17 @@ export async function ensureSchema() {
     )
   `;
 
+  // MCP / API keys minted on /mcp. Revoked keys stay for the audit trail.
+  await sql`
+    CREATE TABLE IF NOT EXISTS api_keys (
+      key          TEXT PRIMARY KEY,
+      owner_id     TEXT NOT NULL,
+      label        TEXT,
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+      last_used_at TIMESTAMPTZ,
+      revoked_at   TIMESTAMPTZ
+    )
+  `;
+
   initialized = true;
 }

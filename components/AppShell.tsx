@@ -9,7 +9,7 @@ import { useState } from 'react';
  * App chrome from the Claude Design file "SocialFlow App" (project be3e4d06):
  * fixed sidebar (logo, nav, "connect another account" card, status line) and a
  * sticky topbar (screen title, search, user). Only screens that exist in the
- * product are listed; publishing and MCP land here once they ship.
+ * product are listed; publishing lands here once it ships.
  */
 
 const NAV: { href: string; label: string; icon: string }[] = [
@@ -17,6 +17,7 @@ const NAV: { href: string; label: string; icon: string }[] = [
   { href: '/automations', label: 'אוטומציות', icon: '⚡' },
   { href: '/logs', label: 'יומן פעילות', icon: '☰' },
   { href: '/posts', label: 'פוסטים ותגובות', icon: '◎' },
+  { href: '/mcp', label: 'חיבור MCP', icon: '⇄' },
 ];
 
 export function initials(name: string) {
