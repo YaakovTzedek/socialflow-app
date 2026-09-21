@@ -1,4 +1,5 @@
 'use client';
+import { LoginLink } from './LoginLink';
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -174,7 +175,7 @@ export default function DashboardHome({ userName }: { userName: string }) {
                   )}
                 </div>
               ))}
-              <a href="/api/auth/login" className="sfa-btn sfa-btn-dashed sfa-btn-sm">+ חבר חשבון נוסף</a>
+              <LoginLink className="sfa-btn sfa-btn-dashed sfa-btn-sm">+ חבר חשבון נוסף</LoginLink>
             </div>
           </div>
         </div>

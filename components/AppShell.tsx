@@ -1,4 +1,5 @@
 'use client';
+import { LoginLink } from './LoginLink';
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -68,7 +69,7 @@ export default function AppShell({
           <div className="sfa-side-card">
             <div className="sfa-h">יותר שיחות.<br />יותר לקוחות.</div>
             <p>חבר עוד דף או חשבון והרחב את הכיסוי.</p>
-            <a href="/api/auth/login">חבר חשבון</a>
+            <LoginLink>חבר חשבון</LoginLink>
           </div>
           <div className="sfa-status"><span className="sfa-dot" />מחובר ל-Meta</div>
         </div>

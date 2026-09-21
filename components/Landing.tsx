@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { LandingFaq } from './LandingFaq';
+import { LoginLink } from './LoginLink';
 
 /**
  * Public landing page (logged-out root). Implemented from the Claude Design
@@ -9,7 +10,6 @@ import { LandingFaq } from './LandingFaq';
  * log table and the chat are labelled demo data.
  */
 
-const LOGIN = '/api/auth/login';
 
 function Logo({ size = 42 }: { size?: number }) {
   const h = Math.round((size * 80) / 112);
@@ -83,7 +83,7 @@ export function Landing({ error }: { error?: string }) {
           <div className="sf-nav-links">
             <a href="#how">איך זה עובד</a><a href="#mcp">MCP</a><a href="#log">יומן חי</a><a href="#faq">שאלות נפוצות</a>
           </div>
-          <Link href={LOGIN} className="sf-btn sf-btn-primary"><FbMark />התחברות עם פייסבוק</Link>
+          <LoginLink className="sf-btn sf-btn-primary"><FbMark />התחברות עם פייסבוק</LoginLink>
         </div>
       </nav>
 
@@ -94,7 +94,7 @@ export function Landing({ error }: { error?: string }) {
           <p className="sf-lead">SocialFlow מגיב לתגובות בפייסבוק ובאינסטגרם, שולח הודעה פרטית עם הקישור, ושומר את הפונה כליד. את הכול אפשר להגדיר ולתפעל גם מתוך Claude ו-ChatGPT, בשפה טבעית.</p>
           {error && <div className="sf-error">שגיאת התחברות: {error}</div>}
           <div className="sf-hero-cta">
-            <Link href={LOGIN} className="sf-btn sf-btn-primary"><FbMark />חבר את הדף שלך והתחל</Link>
+            <LoginLink className="sf-btn sf-btn-primary"><FbMark />חבר את הדף שלך והתחל</LoginLink>
             <a href="#how" className="sf-btn-ghost">איך זה עובד</a>
           </div>
           <div className="sf-trust">
@@ -202,7 +202,7 @@ export function Landing({ error }: { error?: string }) {
         <div className="sf-cta">
           <div className="sf-display">הפוסט הבא שלך כבר יעבוד לבד</div>
           <p>חבר את דף הפייסבוק או חשבון האינסטגרם, בחר מילת מפתח, והאוטומציה הראשונה פעילה.</p>
-          <Link href={LOGIN} className="sf-btn sf-btn-primary"><FbMark />התחברות עם פייסבוק</Link>
+          <LoginLink className="sf-btn sf-btn-primary"><FbMark />התחברות עם פייסבוק</LoginLink>
           <div className="sf-cta-trust">{TRUST.map((t) => <span key={t}>{t}</span>)}</div>
           <div className="sf-slogan">TURN COMMENTS INTO CONVERSIONS</div>
         </div>
