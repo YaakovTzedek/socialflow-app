@@ -4,6 +4,7 @@ import { isLocale, prefixOf, DEFAULT_LOCALE, LOCALES, getMessages, type Locale }
 import { SEO_BASE } from '@/lib/seo';
 import { PublicShell } from '@/components/PublicShell';
 import { BetaForm } from '@/components/BetaForm';
+import { GuideToc } from '@/components/GuideToc';
 import { guideFor } from '@/content/guide';
 
 /**
@@ -57,7 +58,10 @@ export default function GuidePage({ params }: { params: { locale: string } }) {
         <ul>{g.tldr.map((line) => <li key={line}>{line}</li>)}</ul>
       </div>
 
-      <article className="sfp-body" dangerouslySetInnerHTML={{ __html: g.body }} />
+      <div className="sfg-wrap">
+        <article className="sfp-body sfg-body" dangerouslySetInnerHTML={{ __html: g.body }} />
+        <GuideToc title={g.tocTitle} sections={g.sections} />
+      </div>
 
       <section className="sfp-guide-cta" id="join">
         <h2>{g.ctaTitle}</h2>

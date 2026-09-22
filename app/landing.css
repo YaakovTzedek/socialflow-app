@@ -268,6 +268,81 @@ html:not([lang="he"]) .sfp-title { font-size: clamp(30px, 4.2vw, 48px); line-hei
 /* The waiting-list block at the foot of /guide. Wider than .sfp-cta because it
    holds a form and not a button, and scroll-margin so the "join" anchor from
    the private message does not land under the sticky nav. */
+
+/* ------------------------------------------------------------------ */
+/* /guide: the article people land on from the private message.        */
+/* Two columns on desktop, the rail on the side; one column on mobile, */
+/* where the rail is dropped rather than stacked, because a table of   */
+/* contents above a phone-length article is just another screen to     */
+/* scroll past.                                                        */
+/* ------------------------------------------------------------------ */
+.sfg-wrap { display: grid; grid-template-columns: 1fr; gap: 34px; align-items: start; }
+@media (min-width: 1000px) { .sfg-wrap { grid-template-columns: minmax(0, 1fr) 244px; gap: 48px; } }
+
+.sfg-toc { display: none; }
+@media (min-width: 1000px) {
+  .sfg-toc { display: block; position: sticky; inset-block-start: 88px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px 16px; }
+  .sfg-toc-title { font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); margin-block-end: 12px; }
+  .sfg-toc ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .sfg-toc a { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 11px; font-size: 14.5px; color: var(--muted); text-decoration: none; transition: background .18s, color .18s; }
+  .sfg-toc a i { width: 6px; height: 6px; border-radius: 999px; background: currentColor; opacity: .45; flex: none; }
+  .sfg-toc a:hover { color: #fff; background: rgba(255, 255, 255, .04); }
+  .sfg-toc a.on { color: #fff; font-weight: 700; background: rgba(225, 48, 108, .16); }
+  .sfg-toc a.on i { background: #E1306C; opacity: 1; }
+}
+
+.sfg-body > section { scroll-margin-block-start: 92px; }
+.sfg-body > section + section { margin-block-start: 52px; }
+
+.sfg-ran { counter-reset: none; margin: 18px 0 0; padding-inline-start: 22px; display: grid; gap: 10px; }
+.sfg-ran li { line-height: 1.75; color: var(--muted); }
+.sfg-ran strong { color: #fff; }
+
+.sfg-quote { position: relative; margin: 22px 0; padding: 22px 26px; border-radius: 16px; font-size: 19px; font-weight: 700; line-height: 1.65; color: #fff;
+  background: linear-gradient(140deg, rgba(131, 58, 180, .3), rgba(225, 48, 108, .14)); border: 1px solid var(--line); border-inline-start: 3px solid #E1306C; }
+
+.sfg-step { margin-block-start: 20px; background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 24px; }
+.sfg-step-head { display: flex; align-items: center; gap: 12px; margin-block-end: 12px; }
+.sfg-step-head h3 { margin: 0; font-size: 21px; font-weight: 800; color: #fff; }
+.sfg-step-num { flex: none; width: 32px; height: 32px; border-radius: 999px; display: grid; place-items: center; font-size: 15px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #833AB4, #E1306C); }
+.sfg-step-num.sfg-step-done { background: linear-gradient(135deg, #1f9d55, #39c06e); }
+.sfg-step p { color: var(--muted); line-height: 1.75; margin: 0 0 10px; }
+.sfg-step strong { color: #fff; }
+
+.sfg-kw { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 14px 0; }
+.sfg-kw-card { background: rgba(255, 255, 255, .03); border: 1px solid var(--line); border-radius: 13px; padding: 12px 14px; display: grid; gap: 3px; }
+.sfg-kw-card span { font-size: 12.5px; color: var(--faint); }
+.sfg-kw-card strong { font-size: 17px; color: #FF8FB0; }
+
+.sfg-lines { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 8px; }
+.sfg-lines li { background: rgba(255, 255, 255, .035); border: 1px solid var(--line); border-radius: 12px; padding: 11px 14px; color: var(--muted); line-height: 1.6; }
+.sfg-lines strong { color: #fff; }
+
+.sfg-tip { font-size: 14.5px; color: var(--faint); line-height: 1.7; margin: 10px 0 0; }
+.sfg-tip strong { color: #FFB27A; }
+
+.sfg-bad { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 10px; }
+.sfg-bad li { position: relative; background: rgba(225, 48, 108, .07); border: 1px solid rgba(225, 48, 108, .22); border-radius: 13px; padding: 14px 44px 14px 16px; color: var(--muted); line-height: 1.7; }
+.sfg-bad li::before { content: "✕"; position: absolute; inset-inline-end: 15px; inset-block-start: 13px; width: 20px; height: 20px; border-radius: 999px; display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #FF8FA8; background: rgba(225, 48, 108, .2); }
+.sfg-bad strong { color: #fff; }
+
+.sfg-rules { display: grid; grid-template-columns: 1fr; gap: 14px; margin: 18px 0 0; }
+@media (min-width: 720px) { .sfg-rules { grid-template-columns: 1fr 1fr; } }
+.sfg-ok, .sfg-no { border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+.sfg-ok { background: rgba(57, 192, 110, .07); border-color: rgba(57, 192, 110, .22); }
+.sfg-no { background: rgba(225, 48, 108, .07); border-color: rgba(225, 48, 108, .22); }
+.sfg-rules-title { font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; margin-block-end: 10px; }
+.sfg-ok .sfg-rules-title { color: #6FD79A; }
+.sfg-no .sfg-rules-title { color: #FF8FA8; }
+.sfg-ok ul, .sfg-no ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.sfg-ok li, .sfg-no li { position: relative; padding-inline-end: 24px; color: var(--muted); line-height: 1.6; font-size: 15px; }
+.sfg-ok li::before { content: "✓"; position: absolute; inset-inline-end: 0; color: #6FD79A; font-weight: 800; }
+.sfg-no li::before { content: "✕"; position: absolute; inset-inline-end: 0; color: #FF8FA8; font-weight: 800; }
+
+.sfg-hand { margin-block-start: 20px; background: linear-gradient(140deg, rgba(131, 58, 180, .26), rgba(247, 119, 55, .14)); border: 1px solid var(--line); border-radius: 20px; padding: 24px; display: grid; gap: 10px; }
+.sfg-hand-mark { font-family: var(--font-hand, "Caveat"), cursive; font-size: 30px; line-height: 1.2; color: #FCAF45; }
+.sfg-hand p { margin: 0; color: var(--muted); line-height: 1.75; }
+
 .sfp-guide-cta { margin-block-start: 56px; scroll-margin-block-start: 90px; background: linear-gradient(140deg, rgba(131, 58, 180, .3), rgba(247, 119, 55, .16)); border: 1px solid var(--line); border-radius: 22px; padding: 32px; max-width: 760px; }
 .sfp-guide-cta h2 { font-size: 26px; font-weight: 800; color: #fff; margin: 0 0 8px; }
 .sfp-guide-cta p { font-size: 16px; line-height: 1.7; color: var(--muted); margin: 0 0 22px; }
