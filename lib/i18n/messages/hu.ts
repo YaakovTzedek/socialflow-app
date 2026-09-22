@@ -419,6 +419,15 @@ const hu: Messages = {
       { q: 'Az árak tartalmazzák az adót?', a: 'A sékelben megadott árak tartalmazzák az izraeli áfát. A dolláros árak nem tartalmazzák a nálad érvényes adót.' },
     ],
   },
+  email: {
+    trialReminder: {
+      subject: 'A {plan} próbaidőszak vége: {date}',
+      title: 'Három nap van hátra a próbaidőszakból',
+      line1: 'A {plan} próbaidőszak ekkor ér véget: {date}. Utána az előfizetés automatikusan folytatódik, havi {price} áron.',
+      line2: 'Ha ezt szeretnéd, nincs teendőd. Ha nem, a lemondás egyetlen kattintás, és a hozzáférésed a próbaidőszak végéig megmarad.',
+      cta: 'Előfizetés kezelése',
+    },
+  },
   server: {
     brandingLine: 'Küldve a SocialFlow-val · isocialflow.com',
     mcpInstructions: 'A SocialFlow hozzászólás→privát üzenet automatizálásokat kezel Instagramon és Facebookon. Kezdd a list_pages hívással, majd a list_posts segítségével válassz bejegyzést, aztán create_automation. A get_report összefoglalót ad, a get_activity a naplót. A felhasználónak magyarul válaszolj.',

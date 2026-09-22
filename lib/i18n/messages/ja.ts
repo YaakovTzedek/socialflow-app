@@ -419,6 +419,15 @@ const ja: Messages = {
       { q: '料金に税は含まれますか？', a: 'シェケル建ての価格にはイスラエルの付加価値税が含まれます。ドル建ての価格は、お客様の地域で適用される税を含まない金額です。' },
     ],
   },
+  email: {
+    trialReminder: {
+      subject: '{plan} のトライアルは {date} に終了します',
+      title: 'トライアル終了まであと3日です',
+      line1: '{date} に {plan} のトライアルが終了し、その後は月額 {price} で自動的にサブスクリプションへ移行します。',
+      line2: 'このままでよろしければ、お手続きは不要です。ご希望でない場合は、キャンセルはワンクリックで、トライアル終了までは引き続きご利用いただけます。',
+      cta: 'サブスクリプションの管理',
+    },
+  },
   server: {
     brandingLine: 'Sent with SocialFlow · isocialflow.com',
     mcpInstructions: 'SocialFlow は Instagram と Facebook のコメント→ダイレクトメッセージ自動化を管理します。まず list_pages を呼び出し、次に list_posts で投稿を選び、create_automation を実行してください。get_report はサマリーを、get_activity はログを返します。ユーザーには日本語で回答してください。',

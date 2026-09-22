@@ -422,6 +422,15 @@ const en = {
       { q: 'Do prices include tax?', a: 'Shekel prices include Israeli VAT. Dollar prices are before any tax that applies where you are.' },
     ],
   },
+  email: {
+    trialReminder: {
+      subject: 'Your {plan} trial ends on {date}',
+      title: 'Three days left on your trial',
+      line1: 'On {date} your {plan} trial ends and the subscription continues automatically at {price} a month.',
+      line2: 'If that is what you want, there is nothing to do. If it is not, cancelling takes one click and your access stays until the end of the trial.',
+      cta: 'Manage the subscription',
+    },
+  },
   server: {
     brandingLine: 'Sent with SocialFlow · isocialflow.com',
     mcpInstructions: 'SocialFlow manages comment→private-message automations on Instagram and Facebook. Start with list_pages, then list_posts to pick a post, then create_automation. get_report gives a summary, get_activity the log. Answer the user in their language.',

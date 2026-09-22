@@ -419,6 +419,15 @@ const fr: Messages = {
       { q: 'Les prix incluent-ils la taxe ?', a: "Les prix en shekels incluent la TVA israélienne. Les prix en dollars sont hors taxe applicable là où vous vous trouvez." },
     ],
   },
+  email: {
+    trialReminder: {
+      subject: "Votre essai {plan} se termine le {date}",
+      title: "Il reste trois jours d'essai",
+      line1: "Le {date}, votre période d'essai {plan} se termine et l'abonnement continue automatiquement à {price} par mois.",
+      line2: "Si c'est ce que vous voulez, il n'y a rien à faire. Sinon, annuler prend un clic et votre accès reste actif jusqu'à la fin de l'essai.",
+      cta: "Gérer l'abonnement",
+    },
+  },
   server: {
     brandingLine: 'Envoyé avec SocialFlow · isocialflow.com',
     mcpInstructions: "SocialFlow gère des automatisations commentaire→message privé sur Instagram et Facebook. Commence par list_pages, puis list_posts pour choisir une publication, puis create_automation. get_report donne une synthèse, get_activity le journal. Réponds à l'utilisateur en français.",

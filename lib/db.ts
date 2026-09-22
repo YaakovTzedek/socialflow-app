@@ -203,6 +203,11 @@ export async function ensureSchema() {
     );
     ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS locale TEXT;
     ALTER TABLE owner_prefs ADD COLUMN IF NOT EXISTS segment TEXT;
+    ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS trial_reminded_at TIMESTAMPTZ;
+    ALTER TABLE trigger_logs ADD COLUMN IF NOT EXISTS dm_message_id TEXT;
+    ALTER TABLE trigger_logs ADD COLUMN IF NOT EXISTS dm_attempts INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE trigger_logs ADD COLUMN IF NOT EXISTS dm_retryable BOOLEAN NOT NULL DEFAULT false;
+    CREATE INDEX IF NOT EXISTS trigger_logs_dm_retry_idx ON trigger_logs (dm_status, dm_retryable, created_at);
     CREATE INDEX IF NOT EXISTS trigger_logs_automation_idx ON trigger_logs (automation_id, created_at DESC);
   `);
   initialized = true;

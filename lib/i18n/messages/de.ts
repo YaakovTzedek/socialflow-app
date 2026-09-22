@@ -419,6 +419,15 @@ const de: Messages = {
       { q: 'Sind die Preise inklusive Steuer?', a: 'Schekel-Preise enthalten die israelische Mehrwertsteuer. Dollar-Preise verstehen sich vor jeder Steuer, die bei dir vor Ort anfällt.' },
     ],
   },
+  email: {
+    trialReminder: {
+      subject: 'Deine {plan}-Testphase endet am {date}',
+      title: 'Noch drei Tage Testphase',
+      line1: 'Am {date} endet deine {plan}-Testphase, und das Abo läuft automatisch für {price} im Monat weiter.',
+      line2: 'Wenn du das so willst, musst du nichts tun. Wenn nicht, ist Kündigen ein Klick, und dein Zugang bleibt bis zum Ende der Testphase.',
+      cta: 'Abo verwalten',
+    },
+  },
   server: {
     brandingLine: 'Gesendet mit SocialFlow · isocialflow.com',
     mcpInstructions: 'SocialFlow verwaltet Kommentar→Private-Nachricht-Automatisierungen auf Instagram und Facebook. Beginne mit list_pages, dann list_posts, um einen Beitrag auszuwählen, dann create_automation. get_report liefert eine Zusammenfassung, get_activity das Protokoll. Antworte dem Nutzer auf Deutsch.',

@@ -331,13 +331,18 @@ export async function replyToComment(
  * "comment → DM" flow (like ManyChat). Allowed once per comment, within 7 days.
  * Requires the pages_messaging permission.
  */
-export async function sendPrivateReply(
-  commentId: string,
-  message: string,
-  pageToken: string
-): Promise<{ id?: string }> {
-  const url = `${GRAPH_BASE}/me/messages`;
-  const res = await fetch(url, {
+/**
+ * Post a private reply and confirm it actually went out.
+ *
+ * Meta answers this endpoint with an empty body often enough that parsing it
+ * as JSON blind throws "Unexpected end of JSON input", which used to be
+ * recorded as the failure reason and hid the real status code. It also answers
+ * 200 without a message id under load, and treating that as a delivered
+ * message is how a lead silently disappears. So: read the body as text, parse
+ * defensively, and insist on a message id before calling it sent.
+ */
+async function postPrivateReply(commentId: string, message: string, pageToken: string): Promise<{ messageId: string; recipientId?: string }> {
+  const res = await fetch(`${GRAPH_BASE}/me/messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -347,11 +352,48 @@ export async function sendPrivateReply(
     }),
     cache: 'no-store',
   });
-  const data = await res.json();
-  if (!res.ok || data.error) {
-    throw new Error(data.error?.message || `DM failed (${res.status})`);
+
+  const raw = await res.text();
+  let data: any = null;
+  try { data = raw ? JSON.parse(raw) : null; } catch { /* Meta returned something that is not JSON */ }
+
+  if (!res.ok || data?.error) {
+    const e = data?.error;
+    const detail = e ? `${e.message || 'error'}${e.code ? ` (code ${e.code}${e.error_subcode ? `/${e.error_subcode}` : ''})` : ''}` : (raw ? raw.slice(0, 200) : 'empty response');
+    const error: any = new Error(`HTTP ${res.status}: ${detail}`);
+    error.status = res.status;
+    error.metaCode = e?.code;
+    error.retryable = isRetryable(res.status, e?.code);
+    throw error;
   }
-  return data;
+
+  const messageId = data?.message_id || data?.id;
+  if (!messageId) {
+    const error: any = new Error(`HTTP ${res.status} with no message id: ${raw ? raw.slice(0, 200) : 'empty response'}`);
+    error.status = res.status;
+    error.retryable = true;
+    throw error;
+  }
+  return { messageId, recipientId: data?.recipient_id };
+}
+
+/**
+ * Whether a failure is worth trying again. Meta's transient codes are 1, 2 and
+ * 4 (unknown, service, rate limit), 17 and 32 (user and page rate limits), 613
+ * (calls too often), plus any 5xx and any 429. A permission or policy refusal
+ * is not retried, because it will fail the same way in five minutes.
+ */
+export function isRetryable(status: number, metaCode?: number): boolean {
+  if (status >= 500 || status === 429) return true;
+  return [1, 2, 4, 17, 32, 613].includes(Number(metaCode));
+}
+
+export async function sendPrivateReply(
+  commentId: string,
+  message: string,
+  pageToken: string
+): Promise<{ messageId: string; recipientId?: string }> {
+  return postPrivateReply(commentId, message, pageToken);
 }
 
 /**
@@ -363,27 +405,12 @@ export async function sendInstagramPrivateReply(
   commentId: string,
   message: string,
   pageToken: string
-): Promise<{ id?: string }> {
+): Promise<{ messageId: string; recipientId?: string }> {
   // Instagram private replies go through the PAGE-scoped inbox (`me/messages`) with the page
   // token. Posting to `{ig-user-id}/messages` returns "(#3) Application does not have the
   // capability to make this API call" even when instagram_manage_messages is granted.
   void igUserId;
-  const url = `${GRAPH_BASE}/me/messages`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      recipient: { comment_id: commentId },
-      message: { text: message },
-      access_token: pageToken,
-    }),
-    cache: 'no-store',
-  });
-  const data = await res.json();
-  if (!res.ok || data.error) {
-    throw new Error(data.error?.message || `IG DM failed (${res.status})`);
-  }
-  return data;
+  return postPrivateReply(commentId, message, pageToken);
 }
 
 /** Subscribe a page to webhook events (feed comments). Requires page token. */

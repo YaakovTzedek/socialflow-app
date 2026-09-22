@@ -24,6 +24,70 @@ const TIME_BUDGET_MS = 45_000;
 // took 20-40s and was the main reason runs timed out on 20.9.2026).
 const META_CONCURRENCY = 6;
 
+/** Meta allows roughly two calls a second per account. */
+const DM_PACE_MS = 600;
+/** How many times a transient failure is retried before it is given up on. */
+const MAX_DM_ATTEMPTS = 4;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** The message body, identical on the first attempt and on every retry. */
+function dmTextFor(a: any, branding: string | null): string {
+  let msg = a.dm_link ? `${a.dm_message}\n\n${a.dm_link}` : a.dm_message;
+  if (branding) msg += '\n\n' + branding;
+  return msg;
+}
+
+/**
+ * Retry the private messages that failed for a transient reason.
+ *
+ * A comment is claimed in processed_comments before anything is sent, so
+ * without this pass a single rate-limit answer from Meta lost that lead for
+ * good: the comment would never be looked at again. Only rows inside Meta's
+ * 24 hour messaging window are retried, because after it the send would be
+ * refused anyway.
+ */
+async function retryFailedDms(brandingLine: (owner: string) => Promise<string | null>): Promise<{ retried: number; recovered: number }> {
+  const rows = await sql!`
+    SELECT l.id, l.comment_id, l.platform, a.id AS automation_id, a.owner_id, a.page_id,
+           a.dm_message, a.dm_link, a.once_per_user, l.commenter_id, l.dm_attempts,
+           t.access_token, t.ig_id
+    FROM trigger_logs l
+    JOIN automations a ON a.id = l.automation_id
+    JOIN page_tokens t ON t.page_id = a.page_id AND t.owner_id = a.owner_id
+    WHERE l.dm_status = 'failed' AND l.dm_retryable = true
+      AND l.dm_attempts < ${MAX_DM_ATTEMPTS}
+      AND l.created_at > now() - interval '23 hours'
+    ORDER BY l.created_at ASC LIMIT 25`;
+
+  let recovered = 0;
+  for (const r of rows as any[]) {
+    const msg = dmTextFor(r, await brandingLine(r.owner_id));
+    try {
+      const sent = r.platform === 'instagram'
+        ? await sendInstagramPrivateReply(r.ig_id || '', r.comment_id, msg, r.access_token)
+        : await sendPrivateReply(r.comment_id, msg, r.access_token);
+      await sql!`
+        UPDATE trigger_logs
+        SET dm_status = 'sent', dm_message_id = ${sent.messageId}, error_message = NULL,
+            dm_attempts = dm_attempts + 1, dm_retryable = false
+        WHERE id = ${r.id}`;
+      if (r.commenter_id) {
+        await sql!`INSERT INTO dm_sent (automation_id, commenter_id) VALUES (${r.automation_id}, ${r.commenter_id}) ON CONFLICT DO NOTHING`;
+      }
+      recovered++;
+    } catch (e: any) {
+      await sql!`
+        UPDATE trigger_logs
+        SET dm_attempts = dm_attempts + 1, error_message = ${e.message},
+            dm_retryable = ${e?.retryable !== false}
+        WHERE id = ${r.id}`;
+    }
+    await sleep(DM_PACE_MS);
+  }
+  return { retried: rows.length, recovered };
+}
+
 function keywordMatch(text: string, keywords: string[], matchType: string): string | null {
   const t = (text || '').toLowerCase();
   for (const kw of keywords) {
@@ -251,20 +315,37 @@ export async function GET(req: NextRequest) {
             }
           }
 
+          let dmMessageId: string | null = null;
+          let dmRetryable = false;
           if (a.dm_enabled && a.dm_message) {
-            try {
-              let msg = a.dm_link ? `${a.dm_message}\n\n${a.dm_link}` : a.dm_message;
-              const bl = await brandingLine(a.owner_id);
-              if (bl) msg += '\n\n' + bl;
-              if (isIG) {
-                await sendInstagramPrivateReply(tokenRow.ig_id || '', commentId, msg, pageToken);
-              } else {
-                await sendPrivateReply(commentId, msg, pageToken);
+            // once_per_user is honoured here, against dm_sent, so a person who
+            // already got this automation's message is not messaged twice.
+            const already = a.once_per_user && fromId
+              ? await sql!`SELECT 1 FROM dm_sent WHERE automation_id = ${a.id} AND commenter_id = ${String(fromId)} LIMIT 1`
+              : [];
+            if (already.length > 0) {
+              dmStatus = 'skipped_duplicate';
+            } else {
+              const msg = dmTextFor(a, await brandingLine(a.owner_id));
+              try {
+                const sent = isIG
+                  ? await sendInstagramPrivateReply(tokenRow.ig_id || '', commentId, msg, pageToken)
+                  : await sendPrivateReply(commentId, msg, pageToken);
+                dmStatus = 'sent';
+                dmMessageId = sent.messageId;
+                if (fromId) {
+                  await sql!`
+                    INSERT INTO dm_sent (automation_id, commenter_id)
+                    VALUES (${a.id}, ${String(fromId)}) ON CONFLICT DO NOTHING`;
+                }
+              } catch (e: any) {
+                dmStatus = 'failed';
+                dmRetryable = e?.retryable !== false;
+                err = err || e.message;
               }
-              dmStatus = 'sent';
-            } catch (e: any) {
-              dmStatus = 'failed';
-              err = err || e.message;
+              // Meta allows about two calls a second per account. Pace the
+              // sends so a burst of comments does not trip the rate limit.
+              await sleep(DM_PACE_MS);
             }
           }
 
@@ -272,9 +353,10 @@ export async function GET(req: NextRequest) {
           await sql!`
             INSERT INTO trigger_logs (automation_id, platform, post_id, comment_id,
               commenter_id, commenter_name, comment_text, matched_keyword,
-              public_reply_status, dm_status, error_message)
+              public_reply_status, dm_status, error_message, dm_message_id, dm_attempts, dm_retryable)
             VALUES (${a.id}, ${a.platform}, ${postId}, ${commentId}, ${String(fromId || '')},
-              ${fromName || ''}, ${text}, ${kw}, ${publicStatus}, ${dmStatus}, ${err})`;
+              ${fromName || ''}, ${text}, ${kw}, ${publicStatus}, ${dmStatus}, ${err},
+              ${dmMessageId}, ${dmStatus === 'skipped_duplicate' ? 0 : 1}, ${dmRetryable})`;
           matched++;
         }
       }
@@ -296,9 +378,16 @@ export async function GET(req: NextRequest) {
   };
   await mapPool(automations, 4, processAutomation);
 
+  // Recover the messages Meta refused for a transient reason on an earlier pass.
+  let retry = { retried: 0, recovered: 0 };
+  if (Date.now() - started < TIME_BUDGET_MS) {
+    try { retry = await retryFailedDms(brandingLine); } catch { /* never fail the poll over the retry pass */ }
+  }
+
   return NextResponse.json({
     ran_at: new Date().toISOString(),
     took_ms: Date.now() - started,
+    dm_retry: retry,
     summary,
     ...(debug ? { debug_comments: debugComments } : {}),
   });
