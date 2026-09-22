@@ -11,7 +11,7 @@ const de: Messages = {
     pause: 'Pausieren', resume: 'Fortsetzen', active: 'Aktiv', paused: 'Pausiert', error: 'Fehler', yes: 'Ja', no: 'Nein',
     facebook: 'Facebook', instagram: 'Instagram', facebookPage: 'Facebook-Seite', instagramBusiness: 'Instagram-Business-Konto',
     user: 'Nutzer', commenter: 'Kommentator', anyComment: 'Jeder Kommentar', unknownError: 'Etwas ist schiefgelaufen',
-    language: 'Sprache', logout: 'Abmelden', login: 'Anmelden', connectAccount: 'Konto verbinden', connectAnother: '+ Weiteres Konto verbinden',
+    language: 'Sprache', logout: 'Abmelden', login: 'Anmelden', compareNav: 'vs. ManyChat', connectAccount: 'Konto verbinden', connectAnother: '+ Weiteres Konto verbinden',
     connectedToMeta: 'Mit Meta verbunden', signInWithFacebook: 'Mit Facebook anmelden',
     followers: 'Follower', posts: 'Beiträge', media: 'Medien', comments: 'Kommentare',
   },

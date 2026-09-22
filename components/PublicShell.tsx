@@ -31,6 +31,7 @@ export function PublicShell({
             <div className="sf-nav-links" style={{ flex: 1 }}>
               <Link href={p('/blog')}>{m.blog.nav}</Link>
               <Link href={p('/pricing')}>{m.pricing.nav}</Link>
+              <Link href={p('/vs/manychat')}>{m.common.compareNav}</Link>
             </div>
             <LoginLink className="sf-nav-login">{m.common.login}</LoginLink>
             <Link href={p('/')} className="sf-btn sf-btn-primary sf-btn-sm sf-nav-cta">{m.beta.navCta}</Link>
@@ -50,6 +51,7 @@ export function PublicShell({
           <div className="sf-shell" style={{ paddingBlock: 30, display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 15 }}>
             <Link href={p('/blog')}>{m.blog.nav}</Link>
             <Link href={p('/pricing')}>{m.pricing.nav}</Link>
+            <Link href={p('/vs/manychat')}>{m.common.compareNav}</Link>
             <Link href={p('/terms')}>{m.landing.footerTerms}</Link>
             <Link href={p('/privacy')}>{m.landing.footerPrivacy}</Link>
             <span style={{ marginInlineStart: 'auto', color: '#8B7B99', fontSize: 14 }}>{m.landing.copyright}</span>

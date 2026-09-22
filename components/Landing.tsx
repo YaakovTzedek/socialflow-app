@@ -576,6 +576,7 @@ export function Landing({ error }: { error?: string }) {
                 <Link href={p('/terms')}>{H.footerTerms}</Link>
                 <Link href={p('/privacy')}>{H.footerPrivacy}</Link>
                 <Link href={p('/pricing')}>{m.pricing.nav}</Link>
+                <Link href={p('/vs/manychat')}>{m.common.compareNav}</Link>
                 <Link href={p('/blog')}>{m.blog.nav}</Link>
                 <Link href={p('/data-deletion')}>{H.footerDeletion}</Link>
                 <LoginLink>{B.signIn}</LoginLink>

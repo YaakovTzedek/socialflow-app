@@ -11,7 +11,7 @@ const fr: Messages = {
     pause: 'Mettre en pause', resume: 'Reprendre', active: 'Active', paused: 'En pause', error: 'Erreur', yes: 'Oui', no: 'Non',
     facebook: 'Facebook', instagram: 'Instagram', facebookPage: 'Page Facebook', instagramBusiness: 'Compte Instagram professionnel',
     user: 'Utilisateur', commenter: 'Commentateur', anyComment: 'Tout commentaire', unknownError: 'Une erreur est survenue',
-    language: 'Langue', logout: 'Se déconnecter', login: 'Connexion', connectAccount: 'Connecter un compte', connectAnother: '+ Connecter un autre compte',
+    language: 'Langue', logout: 'Se déconnecter', login: 'Connexion', compareNav: 'vs ManyChat', connectAccount: 'Connecter un compte', connectAnother: '+ Connecter un autre compte',
     connectedToMeta: 'Connecté à Meta', signInWithFacebook: 'Se connecter avec Facebook',
     followers: 'abonnés', posts: 'Publications', media: 'Médias', comments: 'commentaires',
   },

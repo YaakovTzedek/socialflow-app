@@ -11,7 +11,7 @@ const ja: Messages = {
     pause: '一時停止', resume: '再開', active: '有効', paused: '一時停止中', error: 'エラー', yes: 'はい', no: 'いいえ',
     facebook: 'Facebook', instagram: 'Instagram', facebookPage: 'Facebook ページ', instagramBusiness: 'Instagram ビジネスアカウント',
     user: 'ユーザー', commenter: 'コメント投稿者', anyComment: 'すべてのコメント', unknownError: '問題が発生しました',
-    language: '言語', logout: 'ログアウト', login: 'ログイン', connectAccount: 'アカウントを接続', connectAnother: '+ 別のアカウントを接続',
+    language: '言語', logout: 'ログアウト', login: 'ログイン', compareNav: 'ManyChatとの比較', connectAccount: 'アカウントを接続', connectAnother: '+ 別のアカウントを接続',
     connectedToMeta: 'Meta に接続済み', signInWithFacebook: 'Facebook でログイン',
     followers: 'フォロワー', posts: '投稿', media: 'メディア', comments: 'コメント',
   },

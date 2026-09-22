@@ -269,6 +269,37 @@ html:not([lang="he"]) .sfp-title { font-size: clamp(30px, 4.2vw, 48px); line-hei
 
 .sfp-cta { margin-block-start: 48px; background: linear-gradient(140deg, rgba(131, 58, 180, .28), rgba(247, 119, 55, .16)); border: 1px solid var(--line); border-radius: 20px; padding: 30px; max-width: 720px; }
 .sfp-cta-title { font-size: 23px; font-weight: 800; color: #fff; margin-block-end: 8px; }
+
+/* Comparison page. The table is the page, so it breaks out of the 720px
+   reading column and scrolls inside its own box rather than pushing the body
+   sideways. Our column is tinted the whole way down so the eye can follow one
+   side without reading the header again. */
+.sfc { margin-block: 8px 12px; }
+.sfc-title { font-size: 27px; line-height: 1.25; color: #fff; margin: 0 0 16px; }
+.sfc-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 18px; background: var(--card); }
+.sfc-table { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 640px; }
+.sfc-table th, .sfc-table td { text-align: start; padding: 13px 16px; vertical-align: top; line-height: 1.55; }
+.sfc-table thead th { position: sticky; inset-block-start: 0; background: #241634; color: #fff; font-weight: 800; font-size: 15px; z-index: 1; }
+.sfc-table tbody th[scope="row"] { color: var(--dim); font-weight: 700; width: 28%; }
+.sfc-table td { color: var(--muted); width: 36%; }
+.sfc-table tbody tr { border-block-start: 1px solid var(--line); }
+.sfc-table .sfc-group th { background: rgba(255, 255, 255, .04); color: #fff; font-size: 13px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; padding-block: 11px; }
+.sfc-table .sfc-us { background: linear-gradient(180deg, rgba(225, 48, 108, .12), rgba(131, 58, 180, .1)); color: var(--text); }
+.sfc-table thead .sfc-us { background: #3a1330; }
+.sfc-table .sfc-key td, .sfc-table .sfc-key th[scope="row"] { font-weight: 700; color: var(--text); }
+.sfc-table .sfc-key th[scope="row"] { color: #fff; }
+
+.sfc-sources { max-width: 720px; margin-block-start: 48px; }
+.sfc-sources h2 { font-size: 21px; color: #fff; margin: 0 0 10px; }
+.sfc-sources p { font-size: 14.5px; line-height: 1.7; color: var(--faint); margin: 0 0 14px; }
+.sfc-sources ul { margin: 0; padding-inline-start: 20px; display: flex; flex-direction: column; gap: 8px; }
+.sfc-sources li { font-size: 14.5px; line-height: 1.6; color: var(--muted); }
+.sfc-cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+
+@media (max-width: 560px) {
+  .sfc-table { font-size: 14px; }
+  .sfc-table th, .sfc-table td { padding: 11px 12px; }
+}
 .sfp-cta p { font-size: 16px; line-height: 1.7; color: var(--muted); margin: 0 0 18px; }
 .sfp-more { margin-block-start: 56px; }
 
