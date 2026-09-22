@@ -197,6 +197,10 @@ html[lang="ar"] .sf-hand, html[lang="ja"] .sf-hand, html[lang="ar"] .sf-sign { f
   .sf-nav-in { gap: 7px; }
   .sf-btn-sm { font-size: 13px; padding-inline: 13px; padding-block: 9px; }
   .sf-nav-login { font-size: 13px; padding-inline: 10px; padding-block: 8px; }
+  /* The hero repeats this button full width, a finger below the nav, while the
+     login exists nowhere else on the page. On a narrow phone the two together
+     push the nav 31px off screen, so the duplicate is the one that goes. */
+  .sf-nav-cta { display: none; }
   .sfa-lang select { padding: 6px 8px; font-size: 12px; }
   .sf-trustline { font-size: 14px; }
 }

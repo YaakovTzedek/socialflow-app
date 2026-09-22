@@ -33,7 +33,7 @@ export function PublicShell({
               <Link href={p('/pricing')}>{m.pricing.nav}</Link>
             </div>
             <LoginLink className="sf-nav-login">{m.common.login}</LoginLink>
-            <Link href={p('/')} className="sf-btn sf-btn-primary sf-btn-sm">{m.beta.navCta}</Link>
+            <Link href={p('/')} className="sf-btn sf-btn-primary sf-btn-sm sf-nav-cta">{m.beta.navCta}</Link>
           </div>
         </div>
 

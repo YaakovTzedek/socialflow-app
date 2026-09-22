@@ -143,7 +143,7 @@ export function Landing({ error }: { error?: string }) {
             {/* The Facebook login used to live only in the footer, 14 screens
                 down on a phone. A beta tester on mobile had no way in. */}
             <LoginLink className="sf-nav-login">{m.common.login}</LoginLink>
-            <a href="#join" className="sf-btn sf-btn-primary sf-btn-sm">{B.navCta}</a>
+            <a href="#join" className="sf-btn sf-btn-primary sf-btn-sm sf-nav-cta">{B.navCta}</a>
           </div>
         </div>
 
