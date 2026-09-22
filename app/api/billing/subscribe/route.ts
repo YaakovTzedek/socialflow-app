@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const currency: 'ILS' | 'USD' = body.currency === 'USD' ? 'USD' : 'ILS';
   const trial = body.trial === true;
   const { singleUseToken, payerName, payerEmail, payerPhone } = body;
-  if (!(planId in PLAN_CATALOG) || planId === 'free') return NextResponse.json({ error: 'bad_plan' }, { status: 400 });
+  if (!(planId in PLAN_CATALOG) || planId === 'free' || !PLAN_CATALOG[planId].sellable) return NextResponse.json({ error: 'bad_plan' }, { status: 400 });
   if (!singleUseToken || !payerName || !payerEmail) return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
   if (trial && (planId !== TRIAL.plan || interval !== 'month')) return NextResponse.json({ error: 'trial_only_pro_monthly' }, { status: 400 });
 

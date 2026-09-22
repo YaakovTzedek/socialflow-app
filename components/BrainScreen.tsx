@@ -31,7 +31,7 @@ interface Data {
   history: History | null;
 }
 
-const PERIODS = [7, 30, 90];
+const PERIODS = [7, 30, 90, 0];  // 0 = all time
 
 /**
  * The engine hands over keys, not words: a media type and a day index. Turning
@@ -102,7 +102,7 @@ export default function BrainScreen() {
         <div className="sfb-periods">
           {PERIODS.map((d) => (
             <button key={d} type="button" className={d === days ? 'on' : ''} onClick={() => setDays(d)}>
-              {t(B.lastDays, { days: d })}
+              {d === 0 ? B.allTime : t(B.lastDays, { days: d })}
             </button>
           ))}
         </div>

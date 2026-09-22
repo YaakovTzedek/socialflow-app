@@ -184,6 +184,7 @@ const ja: Messages = {
     triggered: '{n} 回トリガー', dmsSent: 'ダイレクトメッセージ {n} 件送信', repliesSent: '公開返信 {n} 件', failed: '{n} 件失敗', last: '最終：{when}',
     deleteConfirm: '「{name}」を削除しますか？この操作は元に戻せません。', deleted: '自動化を削除しました', updated: '自動化を更新しました', saved: '自動化を保存しました',
     planLimit: '無料プランの上限である有効な自動化 {limit} 件に達しました。「プランと請求」ページからアップグレードしてください。',
+    accountLimit: 'ご利用プランの接続プロフィール数 {limit} 件の上限に達しました。1 件を解除するか、「プランと請求」ページからアップグレードしてください。',
     builderTitle: '新しい自動化', builderSub: '6つの短いステップ。一時停止の状態で保存し、後から有効化することもできます。', namePlaceholder: '自動化の名前（任意）',
     stepLabel: 'ステップ {n}',
     step1: 'ページまたはアカウントを選択', noTargets: '管理者権限のあるページが見つかりませんでした。',
@@ -264,6 +265,7 @@ const ja: Messages = {
     plans: {
       free: { name: '無料', blurb: 'カードなしで開始：有効な自動化3件、月300件のダイレクトメッセージ。' },
       creator: { name: 'Creator', blurb: 'クリエイターや小規模ビジネス向け：自動化無制限、月3,000件のメッセージ、ブランド表示なし。' },
+      creator_partner: { name: 'Creator Partner', blurb: '1 つのプロフィールで Creator を 1 年間、レビューとガイドと引き換えに。' },
       pro: { name: 'Pro', blurb: 'これを本業にしている方向け：20,000件のメッセージ、5アカウント、MCP を通じた Claude と ChatGPT からの管理。' },
       agency: { name: 'Agency', blurb: '代理店向け：15アカウント、10ユーザー、月100,000件のメッセージ。' },
     },
@@ -330,6 +332,7 @@ const ja: Messages = {
     title: 'Brain',
     subtitle: 'あなたのアカウントが自身の履歴から学んだこと、そして同じような事業者が見ている数字です。',
     lastDays: '直近 {days} 日間',
+    allTime: '全期間',
     emptyTitle: 'まだ学べるデータがありません',
     emptyText: '自動化がコメントの処理を始めると、この画面に何がうまくいって何がうまくいかなかったかが表示されます。',
     kpiTriggers: '処理したコメント',

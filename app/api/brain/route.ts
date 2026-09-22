@@ -12,7 +12,9 @@ export async function GET(req: NextRequest) {
   if (!session.userId) return NextResponse.json({ error: 'not_authenticated' }, { status: 401 });
   if (!hasDb) return NextResponse.json({ error: 'db_not_configured' }, { status: 503 });
   const dParam = Number(req.nextUrl.searchParams.get('days'));
-  const days = [7, 30, 90].includes(dParam) ? dParam : 30;
+  // 0 means the whole history: the ingest walks every post the account ever
+  // published, so a 90-day ceiling would hide most of what it collected.
+  const days = [0, 7, 30, 90].includes(dParam) ? dParam : 30;
   const tz = req.nextUrl.searchParams.get('tz') || 'UTC';
   const [data, segment] = await Promise.all([getBrain(session.userId, days, tz), getSegment(session.userId)]);
   const [benchmark, recommendations, history] = await Promise.all([

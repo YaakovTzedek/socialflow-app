@@ -4,7 +4,7 @@ import { sql, ensureSchema, hasDb } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { requireUserToken, getPageToken } from '@/lib/auth-helpers';
 import { listPages, getPostsInfoCached, type PostInfo } from '@/lib/meta';
-import { automationActivationBlock } from '@/lib/entitlements';
+import { automationActivationBlock, accountConnectBlock } from '@/lib/entitlements';
 
 // GET /api/automations → list the current user's automations
 export async function GET() {
@@ -112,7 +112,10 @@ export async function POST(req: NextRequest) {
 
     await ensureSchema();
 
-    // Plan limit: the free tier allows 3 active automations at once.
+    // Plan limits. Profiles are checked first and on every save: a paused
+    // automation still occupies the page it points at.
+    const pageBlock = await accountConnectBlock(session.userId, String(page_id));
+    if (pageBlock) return NextResponse.json({ error: 'plan_limit', reason: pageBlock.reason, limit: pageBlock.limit, plan: pageBlock.plan }, { status: 402 });
     if (status === 'active') {
       const block = await automationActivationBlock(session.userId);
       if (block) return NextResponse.json({ error: 'plan_limit', reason: block.reason, limit: block.limit, plan: block.plan }, { status: 402 });

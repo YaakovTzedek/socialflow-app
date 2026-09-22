@@ -187,6 +187,7 @@ const en = {
     triggered: 'Triggered {n} times', dmsSent: '{n} private messages sent', repliesSent: '{n} public replies', failed: '{n} failed', last: 'Last: {when}',
     deleteConfirm: 'Delete "{name}"? This cannot be undone.', deleted: 'Automation deleted', updated: 'Automation updated', saved: 'Automation saved',
     planLimit: 'You reached the {limit} active automations of the free plan. Upgrade on the "Plan & billing" page.',
+    accountLimit: 'You reached the {limit} connected profiles of your plan. Free one up, or upgrade on the "Plan & billing" page.',
     builderTitle: 'New automation', builderSub: 'Six short steps. You can save as paused and activate later.', namePlaceholder: 'Automation name (optional)',
     stepLabel: 'Step {n}',
     step1: 'Choose a page or account', noTargets: 'No pages with admin permissions were found.',
@@ -267,6 +268,7 @@ const en = {
     plans: {
       free: { name: 'Free', blurb: 'Start without a card: 3 active automations and 300 private messages a month.' },
       creator: { name: 'Creator', blurb: 'For creators and small businesses: unlimited automations, 3,000 messages a month, no branding.' },
+      creator_partner: { name: 'Creator Partner', blurb: 'A year of Creator on one profile, in exchange for a review and a guide.' },
       pro: { name: 'Pro', blurb: 'For people who live on this: 20,000 messages, 5 accounts, and management from Claude and ChatGPT through MCP.' },
       agency: { name: 'Agency', blurb: 'For agencies: 15 accounts, 10 users, 100,000 messages a month.' },
     },
@@ -333,6 +335,7 @@ const en = {
     title: 'Brain',
     subtitle: 'What your account has learned from its own history, and what businesses like yours are seeing.',
     lastDays: 'Last {days} days',
+    allTime: 'All time',
     emptyTitle: 'Nothing to learn from yet',
     emptyText: 'Once your automations start handling comments, this screen fills with what worked and what did not.',
     kpiTriggers: 'Comments handled',

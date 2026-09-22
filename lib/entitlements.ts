@@ -115,8 +115,27 @@ export async function getUsage(ownerId: string, plan: CatalogEntry): Promise<Usa
   };
 }
 
-/** Can this owner activate one more automation? (null reason = yes) */
-export async function automationActivationBlock(ownerId: string, excludingId?: string): Promise<{ reason: 'automations' | 'accounts'; limit: number; plan: PlanId } | null> {
+/**
+ * Can this owner point an automation at one more page or Instagram account?
+ *
+ * The catalog has carried an `accounts` limit since the first version and
+ * nothing ever read it, so every plan was effectively unlimited on profiles.
+ * A page already in use costs nothing, which is why the check asks whether
+ * this particular page is new before it counts the rest.
+ */
+export async function accountConnectBlock(ownerId: string, pageId: string): Promise<{ reason: 'accounts'; limit: number; plan: PlanId } | null> {
+  const ent = await getEntitlement(ownerId);
+  const cap = ent.plan.limits.accounts;
+  const [row] = await sql!`
+    SELECT count(DISTINCT page_id)::int AS n, bool_or(page_id = ${pageId}) AS has
+    FROM automations WHERE owner_id = ${ownerId}`;
+  if (row?.has) return null;
+  if ((row?.n ?? 0) >= cap) return { reason: 'accounts', limit: cap, plan: ent.planId };
+  return null;
+}
+
+/** Can this owner activate one more automation? (null = yes) */
+export async function automationActivationBlock(ownerId: string, excludingId?: string): Promise<{ reason: 'automations'; limit: number; plan: PlanId } | null> {
   const ent = await getEntitlement(ownerId);
   const cap = ent.plan.limits.activeAutomations;
   if (cap !== null) {

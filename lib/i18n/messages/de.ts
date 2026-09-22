@@ -184,6 +184,7 @@ const de: Messages = {
     triggered: '{n}-mal ausgelöst', dmsSent: '{n} private Nachrichten gesendet', repliesSent: '{n} öffentliche Antworten', failed: '{n} fehlgeschlagen', last: 'Zuletzt: {when}',
     deleteConfirm: '„{name}“ löschen? Das kann nicht rückgängig gemacht werden.', deleted: 'Automatisierung gelöscht', updated: 'Automatisierung aktualisiert', saved: 'Automatisierung gespeichert',
     planLimit: 'Du hast die {limit} aktiven Automatisierungen des kostenlosen Tarifs erreicht. Upgrade auf der Seite „Tarif & Abrechnung“.',
+    accountLimit: 'Du hast die {limit} verbundenen Profile deines Tarifs erreicht. Gib ein Profil frei oder upgrade auf der Seite „Tarif & Abrechnung“.',
     builderTitle: 'Neue Automatisierung', builderSub: 'Sechs kurze Schritte. Du kannst als pausiert speichern und später aktivieren.', namePlaceholder: 'Name der Automatisierung (optional)',
     stepLabel: 'Schritt {n}',
     step1: 'Seite oder Konto wählen', noTargets: 'Keine Seiten mit Admin-Berechtigungen gefunden.',
@@ -264,6 +265,7 @@ const de: Messages = {
     plans: {
       free: { name: 'Kostenlos', blurb: 'Starte ohne Karte: 3 aktive Automatisierungen und 300 private Nachrichten pro Monat.' },
       creator: { name: 'Creator', blurb: 'Für Creator und kleine Unternehmen: unbegrenzte Automatisierungen, 3.000 Nachrichten pro Monat, kein Branding.' },
+      creator_partner: { name: 'Creator Partner', blurb: 'Ein Jahr Creator für ein Profil, im Austausch für eine Rezension und eine Anleitung.' },
       pro: { name: 'Pro', blurb: 'Für alle, die davon leben: 20.000 Nachrichten, 5 Konten und Steuerung aus Claude und ChatGPT über MCP.' },
       agency: { name: 'Agency', blurb: 'Für Agenturen: 15 Konten, 10 Nutzer, 100.000 Nachrichten pro Monat.' },
     },
@@ -330,6 +332,7 @@ const de: Messages = {
     title: 'Brain',
     subtitle: 'Was dein Konto aus seiner eigenen Historie gelernt hat, und was Unternehmen wie deins sehen.',
     lastDays: 'Letzte {days} Tage',
+    allTime: 'Gesamter Zeitraum',
     emptyTitle: 'Noch nichts zum Lernen da',
     emptyText: 'Sobald deine Automatisierungen Kommentare bearbeiten, füllt sich dieser Bildschirm mit dem, was funktioniert hat und was nicht.',
     kpiTriggers: 'Bearbeitete Kommentare',

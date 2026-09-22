@@ -184,6 +184,7 @@ const hu: Messages = {
     triggered: '{n} alkalommal aktiválódott', dmsSent: '{n} privát üzenet elküldve', repliesSent: '{n} nyilvános válasz', failed: '{n} sikertelen', last: 'Utoljára: {when}',
     deleteConfirm: 'Törlöd a(z) „{name}” automatizálást? Ez nem vonható vissza.', deleted: 'Automatizálás törölve', updated: 'Automatizálás frissítve', saved: 'Automatizálás mentve',
     planLimit: 'Elérted az ingyenes csomag {limit} aktív automatizálását. Válts nagyobb csomagra a „Csomag és számlázás” oldalon.',
+    accountLimit: 'Elérted a csomagod {limit} csatlakoztatott profilját. Szabadíts fel egyet, vagy válts nagyobb csomagra a „Csomag és számlázás” oldalon.',
     builderTitle: 'Új automatizálás', builderSub: 'Hat rövid lépés. Elmentheted szüneteltetve, és később aktiválhatod.', namePlaceholder: 'Automatizálás neve (nem kötelező)',
     stepLabel: '{n}. lépés',
     step1: 'Válassz oldalt vagy fiókot', noTargets: 'Nem található admin jogosultságú oldal.',
@@ -264,6 +265,7 @@ const hu: Messages = {
     plans: {
       free: { name: 'Ingyenes', blurb: 'Kezdd el kártya nélkül: 3 aktív automatizálás és havi 300 privát üzenet.' },
       creator: { name: 'Creator', blurb: 'Alkotóknak és kisvállalkozásoknak: korlátlan automatizálás, havi 3 000 üzenet, felirat nélkül.' },
+      creator_partner: { name: 'Creator Partner', blurb: 'Egy év Creator egyetlen profilon, egy értékelésért és egy útmutatóért cserébe.' },
       pro: { name: 'Pro', blurb: 'Azoknak, akik ebből élnek: 20 000 üzenet, 5 fiók, és kezelés Claude-ból és ChatGPT-ből MCP-n keresztül.' },
       agency: { name: 'Agency', blurb: 'Ügynökségeknek: 15 fiók, 10 felhasználó, havi 100 000 üzenet.' },
     },
@@ -330,6 +332,7 @@ const hu: Messages = {
     title: 'Brain',
     subtitle: 'Amit a fiókod a saját előzményeiből tanult, és amit a hozzád hasonló vállalkozások látnak.',
     lastDays: 'Elmúlt {days} nap',
+    allTime: 'Teljes időszak',
     emptyTitle: 'Még nincs miből tanulni',
     emptyText: 'Amint az automatizálásaid elkezdik kezelni a hozzászólásokat, ez a képernyő megtelik azzal, ami működött és ami nem.',
     kpiTriggers: 'Kezelt hozzászólások',

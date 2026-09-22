@@ -184,6 +184,7 @@ const it: Messages = {
     triggered: 'Attivata {n} volte', dmsSent: '{n} messaggi privati inviati', repliesSent: '{n} risposte pubbliche', failed: '{n} falliti', last: 'Ultima: {when}',
     deleteConfirm: 'Eliminare "{name}"? L\'operazione non può essere annullata.', deleted: 'Automazione eliminata', updated: 'Automazione aggiornata', saved: 'Automazione salvata',
     planLimit: 'Hai raggiunto le {limit} automazioni attive del piano gratuito. Passa a un piano superiore dalla pagina "Piano e fatturazione".',
+    accountLimit: 'Hai raggiunto i {limit} profili collegati del tuo piano. Liberane uno oppure passa a un piano superiore dalla pagina "Piano e fatturazione".',
     builderTitle: 'Nuova automazione', builderSub: 'Sei brevi passaggi. Puoi salvare in pausa e attivare più tardi.', namePlaceholder: "Nome dell'automazione (facoltativo)",
     stepLabel: 'Passaggio {n}',
     step1: 'Scegli una pagina o un account', noTargets: 'Nessuna pagina con permessi di amministratore trovata.',
@@ -264,6 +265,7 @@ const it: Messages = {
     plans: {
       free: { name: 'Gratuito', blurb: 'Inizia senza carta: 3 automazioni attive e 300 messaggi privati al mese.' },
       creator: { name: 'Creator', blurb: 'Per creator e piccole attività: automazioni illimitate, 3.000 messaggi al mese, senza dicitura.' },
+      creator_partner: { name: 'Creator Partner', blurb: 'Un anno di Creator su un solo profilo, in cambio di una recensione e di una guida.' },
       pro: { name: 'Pro', blurb: 'Per chi ci vive: 20.000 messaggi, 5 account e gestione da Claude e ChatGPT tramite MCP.' },
       agency: { name: 'Agency', blurb: 'Per le agenzie: 15 account, 10 utenti, 100.000 messaggi al mese.' },
     },
@@ -330,6 +332,7 @@ const it: Messages = {
     title: 'Brain',
     subtitle: 'Cosa ha imparato il tuo account dalla sua stessa storia, e cosa vedono le attività come la tua.',
     lastDays: 'Ultimi {days} giorni',
+    allTime: 'Tutto il periodo',
     emptyTitle: "Non c'è ancora niente da cui imparare",
     emptyText: 'Appena le tue automazioni iniziano a gestire i commenti, questa schermata si riempie di quello che ha funzionato e di quello che no.',
     kpiTriggers: 'Commenti gestiti',

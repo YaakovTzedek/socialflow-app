@@ -184,6 +184,7 @@ const fr: Messages = {
     triggered: 'Déclenchée {n} fois', dmsSent: '{n} messages privés envoyés', repliesSent: '{n} réponses publiques', failed: '{n} échecs', last: 'Dernière : {when}',
     deleteConfirm: 'Supprimer « {name} » ? Cette action est irréversible.', deleted: 'Automatisation supprimée', updated: 'Automatisation mise à jour', saved: 'Automatisation enregistrée',
     planLimit: 'Vous avez atteint les {limit} automatisations actives du forfait gratuit. Passez à un forfait supérieur sur la page « Forfait et facturation ».',
+    accountLimit: 'Vous avez atteint les {limit} profils connectés de votre forfait. Libérez-en un ou passez à un forfait supérieur sur la page « Forfait et facturation ».',
     builderTitle: 'Nouvelle automatisation', builderSub: 'Six étapes courtes. Vous pouvez enregistrer en pause et activer plus tard.', namePlaceholder: "Nom de l'automatisation (facultatif)",
     stepLabel: 'Étape {n}',
     step1: 'Choisissez une page ou un compte', noTargets: "Aucune page avec des droits d'administration n'a été trouvée.",
@@ -264,6 +265,7 @@ const fr: Messages = {
     plans: {
       free: { name: 'Gratuit', blurb: 'Démarrez sans carte : 3 automatisations actives et 300 messages privés par mois.' },
       creator: { name: 'Creator', blurb: 'Pour les créateurs et les petites entreprises : automatisations illimitées, 3 000 messages par mois, sans mention.' },
+      creator_partner: { name: 'Creator Partner', blurb: 'Un an de Creator sur un seul profil, en échange d\'un avis et d\'un guide.' },
       pro: { name: 'Pro', blurb: 'Pour ceux qui en vivent : 20 000 messages, 5 comptes, et le pilotage depuis Claude et ChatGPT via MCP.' },
       agency: { name: 'Agency', blurb: 'Pour les agences : 15 comptes, 10 utilisateurs, 100 000 messages par mois.' },
     },
@@ -330,6 +332,7 @@ const fr: Messages = {
     title: 'Brain',
     subtitle: "Ce que votre compte a appris de son propre historique, et ce que constatent les entreprises comme la vôtre.",
     lastDays: '{days} derniers jours',
+    allTime: 'Depuis le début',
     emptyTitle: 'Rien à apprendre pour le moment',
     emptyText: "Dès que vos automatisations commenceront à traiter des commentaires, cet écran se remplira de ce qui a marché et de ce qui n'a pas marché.",
     kpiTriggers: 'Commentaires traités',

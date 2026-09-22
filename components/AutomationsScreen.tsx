@@ -49,7 +49,7 @@ export default function AutomationsScreen() {
   const toggle = async (a: Automation) => {
     const status = a.status === 'active' ? 'paused' : 'active';
     const res = await fetch(`/api/automations/${a.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
-    if (res.status === 402) { const d = await res.json().catch(() => ({})); showToast(t(A.planLimit, { limit: d.limit })); return; }
+    if (res.status === 402) { const d = await res.json().catch(() => ({})); showToast(t(d.reason === 'accounts' ? A.accountLimit : A.planLimit, { limit: d.limit })); return; }
     setAutos((prev) => prev.map((x) => (x.id === a.id ? { ...x, status } : x)));
   };
   const remove = async (a: Automation) => {
@@ -227,7 +227,7 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
         }),
       });
       const data = await res.json();
-      if (res.status === 402 && data.error === 'plan_limit') throw new Error(t(A.planLimit, { limit: data.limit }));
+      if (res.status === 402 && data.error === 'plan_limit') throw new Error(t(data.reason === 'accounts' ? A.accountLimit : A.planLimit, { limit: data.limit }));
       if (!res.ok) throw new Error(data.error || 'failed');
       onSaved();
     } catch (e: any) { onError(e.message); } finally { setSaving(false); }

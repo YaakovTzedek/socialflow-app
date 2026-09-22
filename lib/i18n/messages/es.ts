@@ -184,6 +184,7 @@ const es: Messages = {
     triggered: 'Activada {n} veces', dmsSent: '{n} mensajes privados enviados', repliesSent: '{n} respuestas públicas', failed: '{n} fallidos', last: 'Última: {when}',
     deleteConfirm: '¿Eliminar "{name}"? Esta acción no se puede deshacer.', deleted: 'Automatización eliminada', updated: 'Automatización actualizada', saved: 'Automatización guardada',
     planLimit: 'Alcanzaste las {limit} automatizaciones activas del plan gratuito. Mejora tu plan en la página "Plan y facturación".',
+    accountLimit: 'Alcanzaste los {limit} perfiles conectados de tu plan. Libera uno o mejora tu plan en la página "Plan y facturación".',
     builderTitle: 'Nueva automatización', builderSub: 'Seis pasos cortos. Puedes guardarla en pausa y activarla más tarde.', namePlaceholder: 'Nombre de la automatización (opcional)',
     stepLabel: 'Paso {n}',
     step1: 'Elige una página o cuenta', noTargets: 'No se encontraron páginas con permisos de administrador.',
@@ -264,6 +265,7 @@ const es: Messages = {
     plans: {
       free: { name: 'Gratis', blurb: 'Empieza sin tarjeta: 3 automatizaciones activas y 300 mensajes privados al mes.' },
       creator: { name: 'Creator', blurb: 'Para creadores y pequeños negocios: automatizaciones ilimitadas, 3.000 mensajes al mes, sin marca.' },
+      creator_partner: { name: 'Creator Partner', blurb: 'Un año de Creator en un solo perfil, a cambio de una reseña y una guía.' },
       pro: { name: 'Pro', blurb: 'Para quienes viven de esto: 20.000 mensajes, 5 cuentas y gestión desde Claude y ChatGPT a través de MCP.' },
       agency: { name: 'Agency', blurb: 'Para agencias: 15 cuentas, 10 usuarios, 100.000 mensajes al mes.' },
     },
@@ -330,6 +332,7 @@ const es: Messages = {
     title: 'Brain',
     subtitle: 'Lo que tu cuenta ha aprendido de su propio historial, y lo que ven los negocios como el tuyo.',
     lastDays: 'Últimos {days} días',
+    allTime: 'Todo el periodo',
     emptyTitle: 'Todavía no hay de qué aprender',
     emptyText: 'En cuanto tus automatizaciones empiecen a gestionar comentarios, esta pantalla se llena con lo que funcionó y lo que no.',
     kpiTriggers: 'Comentarios gestionados',

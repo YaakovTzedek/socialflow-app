@@ -12,7 +12,14 @@
  */
 
 export type Tier = 'free' | 'creator' | 'pro' | 'agency';
-export type PlanId = Tier;
+/**
+ * `creator_partner` is not a tier anyone can buy. It is the deal a content
+ * creator gets in exchange for a review and a guide: Creator for a year, at no
+ * cost, on a single profile. It is granted only from the admin panel, so it
+ * carries `sellable: false` and stays out of PLAN_ORDER, which is what the
+ * pricing page and the billing screen iterate.
+ */
+export type PlanId = Tier | 'creator_partner';
 export type Interval = 'month' | 'year';
 
 export interface PlanLimits {
@@ -57,6 +64,11 @@ export const PLAN_CATALOG: Record<PlanId, CatalogEntry> = {
     tier: 'creator', name: 'Creator', sellable: true, priceIls: 49, priceIlsYear: 490, priceUsd: 12, priceUsdYear: 120,
     limits: { activeAutomations: null, dmsPerMonth: 3000, accounts: 2, seats: 1, logDays: 90, mcp: false, publishing: false, branding: false },
     blurb: 'For creators and small businesses: unlimited automations, 3,000 messages a month, no branding.',
+  },
+  creator_partner: {
+    tier: 'creator', name: 'Creator Partner', sellable: false, priceIls: 0, priceIlsYear: 0, priceUsd: 0, priceUsdYear: 0,
+    limits: { activeAutomations: null, dmsPerMonth: 3000, accounts: 1, seats: 1, logDays: 90, mcp: false, publishing: false, branding: false },
+    blurb: 'A year of Creator on one profile, in exchange for a review and a guide. Granted by hand, never sold.',
   },
   pro: {
     tier: 'pro', name: 'Pro', sellable: true, priceIls: 99, priceIlsYear: 990, priceUsd: 24, priceUsdYear: 240,

@@ -44,7 +44,8 @@ async function safeZone(tz: string): Promise<string> {
 export async function getBrain(ownerId: string, days = 30, tz = 'UTC'): Promise<BrainData> {
   await ensureSchema();
   const zone = await safeZone(tz);
-  const since = new Date(Date.now() - days * 86400000);
+  // days === 0 asks for the whole history, not the last zero days.
+  const since = days > 0 ? new Date(Date.now() - days * 86400000) : new Date(0);
 
   const [totals] = await sql!`
     SELECT count(*)::int AS triggers,
