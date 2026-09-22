@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, hasDb, ensureSchema } from '@/lib/db';
 import { isLocale, DEFAULT_LOCALE } from '@/lib/i18n';
+import { sendBetaSignupNotice } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +40,11 @@ export async function POST(req: NextRequest) {
     VALUES (${phoneRaw.slice(0, 40)}, ${role}, ${tool}, ${locale}, ${'landing'})
     ON CONFLICT (phone) DO NOTHING
     RETURNING id`;
+
+  // The signup is already saved; a mail provider hiccup must not fail the form.
+  if (row) {
+    try { await sendBetaSignupNotice({ phone: phoneRaw, role, tool, locale }); } catch { /* the row is what matters */ }
+  }
 
   return NextResponse.json({ ok: true, duplicate: !row });
 }

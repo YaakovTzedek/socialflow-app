@@ -82,3 +82,28 @@ export async function sendTrialReminder(opts: { to: string; locale: Locale; plan
   );
   return sendEmail({ to: opts.to, subject: fill(E.subject), html });
 }
+
+/**
+ * Tell the owner a beta signup landed. Deliberately plain: the point is the
+ * phone number, so it should be readable from a phone notification without
+ * opening anything. Silent when BETA_NOTIFY_TO is unset.
+ */
+export async function sendBetaSignupNotice(row: { phone: string; role: string; tool: string; locale: string }) {
+  const to = process.env.BETA_NOTIFY_TO;
+  if (!to || !emailConfigured()) return null;
+  const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const html = emailShell(
+    'he',
+    'נרשם חדש לבטא',
+    `<p style="margin:0 0 10px;"><strong style="color:#fff;">טלפון:</strong> <a href="tel:${esc(row.phone)}" style="color:#FF8FB0;">${esc(row.phone)}</a></p>
+     <p style="margin:0 0 10px;"><strong style="color:#fff;">מה הוא עושה:</strong> ${esc(row.role)}</p>
+     <p style="margin:0 0 10px;"><strong style="color:#fff;">באיזה כלי משתמש היום:</strong> ${esc(row.tool)}</p>
+     <p style="margin:0;"><strong style="color:#fff;">שפת הדף:</strong> ${esc(row.locale)}</p>`,
+  );
+  return sendEmail({
+    to,
+    subject: `נרשם חדש לבטא: ${row.phone}`,
+    html,
+    text: `טלפון: ${row.phone}\nמה הוא עושה: ${row.role}\nבאיזה כלי משתמש היום: ${row.tool}\nשפת הדף: ${row.locale}`,
+  });
+}
