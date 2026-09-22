@@ -24,7 +24,7 @@ export function PublicShell({
       <div style={{ position: 'relative', zIndex: 1 }}>
         <div className="sf-nav">
           <div className="sf-shell sf-nav-in">
-            <Link href={p('/')} className="sf-brand" style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 800, fontSize: 21, color: '#fff' }}>
+            <Link href={p('/')} className="sf-brand" style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 800, fontSize: 21, color: '#fff', direction: 'ltr' }}>
               Social<span className="sf-grad-text">Flow</span>
             </Link>
             <div className="sf-nav-links" style={{ flex: 1 }}>
