@@ -74,6 +74,15 @@ const es: Messages = {
     ],
     faqTitle: 'Preguntas frecuentes',
     faqs: [
+      { q: '¿Qué diferencia a SocialFlow de las herramientas grandes?', a: 'La manejas en lenguaje normal desde ChatGPT o Claude en lugar de ir haciendo clic por constructores de flujos. Puedes pedirle que lea tu última publicación y construya la automatización, preguntarle qué automatizaciones funcionaron mejor, preguntarle qué hacer en la próxima publicación. La interfaz está entera en tu idioma, y una pantalla Brain muestra qué generó leads de verdad.' },
+      { q: '¿De verdad puedo crear una automatización pidiéndoselo a ChatGPT?', a: 'Sí. Conecta SocialFlow como servidor MCP a ChatGPT o Claude, y luego escribe algo como: lee mi última publicación de Instagram, crea una automatización de comentarios con un mensaje privado, y dame al menos treinta variantes de respuesta distintas. Se crea, y la automatización aparece en el panel al instante.' },
+      { q: '¿Cuántas variantes de respuesta puede tener una automatización?', a: 'No hay límite. El sistema elige una al azar cada vez, para que la misma publicación no responda a todos los que comentan con la misma frase. Treinta variantes en una automatización es lo normal.' },
+      { q: '¿Puede decirme qué automatizaciones y qué publicaciones funcionaron mejor?', a: 'Sí. Pregúntaselo en el chat y lee tu actividad real: qué automatizaciones trajeron más leads, qué publicaciones, qué palabras clave, y a qué hora llegan los comentarios. Los mismos números están en la pantalla Brain de la aplicación.' },
+      { q: '¿Qué es Brain?', a: 'Una pantalla que muestra lo que tu cuenta aprendió de su propio historial: las mejores automatizaciones, publicaciones y palabras clave, cuándo llegan los comentarios, y frases cortas que señalan lo que destaca. También te compara con una media anónima de cuentas del mismo sector.' },
+      { q: '¿Funciona en Reels?', a: 'Sí. La misma automatización funciona en publicaciones de Instagram, en Reels y en publicaciones de una página de Facebook. Eliges la publicación, defines las palabras, y la respuesta pública y el mensaje privado salen en las dos plataformas desde una sola pantalla.' },
+      { q: '¿Qué pasa con alguien que no me sigue?', a: 'El mensaje privado se envía igualmente, pero Instagram lo deja en sus solicitudes de mensaje y no en la bandeja principal. Por eso la respuesta pública debería decir que se envió un mensaje, para que sepa dónde mirar.' },
+      { q: '¿Cuánto tarda en llegar el mensaje?', a: 'Hasta dos minutos. El sistema busca comentarios nuevos cada dos minutos, y un mensaje que Meta rechaza por un motivo puntual se reenvía automáticamente en vez de perderse.' },
+      { q: '¿Hay programa de afiliados?', a: 'Se está construyendo para creadores. El plan es un año gratis en el sistema a cambio de un vídeo detallado con una automatización funcionando, más un enlace personal que dará el cincuenta por ciento de cada pago de quien se suscriba a través de él durante su primer año. Dilo en el formulario de la beta si quieres estar dentro.' },
       { q: '¿Usan la API oficial de Meta?', a: 'Sí. La conexión usa los permisos oficiales de Meta para páginas y cuentas de empresa de Instagram. Sin scripts, sin suplantación, y tu contraseña nunca es necesaria.' },
       { q: '¿Puedo usarlo en publicaciones antiguas?', a: 'Sí. Elige cualquier publicación existente de la página o la cuenta, define palabras clave, y la automatización empieza a actuar sobre los comentarios nuevos que lleguen. Los comentarios anteriores a la automatización no reciben respuesta automática.' },
       { q: '¿Necesito saber programar?', a: 'No. La configuración es un asistente de seis pasos: elige una página, una publicación, palabras clave, una respuesta pública y un mensaje privado. Si lo prefieres, haz lo mismo en una conversación con Claude o ChatGPT.' },
@@ -447,7 +456,9 @@ const es: Messages = {
     mcpPublishNeedsText: 'caption o link es obligatorio para una publicación de Facebook.',
     mcpPublishNoFbMedia: 'Aquí Facebook publica una foto, texto o un enlace. Para publicar un vídeo o un reel usa Instagram.',
     mcpPublishedNote: 'Publicado. Para que responda a los comentarios automáticamente, créale una automatización a esta publicación con create_automation.',
+    mcpInsightsNote: 'Cada número se cuenta desde el registro de actividad de esta misma cuenta. Las horas están en UTC. La media del sector, cuando aparece, se basa en al menos cinco cuentas y no identifica a ninguna.',
     tools: {
+      get_insights: 'Lo que esta cuenta aprendió de su propio historial: las automatizaciones, publicaciones y palabras clave que generaron más leads, la tasa de comentario a lead, cuándo llegan los comentarios que coinciden, y frases claras que resumen lo que destaca. Sirve para responder qué funcionó mejor y para decidir qué debe hacer la próxima publicación. Contado desde el registro real, nunca predicho.',
       publish_post: 'Publica una publicación nueva en Instagram o Facebook: una foto, un carrusel, un vídeo, un reel o una publicación Facebook text/link. El archivo multimedia ya tiene que estar en una URL https pública que Meta pueda descargar. Disponible desde el plan Pro en adelante. Después de publicar puedes conectar una automatización a la publicación nueva con create_automation.',
       list_pages: 'Las páginas y cuentas de Instagram conectadas del usuario: id de página (page_id), nombre, id de Instagram (ig_id) y nombre de usuario. Usa estos ids en las demás herramientas.',
       list_posts: 'Las últimas publicaciones o reels de una página de Facebook o una cuenta de Instagram (hasta 25), con id, enlace, texto y número de comentarios. Necesario para elegir una publicación para una automatización.',
@@ -460,6 +471,7 @@ const es: Messages = {
       get_report: 'Informe resumido: comentarios gestionados, mensajes privados y respuestas públicas enviados, fallos y las mejores automatizaciones, de hoy, 7 días o 30 días.',
     },
     toolArgs: {
+      days: 'Periodo a analizar: 7, 30 o 90 días',
       caption: 'Texto de la publicación (caption en Instagram, mensaje en Facebook)',
       media_type: 'Qué publicar: image, carousel, video, reel, story (Instagram) o text/link (Facebook)',
       image_url: 'Enlace https público a la imagen',

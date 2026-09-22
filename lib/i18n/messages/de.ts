@@ -74,6 +74,15 @@ const de: Messages = {
     ],
     faqTitle: 'FAQ',
     faqs: [
+      { q: 'Was unterscheidet SocialFlow von den großen Tools?', a: 'Du steuerst es in normaler Sprache aus ChatGPT oder Claude, statt dich durch Flow-Builder zu klicken. Bitte es, deinen letzten Beitrag zu lesen und die Automatisierung zu bauen, frag, welche Automatisierungen am besten liefen, frag, was der nächste Beitrag tun soll. Die Oberfläche ist vollständig auf Deutsch, und ein Brain-Bildschirm zeigt, was wirklich Leads gebracht hat.' },
+      { q: 'Kann ich eine Automatisierung wirklich erstellen, indem ich ChatGPT frage?', a: 'Ja. Verbinde SocialFlow als MCP-Server mit ChatGPT oder Claude und schreib dann etwa: Lies meinen letzten Instagram-Beitrag, bau eine Kommentar-Automatisierung mit privater Nachricht und gib mir mindestens dreißig verschiedene Antwortvarianten. Es legt sie an, und die Automatisierung erscheint sofort im Dashboard.' },
+      { q: 'Wie viele Antwortvarianten passen in eine Automatisierung?', a: 'Es gibt keine Grenze. Das System wählt jedes Mal zufällig eine aus, damit derselbe Beitrag nicht jedem Kommentator denselben Satz antwortet. Dreißig Varianten in einer Automatisierung sind normal.' },
+      { q: 'Kann es mir sagen, welche Automatisierungen und Beiträge am besten liefen?', a: 'Ja. Frag im Chat, und es liest deine echte Aktivität: welche Automatisierungen die meisten Leads brachten, welche Beiträge, welche Auslöserwörter und zu welcher Stunde Kommentare eintreffen. Dieselben Zahlen stehen im Brain-Bildschirm der App.' },
+      { q: 'Was ist Brain?', a: 'Ein Bildschirm, der zeigt, was dein Konto aus seiner eigenen Historie gelernt hat: die besten Automatisierungen, Beiträge und Auslöserwörter, wann Kommentare eintreffen, und kurze Sätze, die auf Auffälliges hinweisen. Er vergleicht dich außerdem mit einem anonymen Durchschnitt von Konten aus derselben Branche.' },
+      { q: 'Funktioniert es auf Reels?', a: 'Ja. Dieselbe Automatisierung läuft auf Instagram-Beiträgen, Reels und Facebook-Seitenbeiträgen. Du wählst den Beitrag, legst die Wörter fest, und die öffentliche Antwort und die private Nachricht gehen auf beiden Plattformen von einem Bildschirm aus raus.' },
+      { q: 'Was passiert mit jemandem, der mir nicht folgt?', a: 'Die private Nachricht wird trotzdem gesendet, aber Instagram legt sie in seine Nachrichtenanfragen statt in den Haupt-Posteingang. Deshalb sollte die öffentliche Antwort sagen, dass eine Nachricht rausging, damit er weiß, wo er nachsehen muss.' },
+      { q: 'Wie lange dauert es, bis die Nachricht ankommt?', a: 'Bis zu zwei Minuten. Das System prüft alle zwei Minuten auf neue Kommentare, und eine Nachricht, die Meta aus einem vorübergehenden Grund ablehnt, wird automatisch erneut versucht, statt verworfen zu werden.' },
+      { q: 'Gibt es ein Partnerprogramm?', a: 'Es wird gerade für Creator aufgebaut. Geplant ist ein Gratisjahr im System im Austausch für ein ausführliches Video mit einer laufenden Automatisierung, dazu ein persönlicher Link, der fünfzig Prozent jeder Zahlung von allen einbringen wird, die darüber im ersten Jahr abschließen. Wenn du dabei sein willst, schreib es ins Beta-Formular.' },
       { q: 'Nutzt ihr die offizielle Meta-API?', a: 'Ja. Die Verbindung nutzt die offiziellen Meta-Berechtigungen für Seiten und Instagram-Business-Konten. Keine Skripte, keine Imitation, und dein Passwort wird nie benötigt.' },
       { q: 'Kann ich es auf alten Beiträgen laufen lassen?', a: 'Ja. Wähle einen beliebigen bestehenden Beitrag auf der Seite oder dem Konto, lege Schlüsselwörter fest, und die Automatisierung reagiert auf neue Kommentare, die eintreffen. Kommentare, die älter sind als die Automatisierung, werden nicht automatisch beantwortet.' },
       { q: 'Muss ich programmieren können?', a: 'Nein. Die Einrichtung ist ein Assistent mit sechs Schritten: Seite, Beitrag, Schlüsselwörter, öffentliche Antwort und private Nachricht wählen. Wenn du magst, machst du dasselbe in einer Unterhaltung mit Claude oder ChatGPT.' },
@@ -447,7 +456,9 @@ const de: Messages = {
     mcpPublishNeedsText: 'caption oder link ist für einen Facebook-Beitrag erforderlich.',
     mcpPublishNoFbMedia: 'Facebook veröffentlicht hier ein Foto, Text oder einen Link. Für ein Video oder ein Reel nutze Instagram.',
     mcpPublishedNote: 'Veröffentlicht. Damit er automatisch auf Kommentare antwortet, erstelle für diesen Beitrag mit create_automation eine Automatisierung.',
+    mcpInsightsNote: 'Jede Zahl wird aus dem eigenen Aktivitätsprotokoll dieses Kontos gezählt. Uhrzeiten sind UTC. Ein Branchendurchschnitt umfasst, wenn vorhanden, mindestens fünf Konten und identifiziert keines davon.',
     tools: {
+      get_insights: 'Was dieses Konto aus seiner eigenen Historie gelernt hat: die Automatisierungen, Beiträge und Auslöserwörter, die die meisten Leads gebracht haben, die Rate von Kommentar zu Lead, wann passende Kommentare eintreffen, und klare Sätze, die das Auffällige zusammenfassen. Nutze es, um zu beantworten, was am besten funktioniert hat, und um zu entscheiden, was der nächste Beitrag tun soll. Aus dem echten Protokoll gezählt, nie prognostiziert.',
       publish_post: 'Einen neuen Beitrag auf Instagram oder Facebook veröffentlichen: ein Foto, ein Karussell, ein Video, ein Reel oder einen Facebook-Beitrag mit Text/Link. Die Medien müssen bereits unter einer öffentlichen https-URL liegen, die Meta herunterladen kann. Ab dem Pro-Tarif verfügbar. Nach dem Veröffentlichen kannst du dem neuen Beitrag mit create_automation eine Automatisierung anhängen.',
       list_pages: 'Die verbundenen Seiten und Instagram-Konten des Nutzers: Seiten-ID (page_id), Name, Instagram-ID (ig_id) und Nutzername. Verwende diese IDs in den anderen Tools.',
       list_posts: 'Die neuesten Beiträge oder Reels einer Facebook-Seite oder eines Instagram-Kontos (bis zu 25), mit ID, Link, Bildunterschrift und Kommentarzahl. Nötig, um einen Beitrag für eine Automatisierung auszuwählen.',
@@ -460,6 +471,7 @@ const de: Messages = {
       get_report: 'Zusammenfassender Bericht: bearbeitete Kommentare, gesendete private Nachrichten und öffentliche Antworten, Fehler und die besten Automatisierungen, für heute, 7 Tage oder 30 Tage.',
     },
     toolArgs: {
+      days: 'Zu analysierender Zeitraum: 7, 30 oder 90 Tage',
       caption: 'Text des Beitrags (Bildunterschrift auf Instagram, Nachricht auf Facebook)',
       media_type: 'Was veröffentlicht wird: image, carousel, video, reel, story (Instagram) oder text/link (Facebook)',
       image_url: 'Öffentlicher https-Link zum Bild',

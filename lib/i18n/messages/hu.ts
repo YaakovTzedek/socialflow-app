@@ -74,6 +74,15 @@ const hu: Messages = {
     ],
     faqTitle: 'GYIK',
     faqs: [
+      { q: 'Mitől más a SocialFlow, mint a nagy eszközök?', a: 'Hétköznapi nyelven kezeled a ChatGPT-ből vagy a Claude-ból, ahelyett hogy folyamatszerkesztőkben kattintgatnál. Kérd meg, hogy olvassa el a legutóbbi bejegyzésedet és építse meg az automatizálást, kérdezd meg, melyik automatizálás működött a legjobban, kérdezd meg, mit csináljon a következő bejegyzés. A felület teljesen magyar, a Brain képernyő pedig megmutatja, mi hozott valóban leadeket.' },
+      { q: 'Tényleg létre tudok hozni automatizálást úgy, hogy megkérem a ChatGPT-t?', a: 'Igen. Csatlakoztasd a SocialFlow-t MCP-szerverként a ChatGPT-hez vagy a Claude-hoz, majd írj valami ilyesmit: olvasd el a legutóbbi Instagram-bejegyzésemet, építs rá hozzászólás-automatizálást privát üzenettel, és adj legalább harminc különböző válaszváltozatot. Létrehozza, és az automatizálás azonnal megjelenik az irányítópulton.' },
+      { q: 'Hány válaszváltozat fér el egy automatizálásban?', a: 'Nincs korlát. A rendszer minden alkalommal véletlenszerűen választ egyet, így ugyanaz a bejegyzés nem ugyanazzal a mondattal válaszol minden hozzászólónak. Harminc változat egy automatizálásban teljesen szokásos.' },
+      { q: 'Meg tudja mondani, melyik automatizálás és bejegyzés működött a legjobban?', a: 'Igen. Kérdezd meg a beszélgetésben, és beolvassa a valós tevékenységedet: melyik automatizálás hozta a legtöbb leadet, melyik bejegyzés, melyik hívószó, és hány órakor érkeznek a hozzászólások. Ugyanezek a számok a Brain képernyőn is ott vannak az alkalmazásban.' },
+      { q: 'Mi az a Brain?', a: 'Egy képernyő, amely megmutatja, mit tanult a fiókod a saját előzményeiből: a legjobb automatizálásokat, bejegyzéseket és hívószavakat, mikor érkeznek a hozzászólások, és rövid mondatokban, mi tűnik ki. Emellett összehasonlít téged az azonos területen működő fiókok névtelen átlagával.' },
+      { q: 'Működik Reels videókon?', a: 'Igen. Ugyanaz az automatizálás fut Instagram-bejegyzéseken, Reels videókon és Facebook-oldalak bejegyzésein. Kiválasztod a bejegyzést, beállítod a szavakat, és a nyilvános válasz meg a privát üzenet mindkét platformon egy képernyőről megy ki.' },
+      { q: 'Mi történik azzal, aki nem követ engem?', a: 'A privát üzenet ettől még elmegy, de az Instagram az üzenetkérések közé teszi, nem a fő postaládába. Ezért érdemes a nyilvános válaszban jelezni, hogy elment egy üzenet, hogy tudja, hol keresse.' },
+      { q: 'Mennyi idő alatt érkezik meg az üzenet?', a: 'Legfeljebb két perc. A rendszer kétpercenként keresi az új hozzászólásokat, és ha a Meta átmeneti okból elutasít egy üzenetet, azt automatikusan újrapróbálja, nem dobja el.' },
+      { q: 'Lesz partnerprogram?', a: 'Most épül a tartalomkészítőknek. A terv: egy ingyenes év a rendszerben egy részletes videós bemutatóért működő automatizálással, plusz egy személyes link, amely ötven százalékot fog fizetni minden olyan befizetés után, amelyet a rajta keresztül előfizetők teljesítenek az első évükben. Ha benne lennél, jelezd a béta űrlapon.' },
       { q: 'A Meta hivatalos API-ját használjátok?', a: 'Igen. A kapcsolat a Meta hivatalos engedélyeit használja oldalakhoz és Instagram üzleti fiókokhoz. Nincsenek szkriptek, nincs megszemélyesítés, és a jelszavadra soha nincs szükség.' },
       { q: 'Futtathatom régi bejegyzéseken?', a: 'Igen. Válassz bármely meglévő bejegyzést az oldalon vagy a fiókban, állíts be rá kulcsszavakat, és az automatizálás elkezd reagálni az újonnan érkező hozzászólásokra. Az automatizálásnál régebbi hozzászólásokra nem válaszol automatikusan.' },
       { q: 'Kell programoznom?', a: 'Nem. A beállítás egy hatlépéses varázsló: válassz oldalt, bejegyzést, kulcsszavakat, nyilvános választ és privát üzenetet. Ha úgy tetszik, ugyanezt megteheted egy Claude- vagy ChatGPT-beszélgetésben is.' },
@@ -447,7 +456,9 @@ const hu: Messages = {
     mcpPublishNeedsText: 'Facebook-bejegyzéshez kötelező a caption vagy a link.',
     mcpPublishNoFbMedia: 'A Facebook itt fotót, szöveget vagy linket tesz közzé. Videóhoz vagy reelhez használd az Instagramot.',
     mcpPublishedNote: 'Közzétéve. Ahhoz, hogy automatikusan válaszoljon a hozzászólásokra, hozz létre hozzá automatizálást a create_automation eszközzel.',
+    mcpInsightsNote: 'Minden szám ennek a fióknak a saját tevékenységnaplójából van kiszámolva. Az órák UTC szerintiek. A szegmensátlag, ha szerepel, legalább öt fiókra vonatkozik, és egyiket sem azonosítja.',
     tools: {
+      get_insights: 'Amit ez a fiók a saját előzményeiből tanult: a legtöbb leadet hozó automatizálások, bejegyzések és hívószavak, a hozzászólásból leaddé válás aránya, mikor érkeznek az egyező hozzászólások, és rövid mondatok arról, mi tűnik ki. Ezzel válaszolható meg, mi működött a legjobban, és ez alapján dönthető el, mit csináljon a következő bejegyzés. A valós naplóból számolva, soha nem előrejelzés.',
       publish_post: 'Új bejegyzés közzététele Instagramon vagy Facebookon: fotó, körhinta, videó, reel vagy Facebook szöveges/linkes bejegyzés. A médiának már egy nyilvános https címen kell lennie, ahonnan a Meta le tudja tölteni. A Pro csomagtól érhető el. Közzététel után a create_automation eszközzel automatizálást csatolhatsz az új bejegyzéshez.',
       list_pages: 'A felhasználó csatlakoztatott oldalai és Instagram-fiókjai: oldalazonosító (page_id), név, Instagram-azonosító (ig_id) és felhasználónév. Ezeket az azonosítókat használd a többi eszközben.',
       list_posts: 'Egy Facebook-oldal vagy Instagram-fiók legújabb bejegyzései vagy Reels videói (legfeljebb 25), azonosítóval, linkkel, képaláírással és hozzászólásszámmal. Szükséges a bejegyzés kiválasztásához egy automatizáláshoz.',
@@ -460,6 +471,7 @@ const hu: Messages = {
       get_report: 'Összefoglaló jelentés: kezelt hozzászólások, elküldött privát üzenetek és nyilvános válaszok, hibák és a legjobb automatizálások, mára, 7 napra vagy 30 napra.',
     },
     toolArgs: {
+      days: 'Az elemzendő időszak: 7, 30 vagy 90 nap',
       caption: 'A bejegyzés szövege (képaláírás Instagramon, üzenet Facebookon)',
       media_type: 'Mit tegyen közzé: image, carousel, video, reel, story (Instagram) vagy text/link (Facebook)',
       image_url: 'Nyilvános https link a képhez',

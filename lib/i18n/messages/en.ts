@@ -77,6 +77,15 @@ const en = {
     ],
     faqTitle: 'FAQ',
     faqs: [
+      { q: 'What makes SocialFlow different from the big tools?', a: 'You manage it in plain language from ChatGPT or Claude instead of clicking through flow builders. Ask it to read your last post and build the automation, ask which automations worked best, ask what to do on the next post. The interface is fully Hebrew and right to left, and a Brain screen shows what actually produced leads.' },
+      { q: 'Can I really create an automation by asking ChatGPT?', a: 'Yes. Connect SocialFlow as an MCP server to ChatGPT or Claude, then write something like: read my latest Instagram post, build a comment automation with a private message, and give me at least thirty different reply variations. It creates it, and the automation appears in the dashboard straight away.' },
+      { q: 'How many reply variations can one automation hold?', a: 'There is no limit. The system picks one at random each time, so the same post does not answer every commenter with the same sentence. Thirty variations on one automation is normal.' },
+      { q: 'Can it tell me which automations and posts worked best?', a: 'Yes. Ask it in the chat and it reads your real activity: which automations brought the most leads, which posts, which trigger words, and what hour comments arrive. The same numbers sit on the Brain screen in the app.' },
+      { q: 'What is Brain?', a: 'A screen that shows what your account learned from its own history: the best automations, posts and trigger words, when comments arrive, and short sentences pointing out what stands out. It also compares you against an anonymous average of accounts in the same field.' },
+      { q: 'Does it work on Reels?', a: 'Yes. The same automation runs on Instagram posts, Reels and Facebook page posts. You pick the post, set the words, and the public reply and private message go out on both platforms from one screen.' },
+      { q: 'What happens to someone who does not follow me?', a: 'The private message is still sent, but Instagram puts it in their message requests rather than the main inbox. That is why the public reply should say a message was sent, so they know to look there.' },
+      { q: 'How long does the message take to arrive?', a: 'Up to two minutes. The system scans for new comments every two minutes, and a message that Meta refuses for a temporary reason is retried automatically instead of being dropped.' },
+      { q: 'Is there an affiliate programme?', a: 'It is being built for creators. The plan is a free year on the system in exchange for a detailed video walkthrough with a working automation, plus a personal link that pays fifty percent of every payment from anyone who subscribes through it during their first year. Ask on the beta form if you want to be in it.' },
       { q: "Do you use Meta's official API?", a: "Yes. The connection uses Meta's official permissions for pages and Instagram business accounts. No scripts, no impersonation, and your password is never needed." },
       { q: 'Can I run it on old posts?', a: 'Yes. Pick any existing post on the page or account, set keywords on it, and the automation starts acting on new comments that arrive. Comments that predate the automation are not answered automatically.' },
       { q: 'Do I need to code?', a: 'No. Setup is a six-step wizard: choose a page, a post, keywords, a public reply and a private message. If you prefer, do the same in a conversation with Claude or ChatGPT.' },
@@ -450,7 +459,9 @@ const en = {
     mcpPublishNeedsText: 'caption or link is required for a Facebook post.',
     mcpPublishNoFbMedia: 'Facebook here publishes a photo, text or a link. To publish a video or a reel use Instagram.',
     mcpPublishedNote: 'Published. To make it reply to comments automatically, create an automation for this post with create_automation.',
+    mcpInsightsNote: 'Every figure is counted from this account\'s own activity log. Hours are UTC. A segment average, when present, is over at least five accounts and identifies none of them.',
     tools: {
+      get_insights: 'What this account has learned from its own history: the automations, posts and trigger words that produced the most leads, the comment to lead rate, when matching comments arrive, and plain sentences summarising what stands out. Use it to answer what worked best and to decide what the next post should do. Counted from the real log, never predicted.',
       publish_post: 'Publish a new post to Instagram or Facebook: a photo, a carousel, a video, a reel or a Facebook text/link post. Media must already sit on a public https URL that Meta can download. Available on the Pro plan and up. After publishing you can attach an automation to the new post with create_automation.',
       list_pages: "The user's connected pages and Instagram accounts: page id (page_id), name, Instagram id (ig_id) and username. Use these ids in the other tools.",
       list_posts: 'The latest posts or reels of a Facebook page or Instagram account (up to 25), with id, link, caption and comment count. Needed to pick a post for an automation.',
@@ -463,6 +474,7 @@ const en = {
       get_report: 'Summary report: comments handled, private messages and public replies sent, failures, and the top automations, for today, 7 days or 30 days.',
     },
     toolArgs: {
+      days: 'Period to analyse: 7, 30 or 90 days',
       caption: 'Post text (caption on Instagram, message on Facebook)',
       media_type: 'What to publish: image, carousel, video, reel, story (Instagram) or text/link (Facebook)',
       image_url: 'Public https link to the image',

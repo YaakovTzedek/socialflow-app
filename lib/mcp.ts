@@ -16,7 +16,8 @@ import { randomUUID } from 'crypto';
 import { sql, ensureSchema } from './db';
 import { listInstagramMedia, listPagePosts, getPostsInfoCached, createInstagramContainer, waitForContainer, publishInstagramContainer, getMediaPermalink, publishFacebookPost, type IgPublishKind } from './meta';
 import { getEntitlement } from './entitlements';
-import { getMessages, negotiate, isLocale, type Locale, type Messages } from './i18n';
+import { getBrain, getSegment, getSegmentBenchmark } from './brain';
+import { getMessages, negotiate, isLocale, fmt, type Locale, type Messages } from './i18n';
 
 export const PROTOCOL_VERSION = '2025-06-18';
 const SERVER_INFO = { name: 'socialflow', version: '1.0.0' };
@@ -58,6 +59,9 @@ function toolsFor(m: Messages) {
     { name: 'delete_automation', description: T.delete_automation, inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'], additionalProperties: false } },
     { name: 'get_activity', description: T.get_activity, inputSchema: { type: 'object', properties: { automation_id: { type: 'string' }, limit: { type: 'integer', minimum: 1, maximum: 200, default: 50 }, since_hours: { type: 'integer', minimum: 1, maximum: 720, description: A.since_hours } }, additionalProperties: false } },
     { name: 'get_report', description: T.get_report, inputSchema: { type: 'object', properties: { period: { type: 'string', enum: ['today', '7d', '30d'], default: '7d' } }, additionalProperties: false } },
+    { name: 'get_insights', description: T.get_insights, inputSchema: { type: 'object', properties: {
+        days: { type: 'integer', enum: [7, 30, 90], default: 30, description: A.days },
+      }, additionalProperties: false } },
     { name: 'publish_post', description: T.publish_post, inputSchema: { type: 'object', properties: {
         page_id: { type: 'string', description: A.page_id },
         platform: { type: 'string', enum: ['instagram', 'facebook'], description: A.platform },
@@ -286,6 +290,35 @@ async function toolPublishPost(owner: string, a: Json, m: Messages) {
   return { published: true, platform: 'instagram', post_id: published.id, permalink, note: m.server.mcpPublishedNote };
 }
 
+/**
+ * The Brain screen, as a tool. Same counts the owner sees in the app, plus the
+ * rendered insight sentences, so an assistant asked "what worked best" answers
+ * from measured history instead of guessing from raw rows.
+ */
+async function toolGetInsights(owner: string, a: Json, m: Messages) {
+  const days = [7, 30, 90].includes(Number(a.days)) ? Number(a.days) : 30;
+  const brain = await getBrain(owner, days, 'UTC');
+  const segment = await getSegment(owner);
+  const benchmark = await getSegmentBenchmark(segment);
+  const templates = m.brain.insights as Record<string, string>;
+
+  return {
+    period_days: days,
+    totals: brain.totals,
+    top_automations: brain.automations.map((r) => ({ name: r.label, triggers: r.triggers, leads: r.leads, comment_to_lead_percent: r.rate })),
+    top_posts: brain.posts.map((r) => ({ post: r.label, permalink: r.permalink, triggers: r.triggers, leads: r.leads, comment_to_lead_percent: r.rate })),
+    top_keywords: brain.keywords.map((r) => ({ keyword: r.label, triggers: r.triggers, leads: r.leads, comment_to_lead_percent: r.rate })),
+    comments_by_hour_utc: brain.byHour,
+    insights: brain.insights.map((i) => fmt(templates[i.key] || '', i.vars as Record<string, string | number>)),
+    segment: segment
+      ? benchmark
+        ? { name: segment, accounts: benchmark.owners, comment_to_lead_percent: benchmark.deliveryRate, top_keywords: benchmark.topKeywords, peak_hour: benchmark.peakHour, note: m.brain.benchPrivacy }
+        : { name: segment, note: m.brain.segmentThin }
+      : null,
+    note: m.server.mcpInsightsNote,
+  };
+}
+
 async function callTool(owner: string, name: string, args: Json, m: Messages) {
   switch (name) {
     case 'list_pages': return toolListPages(owner, m);
@@ -297,6 +330,7 @@ async function callTool(owner: string, name: string, args: Json, m: Messages) {
     case 'delete_automation': return toolDeleteAutomation(owner, args);
     case 'get_activity': return toolGetActivity(owner, args);
     case 'get_report': return toolGetReport(owner, args);
+    case 'get_insights': return toolGetInsights(owner, args, m);
     case 'publish_post': return toolPublishPost(owner, args, m);
     default: throw Object.assign(new Error(`Unknown tool: ${name}`), { code: -32602 });
   }

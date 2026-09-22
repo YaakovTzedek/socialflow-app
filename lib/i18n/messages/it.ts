@@ -74,6 +74,15 @@ const it: Messages = {
     ],
     faqTitle: 'FAQ',
     faqs: [
+      { q: 'Cosa distingue SocialFlow dagli strumenti più grandi?', a: "La gestisci in linguaggio semplice da ChatGPT o Claude invece di cliccare dentro costruttori di flussi. Puoi chiederle di leggere il tuo ultimo post e costruire l'automazione, chiedere quali automazioni hanno funzionato meglio, chiedere cosa fare nel prossimo post. L'interfaccia è tutta nella tua lingua, e una schermata Brain mostra cosa ha davvero portato lead." },
+      { q: "Posso davvero creare un'automazione chiedendolo a ChatGPT?", a: "Sì. Collega SocialFlow come server MCP a ChatGPT o Claude, poi scrivi qualcosa come: leggi il mio ultimo post su Instagram, costruisci un'automazione di commenti con un messaggio privato, e dammi almeno trenta varianti di risposta diverse. Viene creata, e l'automazione compare subito nella dashboard." },
+      { q: "Quante varianti di risposta può contenere un'automazione?", a: "Non c'è nessun limite. Il sistema ne estrae una a caso ogni volta, così lo stesso post non risponde a tutti i commentatori con la stessa frase. Trenta varianti su una sola automazione è normale." },
+      { q: 'Può dirmi quali automazioni e quali post hanno funzionato meglio?', a: "Sì. Chiediglielo in chat e legge la tua attività reale: quali automazioni hanno portato più lead, quali post, quali parole chiave, e a che ora arrivano i commenti. Gli stessi numeri stanno nella schermata Brain dentro l'app." },
+      { q: "Cos'è Brain?", a: 'Una schermata che mostra cosa ha imparato il tuo account dalla propria storia: le automazioni, i post e le parole chiave migliori, quando arrivano i commenti, e frasi brevi che segnalano cosa spicca. Ti confronta anche con una media anonima di account dello stesso settore.' },
+      { q: 'Funziona sui Reels?', a: 'Sì. La stessa automazione gira sui post Instagram, sui Reels e sui post di una pagina Facebook. Scegli il post, imposti le parole, e la risposta pubblica e il messaggio privato partono su entrambe le piattaforme da una sola schermata.' },
+      { q: 'Cosa succede a chi non mi segue?', a: 'Il messaggio privato viene inviato lo stesso, ma Instagram lo mette nelle sue richieste di messaggio invece che nella casella principale. Per questo la risposta pubblica dovrebbe dire che è stato inviato un messaggio, così sa dove cercarlo.' },
+      { q: 'Quanto tempo passa prima che il messaggio arrivi?', a: 'Fino a due minuti. Il sistema cerca nuovi commenti ogni due minuti, e un messaggio che Meta rifiuta per un motivo temporaneo viene rinviato automaticamente invece di andare perso.' },
+      { q: "C'è un programma di affiliazione?", a: "È in costruzione per i creator. Il piano prevede un anno gratis sul sistema in cambio di un video dettagliato con un'automazione funzionante, più un link personale che darà il cinquanta per cento di ogni pagamento di chi si abbona tramite quel link durante il suo primo anno. Segnalalo nel modulo della beta se vuoi farne parte." },
       { q: "Usate l'API ufficiale di Meta?", a: 'Sì. La connessione usa i permessi ufficiali di Meta per pagine e account Instagram aziendali. Niente script, nessuna impersonificazione, e la tua password non serve mai.' },
       { q: 'Posso usarlo sui post vecchi?', a: "Sì. Scegli qualsiasi post esistente della pagina o dell'account, imposta le parole chiave, e l'automazione inizia a gestire i nuovi commenti in arrivo. I commenti precedenti all'automazione non ricevono risposta automatica." },
       { q: 'Devo saper programmare?', a: 'No. La configurazione è una procedura guidata in sei passaggi: scegli una pagina, un post, le parole chiave, una risposta pubblica e un messaggio privato. Se preferisci, fai lo stesso in una conversazione con Claude o ChatGPT.' },
@@ -447,7 +456,9 @@ const it: Messages = {
     mcpPublishNeedsText: 'caption o link è obbligatorio per un post su Facebook.',
     mcpPublishNoFbMedia: 'Qui Facebook pubblica una foto, del testo o un link. Per pubblicare un video o un reel usa Instagram.',
     mcpPublishedNote: "Pubblicato. Per far rispondere il post ai commenti in automatico, creagli un'automazione con create_automation.",
+    mcpInsightsNote: 'Ogni numero è contato dal registro di attività di questo account. Le ore sono in UTC. La media di settore, quando compare, si basa su almeno cinque account e non ne identifica nessuno.',
     tools: {
+      get_insights: 'Cosa ha imparato questo account dalla propria storia: le automazioni, i post e le parole chiave che hanno portato più lead, il tasso da commento a lead, quando arrivano i commenti corrispondenti, e frasi semplici che riassumono cosa spicca. Serve per rispondere a cosa ha funzionato meglio e per decidere cosa deve fare il prossimo post. Contato dal registro reale, mai previsto.',
       publish_post: "Pubblica un nuovo post su Instagram o Facebook: una foto, un carosello, un video, un reel o un post Facebook text/link. Il file multimediale deve già trovarsi su un URL https pubblico che Meta possa scaricare. Disponibile dal piano Pro in su. Dopo la pubblicazione puoi collegare un'automazione al nuovo post con create_automation.",
       list_pages: "Le pagine e gli account Instagram collegati dell'utente: id pagina (page_id), nome, id Instagram (ig_id) e username. Usa questi id negli altri strumenti.",
       list_posts: "Gli ultimi post o reel di una pagina Facebook o di un account Instagram (fino a 25), con id, link, didascalia e numero di commenti. Serve per scegliere un post per un'automazione.",
@@ -460,6 +471,7 @@ const it: Messages = {
       get_report: 'Report riassuntivo: commenti gestiti, messaggi privati e risposte pubbliche inviati, errori e le automazioni migliori, per oggi, 7 giorni o 30 giorni.',
     },
     toolArgs: {
+      days: 'Periodo da analizzare: 7, 30 o 90 giorni',
       caption: 'Testo del post (caption su Instagram, messaggio su Facebook)',
       media_type: 'Cosa pubblicare: image, carousel, video, reel, story (Instagram) o text/link (Facebook)',
       image_url: "Link https pubblico all'immagine",
