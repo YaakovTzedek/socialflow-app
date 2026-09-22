@@ -5,7 +5,7 @@ import { PLAN_CATALOG, type PlanId } from '@/lib/plans';
 export const SEO_BASE = (process.env.NEXT_PUBLIC_BASE_URL || 'https://isocialflow.com').replace(/\/$/, '');
 
 /** Public pages, in sitemap order. Everything else needs a session. */
-export const PUBLIC_PATHS = ['/', '/pricing', '/blog', '/terms', '/privacy', '/data-deletion'] as const;
+export const PUBLIC_PATHS = ['/', '/pricing', '/guide', '/blog', '/terms', '/privacy', '/data-deletion'] as const;
 
 export function urlFor(locale: Locale, path: string) {
   const p = path === '/' ? '' : path;

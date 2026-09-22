@@ -264,6 +264,15 @@ html:not([lang="he"]) .sfp-title { font-size: clamp(30px, 4.2vw, 48px); line-hei
 .sfp-cta-title { font-size: 23px; font-weight: 800; color: #fff; margin-block-end: 8px; }
 .sfp-cta p { font-size: 16px; line-height: 1.7; color: var(--muted); margin: 0 0 18px; }
 .sfp-more { margin-block-start: 56px; }
+
+/* The waiting-list block at the foot of /guide. Wider than .sfp-cta because it
+   holds a form and not a button, and scroll-margin so the "join" anchor from
+   the private message does not land under the sticky nav. */
+.sfp-guide-cta { margin-block-start: 56px; scroll-margin-block-start: 90px; background: linear-gradient(140deg, rgba(131, 58, 180, .3), rgba(247, 119, 55, .16)); border: 1px solid var(--line); border-radius: 22px; padding: 32px; max-width: 760px; }
+.sfp-guide-cta h2 { font-size: 26px; font-weight: 800; color: #fff; margin: 0 0 8px; }
+.sfp-guide-cta p { font-size: 16px; line-height: 1.7; color: var(--muted); margin: 0 0 22px; }
+@media (max-width: 640px) { .sfp-guide-cta { padding: 24px 18px; border-radius: 18px; } }
+
 .sfp-more h2 { font-size: 23px; color: #fff; margin: 0 0 16px; }
 
 .sfp-currency { font-size: 14px; color: var(--faint); margin-block-end: 20px; }
