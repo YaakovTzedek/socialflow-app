@@ -52,6 +52,14 @@ export async function GET(req: NextRequest) {
   let host = 'unknown';
   try { host = new URL(raw).host; } catch { /* malformed or absent */ }
   const [ver] = await sql!`SELECT version() AS v, current_database() AS db, current_schema() AS schema`;
+  // On the Supabase pooler the connecting user is postgres.<project ref>, which
+  // is how a deployment can name the project holding its data without ever
+  // exposing the password.
+  let poolUser: string | null = null;
+  try {
+    const [u] = await sql!`SELECT usename FROM pg_stat_activity WHERE pid = pg_backend_pid()`;
+    poolUser = (u?.usename as string) || null;
+  } catch { /* not every provider exposes it */ }
 
-  return NextResponse.json({ database: { host, name: ver?.db, schema: ver?.schema, version: String(ver?.v || '').slice(0, 60) }, summary, errors, automations, dmSentRows: dm?.n ?? 0, recent });
+  return NextResponse.json({ database: { host, user: poolUser, name: ver?.db, schema: ver?.schema, version: String(ver?.v || '').slice(0, 60) }, summary, errors, automations, dmSentRows: dm?.n ?? 0, recent });
 }
