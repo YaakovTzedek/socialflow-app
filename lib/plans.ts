@@ -86,3 +86,78 @@ export function priceFor(id: PlanId, interval: Interval, currency: 'ILS' | 'USD'
 }
 
 export function fmtIls(n: number) { return `₪${n.toLocaleString('he-IL')}`; }
+
+/* ------------------------------------------------------------------------ */
+/* Currency by country                                                        */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * What a visitor is charged, and what the page shows them.
+ *
+ * Only two currencies are actually charged: shekels in Israel and dollars
+ * everywhere else, because those are the two the payment provider settles in.
+ * A locale whose country uses a third currency still sees its own money, as an
+ * indication next to the real figure, converted with the fixed rates below.
+ *
+ * The rates are deliberately fixed rather than fetched: a price that moves with
+ * the exchange rate every time the page is loaded is a worse experience than a
+ * round number that is occasionally a few percent off. Update them here.
+ */
+export type ChargeCurrency = 'ILS' | 'USD';
+export type DisplayCurrency = 'ILS' | 'USD' | 'EUR' | 'HUF' | 'JPY';
+
+export interface LocalePricing {
+  /** The currency the customer's card is actually charged in. */
+  charge: ChargeCurrency;
+  /** The currency shown alongside, when the country uses a third one. */
+  display?: Exclude<DisplayCurrency, 'ILS' | 'USD'>;
+}
+
+export const PRICING_BY_LOCALE: Record<string, LocalePricing> = {
+  he: { charge: 'ILS' },
+  en: { charge: 'USD' },
+  ar: { charge: 'USD' },
+  de: { charge: 'USD', display: 'EUR' },
+  fr: { charge: 'USD', display: 'EUR' },
+  it: { charge: 'USD', display: 'EUR' },
+  es: { charge: 'USD', display: 'EUR' },
+  hu: { charge: 'USD', display: 'HUF' },
+  ja: { charge: 'USD', display: 'JPY' },
+};
+
+/** Indicative rates against one US dollar. Reviewed by hand, not fetched. */
+export const USD_RATES: Record<Exclude<DisplayCurrency, 'ILS' | 'USD'>, number> = {
+  EUR: 0.92,
+  HUF: 360,
+  JPY: 152,
+};
+
+const SYMBOL: Record<DisplayCurrency, string> = { ILS: '₪', USD: '$', EUR: '€', HUF: 'Ft', JPY: '¥' };
+
+/** Round to something a price tag would actually show in that currency. */
+function roundFor(currency: DisplayCurrency, value: number): number {
+  if (value === 0) return 0;
+  if (currency === 'HUF') return Math.round(value / 100) * 100;
+  if (currency === 'JPY') return Math.round(value / 10) * 10;
+  return Math.round(value);
+}
+
+export function formatMoney(currency: DisplayCurrency, amount: number, locale = 'en'): string {
+  const n = roundFor(currency, amount);
+  const num = n.toLocaleString(locale === 'he' ? 'he-IL' : locale);
+  return currency === 'HUF' ? `${num} ${SYMBOL.HUF}` : `${SYMBOL[currency]}${num}`;
+}
+
+export function pricingForLocale(locale: string): LocalePricing {
+  return PRICING_BY_LOCALE[locale] || { charge: 'USD' };
+}
+
+/** The headline price, in the currency the card is charged, plus the local indication. */
+export function displayPrice(planId: PlanId, interval: Interval, locale: string) {
+  const cfg = pricingForLocale(locale);
+  const charged = priceFor(planId, interval, cfg.charge);
+  const main = formatMoney(cfg.charge, charged, locale);
+  if (!cfg.display || charged === 0) return { main, local: null as string | null, charge: cfg.charge };
+  const usd = priceFor(planId, interval, 'USD');
+  return { main, local: formatMoney(cfg.display, usd * USD_RATES[cfg.display], locale), charge: cfg.charge };
+}

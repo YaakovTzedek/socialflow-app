@@ -127,6 +127,8 @@ export function Landing({ error }: { error?: string }) {
               <a href="#how">{H.navHow}</a>
               <a href="#features">{H.navFeatures}</a>
               <a href="#faq">{H.navFaq}</a>
+              <Link href={p('/pricing')}>{m.pricing.nav}</Link>
+              <Link href={p('/blog')}>{m.blog.nav}</Link>
             </div>
             <LanguageSwitcher />
             <a href="#join" className="sf-btn sf-btn-primary sf-btn-sm">{B.navCta}</a>
@@ -447,6 +449,8 @@ export function Landing({ error }: { error?: string }) {
               <div className="sf-footer-links" style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 15, flex: 1 }}>
                 <Link href={p('/terms')}>{H.footerTerms}</Link>
                 <Link href={p('/privacy')}>{H.footerPrivacy}</Link>
+                <Link href={p('/pricing')}>{m.pricing.nav}</Link>
+                <Link href={p('/blog')}>{m.blog.nav}</Link>
                 <Link href={p('/data-deletion')}>{H.footerDeletion}</Link>
                 <LoginLink>{B.signIn}</LoginLink>
               </div>

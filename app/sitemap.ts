@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { LOCALES } from '@/lib/i18n';
+import { allPosts } from '@/lib/blog';
 import { PUBLIC_PATHS, alternatesFor, urlFor } from '@/lib/seo';
 
 /** Every public page in every language, each entry carrying its hreflang set. */
@@ -17,6 +18,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
         alternates: { languages },
       });
     }
+  }
+  // Articles exist per language, so each one contributes exactly its own URL.
+  for (const post of allPosts()) {
+    out.push({
+      url: urlFor(post.locale, `/blog/${post.slug}`),
+      lastModified: new Date(post.updated || post.published),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    });
   }
   return out;
 }
