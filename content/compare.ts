@@ -78,7 +78,7 @@ const he: Compare = {
     'כשעוברים את המגבלה ב-ManyChat האוטומציות ממשיכות לרוץ והתוספת נכנסת לחשבון הבא. אצלנו השליחה נעצרת ואתם מקבלים התראה, בלי חיוב מפתיע.',
     'ל-SocialFlow יש שרת MCP מובנה: אפשר להקים ולתפעל אוטומציות מתוך Claude ו-ChatGPT בשפה חופשית. ל-ManyChat אין שרת רשמי, רק עטיפות של צד שלישי מעל ה-API.',
     'ל-ManyChat אין תמיכה בכיווניות ימין לשמאל. בקהילה שלהם פתוחה בקשה לתמיכה בעברית ובערבית, והפתרון בפועל הוא תוסף כרום. SocialFlow נבנתה בעברית מהיום הראשון.',
-    'מה שיש להם ואין לנו: וואטסאפ, SMS, מייל וטיקטוק, מאות תבניות מוכנות, ושנים של בגרות. אנחנו עושים אינסטגרם ופייסבוק, ועושים אותם היטב.',
+    'המעבר הוא התחברות אחת דרך אותו ממשק רשמי של Meta. החשבונות שכבר מחוברים אצלכם עוברים כמו שהם.',
   ],
 
   tableTitle: 'ההשוואה, שורה מול שורה',
@@ -173,16 +173,12 @@ const he: Compare = {
       ],
     },
     {
-      title: 'יכולות וערוצים',
+      title: 'יכולות',
       rows: [
         { label: 'תגובה ציבורית והודעה פרטית', us: 'כן', them: 'כן' },
-        { label: 'אינסטגרם', us: 'כן', them: 'כן' },
-        { label: 'פייסבוק', us: 'כן', them: 'כן' },
-        { label: 'וואטסאפ', us: 'לא', them: 'כן', key: true },
-        { label: 'SMS ומייל', us: 'לא', them: 'כן' },
-        { label: 'טיקטוק וטלגרם', us: 'לא', them: 'כן' },
-        { label: 'תבניות מוכנות', us: 'לא, בונים מאפס או מבקשים מהצ\'אט', them: 'מאות' },
-        { label: 'מיתוג המערכת בהודעות', us: `מוסר החל מ-${PLAN_CATALOG.creator.name}`, them: '"Powered by Manychat" במסלול החינמי' },
+        { label: 'אינסטגרם ופייסבוק', us: 'כן', them: 'כן' },
+        { label: 'מיתוג המערכת בהודעות', us: `מוסר החל מ-${PLAN_CATALOG.creator.name}`, them: '"Powered by Manychat" במסלול החינמי', key: true },
+        { label: 'זמן הקמה של אוטומציה ראשונה', us: 'דקות, או משפט אחד לצ\'אט', them: 'בניית תרחיש בממשק' },
       ],
     },
     {
@@ -194,21 +190,16 @@ const he: Compare = {
           them: `${MC.pro.contacts.toLocaleString('he-IL')} אנשי קשר פעילים בחודש`,
         },
         {
-          label: 'חשבונות מחוברים',
-          us: `${PLAN_CATALOG.pro.limits.accounts} ב-Pro, ${PLAN_CATALOG.agency.limits.accounts} ב-Agency`,
-          them: 'לפי ערוצים, לא לפי חשבונות',
-        },
-        {
-          label: 'משתמשים בחשבון',
-          us: `${PLAN_CATALOG.pro.limits.seats} ב-Pro, ${PLAN_CATALOG.agency.limits.seats} ב-Agency`,
-          them: `${MC.pro.seats} ב-Pro, ${MC.business.seats} ב-Business, ${MC.advanced.seats} ב-Advanced`,
-        },
-        {
           label: 'שמירת יומן פעילות',
           us: `${PLAN_CATALOG.pro.limits.logDays} ימים ב-Pro`,
           them: 'לא מפורסם כמגבלת מסלול',
         },
-        { label: 'אוטומציות פעילות', us: 'ללא הגבלה בכל מסלול בתשלום', them: 'ללא הגבלה בכל מסלול בתשלום' },
+        {
+          label: 'כמה עולה להגיע ל-3,000 פניות בחודש',
+          us: `${PLAN_CATALOG.pro.priceIls} ש"ח, בתוך המסלול`,
+          them: `${MC.pro.usd} דולר ועוד ${Math.round((3000 - MC.pro.contacts) * MC.pro.over)} דולר חריגה`,
+          key: true,
+        },
       ],
     },
   ],
@@ -237,15 +228,24 @@ const he: Compare = {
 <p>כלומר כדי לכתוב הודעה בעברית בלי שהפיסוק יקפוץ לצד הלא נכון, אתם מתקינים תוסף בדפדפן. זה עובד. זה גם אומר משהו על סדר העדיפויות.</p>
 <p>SocialFlow נכתבה עם כיווניות לוגית מהשורה הראשונה, ומדברת תשע שפות. עברית היא אחת מהן, לא תרגום שהודבק בסוף.</p>
 
-<h2>מה ManyChat עושה טוב יותר מאיתנו</h2>
-<p>הדף הזה שווה משהו רק אם הוא גם אומר את זה.</p>
+<h2>כמה זה באמת עולה, על חודש אחד טוב</h2>
+<p>נניח ריל שעבד: 3,000 אנשים הגיבו החודש וקיבלו הודעה פרטית.</p>
+<p>ב-SocialFlow זה <strong>בתוך המסלול</strong>. Pro כולל 20,000 הודעות בחודש, כלומר החשבון הוא 99 שקלים, בדיוק כמו בחודש שקט.</p>
+<p>ב-ManyChat, Pro כולל 2,500 אנשי קשר פעילים. 500 הנוספים הם חריגה של חמישה סנט לכל אחד, כלומר 25 דולר מעל ה-39. החודש הבא שוב תלוי בכמה אנשים הגיבו.</p>
+<p>זה לא הבדל של אחוזים. זו השאלה אם התמחור שלכם צפוי או שהוא נגזרת של ההצלחה השיווקית שלכם.</p>
+
+<h2>המעבר לוקח דקות, לא פרויקט</h2>
+<p>החיבור עובר דרך אותו ממשק רשמי של Meta שכבר אישרתם פעם. מתחברים עם הפייסבוק, בוחרים את הדף ואת חשבון האינסטגרם העסקי, וזהו.</p>
+<p>את האוטומציות בונים מחדש, וזה לוקח דקות: בוחרים פוסט, כותבים מילת מפתח, מדביקים קישור. או, אם אתם על Pro, מחברים את החשבון ל-Claude או ל-ChatGPT ומבקשים מהם להקים את הכול בשפה חופשית.</p>
+<p>אין ייצוא, אין ייבוא, אין תקופת חפיפה שבה משלמים על שתי מערכות.</p>
+
+<h2>למי SocialFlow מתאים</h2>
 <ul>
-<li><strong>ערוצים.</strong> יש להם וואטסאפ, SMS, מייל, טיקטוק וטלגרם. לנו יש אינסטגרם ופייסבוק. אם המשפך שלכם חייב וואטסאפ, הם התשובה ולא אנחנו.</li>
-<li><strong>תבניות.</strong> מאות תרחישים מוכנים לבחירה. אצלנו בונים מאפס, או מבקשים מהצ'אט לבנות.</li>
-<li><strong>בגרות.</strong> הם בשוק שנים, עם אקוסיסטם של אינטגרציות, קורסים וסוכנויות שמתמחות בהם. אנחנו חדשים.</li>
-<li><strong>קנה מידה.</strong> המסלול הגבוה שלהם מיועד ל-25,000 אנשי קשר פעילים בחודש, עם תמיכה ייעודית.</li>
+<li><strong>עסקים ישראליים</strong> שרוצים ממשק בעברית, חשבונית בשקלים, ותמיכה שעונה בעברית.</li>
+<li><strong>יוצרי תוכן</strong> שמפרסמים הרבה ולא רוצים שכל ריל מוצלח ייצור שורה נוספת בחשבון.</li>
+<li><strong>מי שעובד עם Claude או ChatGPT</strong> ומעדיף לנהל את המערכת בשיחה במקום בממשק.</li>
+<li><strong>סוכנויות</strong> שמנהלות כמה לקוחות תחת חשבון אחד, עם 15 חשבונות ועשרה משתמשים במסלול Agency.</li>
 </ul>
-<p>אם אתם עסק ישראלי שמריץ אינסטגרם ופייסבוק, רוצה לשלם בשקלים, לא רוצה להיענש על תוכן שעובד, ורוצה לתפעל הכול מתוך צ'אט, אנחנו ההתאמה הטובה יותר. אם אתם צריכים וואטסאפ או חמישה ערוצים, אנחנו לא, ועדיף שתדעו את זה עכשיו.</p>
 `,
 
   faqTitle: 'שאלות נפוצות',
@@ -271,8 +271,8 @@ const he: Compare = {
       a: 'ב-SocialFlow השליחה נעצרת ואתם מקבלים התראה, בלי חיוב נוסף. ב-ManyChat האוטומציות ממשיכות לרוץ והתוספת מתווספת אוטומטית לחשבונית הבאה.',
     },
     {
-      q: 'יש ל-SocialFlow וואטסאפ?',
-      a: 'לא. אנחנו עושים אינסטגרם ופייסבוק בלבד. ל-ManyChat יש וואטסאפ, SMS, מייל, טיקטוק וטלגרם. אם וואטסאפ הוא חלק הכרחי מהמשפך שלכם, הם ההתאמה הנכונה.',
+      q: 'כמה עולה חודש שבו ריל אחד עשה חיים?',
+      a: `אם 3,000 אנשים הגיבו וקיבלו הודעה, ב-SocialFlow זה בתוך המסלול: Pro כולל ${PLAN_CATALOG.pro.limits.dmsPerMonth.toLocaleString('he-IL')} הודעות בחודש, אז החשבון נשאר ${PLAN_CATALOG.pro.priceIls} שקלים. ב-ManyChat אותם 3,000 הם 500 אנשי קשר מעבר למכסת Pro, כלומר 25 דולר חריגה מעל ה-39.`,
     },
     {
       q: 'אפשר לעבור מ-ManyChat ל-SocialFlow?',
@@ -314,7 +314,7 @@ const en: Compare = {
     'Pass the limit on ManyChat and your automations keep running while the overage lands on your next invoice. Here, sending stops and you get an alert. No surprise bill.',
     'SocialFlow has a built-in MCP server: set up and run automations from Claude and ChatGPT in plain language. ManyChat has no official server, only third-party wrappers over its API.',
     'ManyChat has no built-in right-to-left support. There is an open request in their community for Hebrew and Arabic, and the working answer is a Chrome extension.',
-    'What they have and we do not: WhatsApp, SMS, email and TikTok, hundreds of templates, and years of maturity. We do Instagram and Facebook, and we do them well.',
+    'Switching is one sign-in through the same official Meta interface. Accounts you already have connected come across as they are.',
   ],
 
   tableTitle: 'The comparison, row by row',
@@ -366,26 +366,25 @@ const en: Compare = {
       ],
     },
     {
-      title: 'Features and channels',
+      title: 'Features',
       rows: [
         { label: 'Public reply plus private message', us: 'Yes', them: 'Yes' },
-        { label: 'Instagram', us: 'Yes', them: 'Yes' },
-        { label: 'Facebook', us: 'Yes', them: 'Yes' },
-        { label: 'WhatsApp', us: 'No', them: 'Yes', key: true },
-        { label: 'SMS and email', us: 'No', them: 'Yes' },
-        { label: 'TikTok and Telegram', us: 'No', them: 'Yes' },
-        { label: 'Ready-made templates', us: 'No, you build from scratch or ask the chat', them: 'Hundreds' },
-        { label: 'Branding on messages', us: `Removed from ${PLAN_CATALOG.creator.name} up`, them: '"Powered by Manychat" on the free tier' },
+        { label: 'Instagram and Facebook', us: 'Yes', them: 'Yes' },
+        { label: 'Branding on messages', us: `Removed from ${PLAN_CATALOG.creator.name} up`, them: '"Powered by Manychat" on the free tier', key: true },
+        { label: 'Time to a first automation', us: 'Minutes, or one sentence to the chat', them: 'Building a flow in the editor' },
       ],
     },
     {
       title: 'Limits by tier',
       rows: [
         { label: 'Professional tier volume', us: `${PLAN_CATALOG.pro.limits.dmsPerMonth.toLocaleString('en')} private messages a month`, them: `${MC.pro.contacts.toLocaleString('en')} active contacts a month` },
-        { label: 'Connected accounts', us: `${PLAN_CATALOG.pro.limits.accounts} on Pro, ${PLAN_CATALOG.agency.limits.accounts} on Agency`, them: 'Counted as channels, not accounts' },
-        { label: 'Seats', us: `${PLAN_CATALOG.pro.limits.seats} on Pro, ${PLAN_CATALOG.agency.limits.seats} on Agency`, them: `${MC.pro.seats} on Pro, ${MC.business.seats} on Business, ${MC.advanced.seats} on Advanced` },
         { label: 'Activity log retention', us: `${PLAN_CATALOG.pro.limits.logDays} days on Pro`, them: 'Not published as a tier limit' },
-        { label: 'Active automations', us: 'Unlimited on every paid tier', them: 'Unlimited on every paid tier' },
+        {
+          label: 'Cost of a month with 3,000 enquiries',
+          us: `$${PLAN_CATALOG.pro.priceUsd}, inside the tier`,
+          them: `$${MC.pro.usd} plus $${Math.round((3000 - MC.pro.contacts) * MC.pro.over)} in overage`,
+          key: true,
+        },
       ],
     },
   ],
@@ -409,15 +408,24 @@ const en: Compare = {
 <p>ManyChat has no official MCP server. What exists are third-party wrappers over their public API: an open-source project, and connectors from automation vendors. They work, but they need an API key, a manual config entry, and they are not supported by ManyChat. Their own community carries an open request for an "API for the AI agent era".</p>
 <p>Here it is not an add-on. It is part of the product, and connecting is one click with no keys and no files.</p>
 
-<h2>What ManyChat does better than us</h2>
-<p>This page is only worth anything if it says this too.</p>
+<h2>What one good month actually costs</h2>
+<p>Say a reel lands: 3,000 people comment this month and each gets a private message.</p>
+<p>On SocialFlow that is <strong>inside the tier</strong>. Pro includes 20,000 messages a month, so the invoice is the same as in a quiet month.</p>
+<p>On ManyChat, Pro includes 2,500 active contacts. The other 500 are overage at five cents each, $25 on top of the $39. Next month depends again on how many people replied.</p>
+<p>That is not a difference in percentages. It is whether your pricing is predictable or a derivative of your own marketing success.</p>
+
+<h2>Switching takes minutes, not a project</h2>
+<p>The connection runs through the same official Meta interface you have already approved once. Sign in with Facebook, pick the page and the Instagram business account, done.</p>
+<p>Automations are rebuilt, and that takes minutes: pick a post, type a keyword, paste a link. Or, on Pro, connect the account to Claude or ChatGPT and ask them to set the whole thing up in plain language.</p>
+<p>No export, no import, no overlap month where you pay for two systems.</p>
+
+<h2>Who SocialFlow is for</h2>
 <ul>
-<li><strong>Channels.</strong> They have WhatsApp, SMS, email, TikTok and Telegram. We have Instagram and Facebook. If your funnel needs WhatsApp, they are the answer and we are not.</li>
-<li><strong>Templates.</strong> Hundreds of ready-made flows. Here you build from scratch, or ask the chat to build.</li>
-<li><strong>Maturity.</strong> Years in the market, with an ecosystem of integrations, courses and agencies that specialise in them. We are new.</li>
-<li><strong>Scale.</strong> Their top tier is built for 25,000 active contacts a month with dedicated support.</li>
+<li><strong>Businesses</strong> that want the interface, the invoice and the support in their own language.</li>
+<li><strong>Creators</strong> who publish a lot and do not want every reel that works to add a line to the invoice.</li>
+<li><strong>People who work in Claude or ChatGPT</strong> and would rather run the system in conversation than in an editor.</li>
+<li><strong>Agencies</strong> running several clients under one account, with 15 accounts and ten seats on Agency.</li>
 </ul>
-<p>If you run Instagram and Facebook, do not want to be taxed for content that works, and want to run everything from a chat, we are the better fit. If you need WhatsApp or five channels, we are not, and it is better you know that now.</p>
 `,
 
   faqTitle: 'Frequently asked questions',
@@ -443,8 +451,8 @@ const en: Compare = {
       a: 'On SocialFlow sending stops and you get an alert, with no extra charge. On ManyChat automations keep running and the overage is added automatically to your next invoice.',
     },
     {
-      q: 'Does SocialFlow do WhatsApp?',
-      a: 'No. We do Instagram and Facebook only. ManyChat has WhatsApp, SMS, email, TikTok and Telegram. If WhatsApp is a required part of your funnel, they are the right fit.',
+      q: 'What does a month with one viral reel cost?',
+      a: `If 3,000 people comment and each gets a message, on SocialFlow that is inside the tier: Pro includes ${PLAN_CATALOG.pro.limits.dmsPerMonth.toLocaleString('en')} messages a month, so the invoice stays $${PLAN_CATALOG.pro.priceUsd}. On ManyChat those same 3,000 are 500 contacts past the Pro quota, which is $25 of overage on top of the $39.`,
     },
     {
       q: 'Can I move from ManyChat to SocialFlow?',
