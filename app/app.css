@@ -383,3 +383,69 @@ html:not([lang="he"]) .sf-h1 { font-size: 64px; line-height: 1.02; }
 html:not([lang="he"]) .sf-display { line-height: 1.08; }
 html:not([lang="he"]) .sfa-head .sfa-h { font-size: 30px; }
 html:not([lang="he"]) .sfa-side-card .sfa-h { font-size: 22px; }
+
+/* ------------------------------------------------------------------ */
+/* Brain                                                               */
+/* ------------------------------------------------------------------ */
+.sfb { display: flex; flex-direction: column; gap: 18px; }
+.sfb-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.sfb-periods { display: flex; gap: 6px; background: rgba(255, 255, 255, .04); border: 1px solid var(--line); border-radius: 999px; padding: 4px; }
+.sfb-periods button {
+  font-family: inherit; font-size: 14px; font-weight: 700; color: var(--dim);
+  background: none; border: 0; border-radius: 999px; padding: 8px 14px; cursor: pointer; white-space: nowrap;
+}
+.sfb-periods button.on { background: linear-gradient(90deg, #833AB4, #E1306C); color: #fff; }
+
+.sfb-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
+.sfb-kpi { background: var(--card, #1a1024); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; display: flex; flex-direction: column; gap: 4px; }
+.sfb-kpi strong { font-size: 30px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+.sfb-kpi span { font-size: 14px; color: var(--dim); }
+
+.sfb-card-title { font-size: 17px; font-weight: 800; color: #fff; margin-block-end: 4px; }
+.sfb-empty { text-align: center; }
+.sfb-empty-title { font-size: 19px; font-weight: 800; color: #fff; margin-block-end: 6px; }
+
+.sfb-insights { display: flex; flex-direction: column; gap: 10px; margin-block-start: 12px; }
+.sfb-insight { display: flex; align-items: flex-start; gap: 11px; font-size: 15px; line-height: 1.6; color: var(--text, #FAF7FC); background: rgba(255, 255, 255, .03); border: 1px solid var(--line); border-radius: 13px; padding: 13px 15px; }
+.sfb-insight-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; margin-block-start: 7px; }
+.sfb-insight.good .sfb-insight-dot { background: #22c55e; }
+.sfb-insight.warn .sfb-insight-dot { background: #FCAF45; }
+.sfb-insight.info .sfb-insight-dot { background: #E1306C; }
+
+.sfb-segments { display: flex; flex-wrap: wrap; gap: 8px; }
+.sfb-segments button {
+  font-family: inherit; font-size: 14px; font-weight: 700; color: var(--dim);
+  background: rgba(255, 255, 255, .04); border: 1px solid var(--line); border-radius: 999px;
+  padding: 9px 15px; cursor: pointer;
+}
+.sfb-segments button:hover { color: #fff; border-color: rgba(225, 48, 108, .5); }
+.sfb-segments button.on { background: rgba(225, 48, 108, .18); border-color: rgba(225, 48, 108, .6); color: #fff; }
+
+.sfb-bench { margin-block-start: 16px; display: flex; flex-direction: column; gap: 10px; border-block-start: 1px solid var(--line); padding-block-start: 16px; }
+.sfb-bench-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 15px; line-height: 1.6; color: var(--text, #FAF7FC); }
+.sfb-bench-row b { font-size: 13px; font-weight: 800; border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
+.sfb-bench-row b.up { background: rgba(34, 197, 94, .14); border: 1px solid rgba(34, 197, 94, .5); color: #6CE9A6; }
+.sfb-bench-row b.down { background: rgba(252, 175, 69, .14); border: 1px solid rgba(252, 175, 69, .5); color: #FFCE7A; }
+.sfb-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sfb-chips i { font-style: normal; font-size: 13px; font-weight: 700; background: rgba(131, 58, 180, .22); border: 1px solid rgba(131, 58, 180, .45); border-radius: 999px; padding: 4px 11px; }
+.sfb-bench-note { font-size: 13px; color: var(--faint, #8B7B99); }
+
+.sfb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 16px; align-items: start; }
+.sfb-table { width: 100%; border-collapse: collapse; margin-block-start: 12px; font-size: 14px; }
+.sfb-table th { text-align: start; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint, #8B7B99); font-weight: 700; padding-block: 0 8px; }
+.sfb-table td { padding-block: 10px; border-block-start: 1px solid var(--line); vertical-align: top; }
+.sfb-table td:first-child { max-width: 260px; overflow-wrap: anywhere; }
+.sfb-table td small { display: block; font-size: 12px; color: var(--faint, #8B7B99); margin-block-start: 2px; }
+.sfb-table td:not(:first-child) { text-align: end; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sfb-table td b { color: #fff; }
+
+.sfb-hours { display: flex; align-items: flex-end; gap: 3px; height: 130px; margin-block-start: 14px; }
+.sfb-hour { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; position: relative; }
+.sfb-hour > span { display: block; width: 100%; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, #E1306C, #833AB4); }
+.sfb-hour > i { position: absolute; inset-block-end: -18px; font-style: normal; font-size: 10px; color: var(--faint, #8B7B99); }
+.sfb-grid .sfa-card:has(.sfb-hours) { padding-block-end: 34px; }
+
+@media (max-width: 720px) {
+  .sfb-kpi strong { font-size: 25px; }
+  .sfb-table td:first-child { max-width: 160px; }
+}

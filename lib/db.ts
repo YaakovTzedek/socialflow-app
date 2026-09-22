@@ -174,6 +174,18 @@ export async function ensureSchema() {
       note       TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS segment_stats (
+      segment        TEXT PRIMARY KEY,
+      owners         INTEGER NOT NULL,
+      triggers       INTEGER NOT NULL,
+      leads          INTEGER NOT NULL,
+      delivery_rate  INTEGER NOT NULL,
+      link_rate      INTEGER,
+      no_link_rate   INTEGER,
+      peak_hour      INTEGER,
+      top_keywords   JSONB NOT NULL DEFAULT '[]'::jsonb,
+      computed_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
     CREATE TABLE IF NOT EXISTS beta_signups (
       id         BIGSERIAL PRIMARY KEY,
       phone      TEXT NOT NULL UNIQUE,
@@ -186,9 +198,11 @@ export async function ensureSchema() {
     CREATE TABLE IF NOT EXISTS owner_prefs (
       owner_id   TEXT PRIMARY KEY,
       locale     TEXT NOT NULL DEFAULT 'en',
+      segment    TEXT,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
     ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS locale TEXT;
+    ALTER TABLE owner_prefs ADD COLUMN IF NOT EXISTS segment TEXT;
     CREATE INDEX IF NOT EXISTS trigger_logs_automation_idx ON trigger_logs (automation_id, created_at DESC);
   `);
   initialized = true;
