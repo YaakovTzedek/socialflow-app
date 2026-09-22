@@ -3,6 +3,7 @@ import {
   exchangeCodeForToken,
   getLongLivedToken,
   getMe,
+  listPages,
 } from '@/lib/meta';
 import { getSession } from '@/lib/session';
 import { getBaseUrl, getRedirectUri } from '@/lib/url';
@@ -54,6 +55,29 @@ export async function GET(req: NextRequest) {
     session.userName = me.name;
     session.tokenExpiresAt = Date.now() + (long.expires_in ?? 5184000) * 1000;
     await session.save();
+
+    // Store a page token for every page the user just approved.
+    //
+    // These used to be written only when the first automation was created,
+    // which meant the MCP server could list a page and then refuse to read its
+    // posts: "page_not_ready". Someone connecting through Claude or ChatGPT had
+    // to come back to the web app, build one automation by hand, and only then
+    // could the chat do anything. The permission belongs to the connection, not
+    // to the first automation, so it is stored here.
+    if (hasDb) {
+      try {
+        await ensureSchema();
+        for (const page of await listPages(long.access_token)) {
+          if (!page.access_token) continue;
+          await sql!`
+            INSERT INTO page_tokens (page_id, owner_id, page_name, access_token, ig_id)
+            VALUES (${page.id}, ${me.id}, ${page.name ?? null}, ${page.access_token}, ${page.instagram_business_account?.id ?? null})
+            ON CONFLICT (page_id) DO UPDATE SET
+              owner_id = EXCLUDED.owner_id, page_name = EXCLUDED.page_name,
+              access_token = EXCLUDED.access_token, ig_id = EXCLUDED.ig_id, updated_at = now()`;
+        }
+      } catch { /* a login must never fail because Meta was slow to list pages */ }
+    }
 
     // Credit the partner whose link brought this account, first touch only.
     const affCode = req.cookies.get(AFF_COOKIE)?.value;

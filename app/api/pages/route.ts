@@ -27,7 +27,8 @@ function toSafe(pages: Awaited<ReturnType<typeof listPages>>) {
 }
 
 async function fetchAndStore(token: string, ownerId: string | null) {
-  const safe = toSafe(await listPages(token));
+  const pages = await listPages(token);
+  const safe = toSafe(pages);
   if (hasDb && ownerId) {
     try {
       await ensureSchema();
@@ -35,7 +36,20 @@ async function fetchAndStore(token: string, ownerId: string | null) {
         INSERT INTO pages_cache (owner_id, payload, updated_at) VALUES (${ownerId}, ${sql!.json(safe as any)}, now())
         ON CONFLICT (owner_id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = now()
       `;
-    } catch { /* cache is best effort */ }
+      // The cache deliberately carries no tokens, so the page tokens are stored
+      // separately here as well as at login. That heals accounts connected
+      // before tokens were kept at connect time: opening the app is enough, and
+      // nobody has to sign in again to make the MCP server see their posts.
+      for (const page of pages) {
+        if (!page.access_token) continue;
+        await sql!`
+          INSERT INTO page_tokens (page_id, owner_id, page_name, access_token, ig_id)
+          VALUES (${page.id}, ${ownerId}, ${page.name ?? null}, ${page.access_token}, ${page.instagram_business_account?.id ?? null})
+          ON CONFLICT (page_id) DO UPDATE SET
+            owner_id = EXCLUDED.owner_id, page_name = EXCLUDED.page_name,
+            access_token = EXCLUDED.access_token, ig_id = EXCLUDED.ig_id, updated_at = now()`;
+      }
+    } catch { /* cache and token refresh are both best effort */ }
   }
   return safe;
 }

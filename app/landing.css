@@ -269,6 +269,56 @@ html:not([lang="he"]) .sfp-title { font-size: clamp(30px, 4.2vw, 48px); line-hei
    holds a form and not a button, and scroll-margin so the "join" anchor from
    the private message does not land under the sticky nav. */
 
+/* Savings calculator. The only block a visitor operates instead of reading,
+   so it gets real weight: copy and sliders on one side, three figures on the
+   other, and the estimate disclaimer where it cannot be missed. */
+.sf-calc { padding-block: 0 96px; display: grid; grid-template-columns: 1fr; gap: 26px; align-items: center; }
+@media (min-width: 900px) { .sf-calc { grid-template-columns: minmax(0, 1.05fr) minmax(280px, .95fr); gap: 42px; } }
+.sf-calc-copy p { color: var(--muted); line-height: 1.75; margin: 14px 0 20px; max-width: 560px; }
+.sf-calc-row { display: grid; gap: 9px; margin-block-end: 18px; }
+.sf-calc-row > span { font-size: 15px; color: var(--muted); }
+.sf-calc-row b { color: #fff; font-size: 17px; font-variant-numeric: tabular-nums; }
+.sf-calc-row input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 999px; background: linear-gradient(90deg, #833AB4, #E1306C, #F77737); outline: none; }
+.sf-calc-row input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 999px; background: #fff; border: 3px solid #E1306C; cursor: pointer; box-shadow: 0 4px 14px rgba(225, 48, 108, .45); }
+.sf-calc-row input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 999px; background: #fff; border: 3px solid #E1306C; cursor: pointer; }
+.sf-calc-row input[type="range"]:focus-visible { box-shadow: 0 0 0 3px rgba(225, 48, 108, .45); }
+.sf-calc-note { font-size: 13.5px; color: var(--faint); line-height: 1.7; margin: 0; }
+.sf-calc-out { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+.sf-calc-stat { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 22px 20px; display: grid; gap: 6px; }
+.sf-calc-stat strong { font-size: 38px; font-weight: 800; color: #fff; line-height: 1; font-variant-numeric: tabular-nums; }
+.sf-calc-stat strong i { font-size: 16px; font-style: normal; font-weight: 700; color: var(--faint); margin-inline-start: 6px; }
+.sf-calc-stat span { font-size: 14px; color: var(--muted); line-height: 1.5; }
+.sf-calc-stat-hero { border-color: rgba(225, 48, 108, .55); box-shadow: 0 22px 54px rgba(225, 48, 108, .16); }
+.sf-calc-stat-hero strong { background: linear-gradient(90deg, #E1306C, #F77737, #FCAF45); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.sf-calc-stat-good strong { font-size: 27px; color: #6FD79A; }
+
+/* What happens after you connect, beside privacy. Both answer the same fear,
+   so they share a row just before the questions. */
+.sf-trustpair { padding-block: 0 96px; display: grid; grid-template-columns: 1fr; gap: 34px; align-items: start; }
+@media (min-width: 980px) { .sf-trustpair { grid-template-columns: 1fr 1fr; gap: 44px; } }
+.sf-after p, .sf-priv p { color: var(--muted); line-height: 1.75; margin: 14px 0 20px; }
+.sf-after ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.sf-after li { display: flex; gap: 13px; align-items: flex-start; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; }
+.sf-after-n { flex: none; width: 27px; height: 27px; border-radius: 999px; display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #833AB4, #E1306C); }
+.sf-after li strong { display: block; color: #fff; font-size: 16px; margin-block-end: 4px; }
+.sf-after li em { font-style: normal; color: var(--muted); font-size: 14.5px; line-height: 1.6; }
+
+.sf-priv-cols { display: grid; grid-template-columns: 1fr; gap: 14px; }
+@media (min-width: 560px) { .sf-priv-cols { grid-template-columns: 1fr 1fr; } }
+.sf-priv-yes, .sf-priv-no { border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+.sf-priv-yes { background: rgba(57, 192, 110, .07); border-color: rgba(57, 192, 110, .22); }
+.sf-priv-no { background: rgba(225, 48, 108, .07); border-color: rgba(225, 48, 108, .22); }
+.sf-priv-head { font-size: 13px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; margin-block-end: 11px; }
+.sf-priv-yes .sf-priv-head { color: #6FD79A; }
+.sf-priv-no .sf-priv-head { color: #FF8FA8; }
+.sf-priv-cols ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+.sf-priv-cols li { position: relative; padding-inline-end: 23px; color: var(--muted); font-size: 14.5px; line-height: 1.6; }
+.sf-priv-yes li::before { content: "✓"; position: absolute; inset-inline-end: 0; color: #6FD79A; font-weight: 800; }
+.sf-priv-no li::before { content: "✕"; position: absolute; inset-inline-end: 0; color: #FF8FA8; font-weight: 800; }
+.sf-priv-links { display: flex; flex-wrap: wrap; gap: 18px; margin-block-start: 16px; }
+.sf-priv-links a { font-size: 14px; color: #FF8FB0; text-decoration: none; border-block-end: 1px solid rgba(255, 143, 176, .35); }
+.sf-priv-links a:hover { color: #fff; border-color: #fff; }
+
 /* Price teaser on the landing: three figures right after "how it works",
    because the full table sat past the seventh screen and the second thing
    anyone asks is what it costs. */

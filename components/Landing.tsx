@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { LandingFaq } from './LandingFaq';
 import { LoginLink } from './LoginLink';
@@ -96,6 +97,13 @@ function FlowArrow({ flip = false }: { flip?: boolean }) {
 
 export function Landing({ error }: { error?: string }) {
   const { m, t, p, dir, locale } = useI18n();
+  // 30 comments at 15% is what a normal post looks like. The design shipped
+  // with 120 and 25%, which reads as someone else's account and costs trust
+  // on the one block a visitor actually touches.
+  const [comments, setComments] = useState(30);
+  const [rate, setRate] = useState(15);
+  const leads = Math.round((comments * rate) / 100);
+  const minutes = Math.max(1, Math.round((leads * 40) / 60));
   const H = m.home;
   const B = m.beta;
   const rtl = dir === 'rtl';
@@ -384,6 +392,43 @@ export function Landing({ error }: { error?: string }) {
           </div>
         </div>
 
+        {/* CALCULATOR
+            The only block on this page a visitor operates rather than reads,
+            which is why it sits early. The note under it is deliberate: this
+            estimates time, it does not promise a result. */}
+        <div className="sf-shell sf-calc">
+          <div className="sf-calc-copy">
+            <div className="sf-display sf-h2">{H.calcTitle}</div>
+            <div className="sf-rule" />
+            <p>{H.calcSub}</p>
+            <label className="sf-calc-row">
+              <span>{H.calcComments} <b>{comments}</b></span>
+              <input type="range" min={10} max={300} step={5} value={comments}
+                     onChange={(e) => setComments(Number(e.target.value))} />
+            </label>
+            <label className="sf-calc-row">
+              <span>{H.calcRate} <b>{rate}%</b></span>
+              <input type="range" min={5} max={60} step={5} value={rate}
+                     onChange={(e) => setRate(Number(e.target.value))} />
+            </label>
+            <p className="sf-calc-note">{H.calcNote}</p>
+          </div>
+          <div className="sf-calc-out">
+            <div className="sf-calc-stat">
+              <strong>{leads}</strong>
+              <span>{H.calcOutLeads}</span>
+            </div>
+            <div className="sf-calc-stat sf-calc-stat-hero">
+              <strong>{minutes}<i>{H.calcMinutes}</i></strong>
+              <span>{H.calcOutTime}</span>
+            </div>
+            <div className="sf-calc-stat sf-calc-stat-good">
+              <strong>{H.calcOutCoverValue}</strong>
+              <span>{H.calcOutCover}</span>
+            </div>
+          </div>
+        </div>
+
         {/* KEYWORDS */}
         <div id="features" className="sf-shell" style={{ paddingBlock: '0 96px' }}>
           <div style={{ marginBlockEnd: 30 }}>
@@ -438,6 +483,44 @@ export function Landing({ error }: { error?: string }) {
                 ))}
               </div>
               <div style={{ fontSize: 13, color: '#8B7B99' }}>{H.logNote}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* AFTER CONNECTING + PRIVACY
+            Both answer the same fear, so they sit together and just before the
+            questions section, where someone who is nearly convinced still wants
+            to know what they are handing over. */}
+        <div className="sf-shell sf-trustpair">
+          <div className="sf-after">
+            <div className="sf-display sf-h2">{H.afterTitle}</div>
+            <div className="sf-rule" />
+            <p>{H.afterSub}</p>
+            <ol>
+              {H.after.map((a, i) => (
+                <li key={a.title}>
+                  <span className="sf-after-n">{i + 1}</span>
+                  <div><strong>{a.title}</strong><em>{a.desc}</em></div>
+                </li>
+              ))}
+            </ol>
+          </div>
+          <div className="sf-priv">
+            <div className="sf-display sf-h2">{H.privacyTitle}</div>
+            <div className="sf-rule" />
+            <div className="sf-priv-cols">
+              <div className="sf-priv-yes">
+                <div className="sf-priv-head">{H.privacyKeptTitle}</div>
+                <ul>{H.privacyKept.map((k) => <li key={k}>{k}</li>)}</ul>
+              </div>
+              <div className="sf-priv-no">
+                <div className="sf-priv-head">{H.privacyNotTitle}</div>
+                <ul>{H.privacyNot.map((k) => <li key={k}>{k}</li>)}</ul>
+              </div>
+            </div>
+            <div className="sf-priv-links">
+              <Link href={p('/data-deletion')}>{H.privacyDelete}</Link>
+              <Link href={p('/privacy')}>{H.privacyMeta}</Link>
             </div>
           </div>
         </div>
