@@ -11,7 +11,7 @@ const es: Messages = {
     pause: 'Pausar', resume: 'Reanudar', active: 'Activa', paused: 'En pausa', error: 'Error', yes: 'Sí', no: 'No',
     facebook: 'Facebook', instagram: 'Instagram', facebookPage: 'Página de Facebook', instagramBusiness: 'Cuenta de empresa de Instagram',
     user: 'Usuario', commenter: 'Comentarista', anyComment: 'Cualquier comentario', unknownError: 'Algo salió mal',
-    language: 'Idioma', logout: 'Cerrar sesión', connectAccount: 'Conectar cuenta', connectAnother: '+ Conectar otra cuenta',
+    language: 'Idioma', logout: 'Cerrar sesión', login: 'Entrar', connectAccount: 'Conectar cuenta', connectAnother: '+ Conectar otra cuenta',
     connectedToMeta: 'Conectado a Meta', signInWithFacebook: 'Iniciar sesión con Facebook',
     followers: 'seguidores', posts: 'Publicaciones', media: 'Contenido', comments: 'comentarios',
   },

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import '@/app/landing.css';
 import { getMessages, localePath, type Locale } from '@/lib/i18n';
+import { LoginLink } from './LoginLink';
 
 /**
  * Chrome for the public pages that are not the landing: blog and pricing.
@@ -31,6 +32,7 @@ export function PublicShell({
               <Link href={p('/blog')}>{m.blog.nav}</Link>
               <Link href={p('/pricing')}>{m.pricing.nav}</Link>
             </div>
+            <LoginLink className="sf-nav-login">{m.common.login}</LoginLink>
             <Link href={p('/')} className="sf-btn sf-btn-primary sf-btn-sm">{m.beta.navCta}</Link>
           </div>
         </div>

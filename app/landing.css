@@ -47,6 +47,8 @@
 .sf-nav-links { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
 .sf-nav-links a { font-weight: 600; font-size: 15px; color: var(--muted); padding-inline: 14px; padding-block: 8px; border-radius: 10px; }
 .sf-nav-links a:hover { color: #fff; background: rgba(255, 255, 255, .06); }
+.sf-nav-login { font-weight: 700; font-size: 15px; color: var(--muted); padding-inline: 14px; padding-block: 9px; border-radius: 10px; border: 1px solid var(--line); white-space: nowrap; }
+.sf-nav-login:hover { color: #fff; background: rgba(255, 255, 255, .06); }
 
 /* buttons */
 .sf-btn { display: inline-flex; align-items: center; gap: 10px; font-family: var(--font-body, Assistant, sans-serif); font-weight: 700; font-size: 16px; padding-inline: 26px; padding-block: 12px; border-radius: 999px; border: 0; cursor: pointer; white-space: nowrap; transition: filter .15s, box-shadow .15s, border-color .15s, background .15s; }
@@ -194,6 +196,7 @@ html[lang="ar"] .sf-hand, html[lang="ja"] .sf-hand, html[lang="ar"] .sf-sign { f
   .sf-brand { gap: 7px !important; }
   .sf-nav-in { gap: 7px; }
   .sf-btn-sm { font-size: 13px; padding-inline: 13px; padding-block: 9px; }
+  .sf-nav-login { font-size: 13px; padding-inline: 10px; padding-block: 8px; }
   .sfa-lang select { padding: 6px 8px; font-size: 12px; }
   .sf-trustline { font-size: 14px; }
 }

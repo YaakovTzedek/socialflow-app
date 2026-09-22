@@ -14,7 +14,7 @@ const en = {
     pause: 'Pause', resume: 'Resume', active: 'Active', paused: 'Paused', error: 'Error', yes: 'Yes', no: 'No',
     facebook: 'Facebook', instagram: 'Instagram', facebookPage: 'Facebook page', instagramBusiness: 'Instagram business account',
     user: 'User', commenter: 'Commenter', anyComment: 'Any comment', unknownError: 'Something went wrong',
-    language: 'Language', logout: 'Log out', connectAccount: 'Connect account', connectAnother: '+ Connect another account',
+    language: 'Language', logout: 'Log out', login: 'Sign in', connectAccount: 'Connect account', connectAnother: '+ Connect another account',
     connectedToMeta: 'Connected to Meta', signInWithFacebook: 'Sign in with Facebook',
     followers: 'followers', posts: 'Posts', media: 'Media', comments: 'comments',
   },
