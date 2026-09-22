@@ -45,7 +45,8 @@ function dmTextFor(a: any, branding: string | null): string {
  * without this pass a single rate-limit answer from Meta lost that lead for
  * good: the comment would never be looked at again. Only rows inside Meta's
  * 24 hour messaging window are retried, because after it the send would be
- * refused anyway.
+ * refused anyway. A row with zero attempts predates the retry columns, so it
+ * gets one pass regardless of the flag.
  */
 async function retryFailedDms(brandingLine: (owner: string) => Promise<string | null>): Promise<{ retried: number; recovered: number }> {
   const rows = await sql!`
@@ -55,7 +56,8 @@ async function retryFailedDms(brandingLine: (owner: string) => Promise<string | 
     FROM trigger_logs l
     JOIN automations a ON a.id = l.automation_id
     JOIN page_tokens t ON t.page_id = a.page_id AND t.owner_id = a.owner_id
-    WHERE l.dm_status = 'failed' AND l.dm_retryable = true
+    WHERE l.dm_status = 'failed'
+      AND (l.dm_retryable = true OR l.dm_attempts = 0)
       AND l.dm_attempts < ${MAX_DM_ATTEMPTS}
       AND l.created_at > now() - interval '23 hours'
     ORDER BY l.created_at ASC LIMIT 25`;
