@@ -50,7 +50,15 @@ export async function GET(req: NextRequest) {
   // connection string itself is a secret and never leaves the deployment.
   const raw = process.env.SOCIALFLOW_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
   let host = 'unknown';
-  try { host = new URL(raw).host; } catch { /* malformed or absent */ }
+  let projectRef: string | null = null;
+  try {
+    const u = new URL(raw);
+    host = u.host;
+    // On the Supabase pooler the username is postgres.<project ref>. The ref is
+    // public (it is the project's subdomain); the password never leaves here.
+    const dot = decodeURIComponent(u.username).indexOf('.');
+    if (dot > 0) projectRef = decodeURIComponent(u.username).slice(dot + 1);
+  } catch { /* malformed or absent */ }
   const [ver] = await sql!`SELECT version() AS v, current_database() AS db, current_schema() AS schema`;
   // On the Supabase pooler the connecting user is postgres.<project ref>, which
   // is how a deployment can name the project holding its data without ever
@@ -61,5 +69,5 @@ export async function GET(req: NextRequest) {
     poolUser = (u?.usename as string) || null;
   } catch { /* not every provider exposes it */ }
 
-  return NextResponse.json({ database: { host, user: poolUser, name: ver?.db, schema: ver?.schema, version: String(ver?.v || '').slice(0, 60) }, summary, errors, automations, dmSentRows: dm?.n ?? 0, recent });
+  return NextResponse.json({ database: { host, projectRef, user: poolUser, name: ver?.db, schema: ver?.schema, version: String(ver?.v || '').slice(0, 60) }, summary, errors, automations, dmSentRows: dm?.n ?? 0, recent });
 }
