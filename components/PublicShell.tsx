@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import '@/app/landing.css';
 import { getMessages, localePath, type Locale } from '@/lib/i18n';
 
 /**
