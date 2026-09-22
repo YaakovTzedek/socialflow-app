@@ -348,3 +348,6 @@ html:not([lang="he"]) .sfp-title { font-size: clamp(30px, 4.2vw, 48px); line-hei
 .sfad-gate-input { font-family: inherit; font-size: 16px; color: var(--text); background: rgba(10, 6, 16, .6); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
 .sfad-gate-input:focus { outline: none; border-color: rgba(225, 48, 108, .7); }
 .sfad-gate-box .sf-btn { justify-content: center; }
+.sfad-copy { background: none; border: 0; color: #FF8FB0; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; padding: 0; margin-inline-end: 10px; }
+.sfad-copy:hover { color: #fff; }
+.sfp-partner-link { font-size: 15px; background: rgba(10, 6, 16, .55); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; overflow-wrap: anywhere; color: #FF8FB0; margin: 8px 0 12px; }

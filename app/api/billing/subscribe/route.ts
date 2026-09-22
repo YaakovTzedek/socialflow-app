@@ -3,6 +3,7 @@ import { getSession } from '@/lib/session';
 import { sql, hasDb, ensureSchema } from '@/lib/db';
 import { PLAN_CATALOG, TRIAL, priceFor, type Interval, type PlanId } from '@/lib/plans';
 import { createSubscription, billingConfigured, cancelRecurring } from '@/lib/sumit';
+import { recordCommission } from '@/lib/affiliates';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,6 +55,16 @@ export async function POST(req: NextRequest) {
   await sql!`
     INSERT INTO invoices (owner_id, subscription_id, sumit_document_id, sumit_payment_id, amount_agorot, currency, pdf_url, status, raw)
     VALUES (${session.userId}, ${sub.id}, ${result.documentId}, ${result.paymentId}, ${Math.round(result.amount * 100)}, ${result.currency}, ${result.pdfUrl}, ${'paid'}, ${sql!.json(result.raw as any)})`;
+
+  // Partner commission on what was actually charged, never on the list price.
+  try {
+    await recordCommission({
+      ownerId: session.userId,
+      invoiceId: null,
+      amountAgorot: Math.round(result.amount * 100),
+      currency: result.currency,
+    });
+  } catch { /* the subscription is live either way */ }
 
   return NextResponse.json({ success: true, subscription_id: sub.id, plan_id: planId, trial, period_end: periodEnd.toISOString(), pdf_url: result.pdfUrl });
 }

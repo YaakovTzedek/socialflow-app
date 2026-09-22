@@ -174,6 +174,37 @@ export async function ensureSchema() {
       note       TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS affiliates (
+      code        TEXT PRIMARY KEY,
+      name        TEXT NOT NULL,
+      phone       TEXT,
+      email       TEXT,
+      note        TEXT,
+      owner_id    TEXT,
+      rate_percent INTEGER NOT NULL DEFAULT 50,
+      months      INTEGER NOT NULL DEFAULT 12,
+      status      TEXT NOT NULL DEFAULT 'active',
+      clicks      INTEGER NOT NULL DEFAULT 0,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS affiliate_referrals (
+      owner_id    TEXT PRIMARY KEY,
+      code        TEXT NOT NULL,
+      first_seen_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS affiliate_referrals_code_idx ON affiliate_referrals (code);
+    CREATE TABLE IF NOT EXISTS affiliate_commissions (
+      id            BIGSERIAL PRIMARY KEY,
+      code          TEXT NOT NULL,
+      owner_id      TEXT NOT NULL,
+      invoice_id    BIGINT,
+      amount_agorot INTEGER NOT NULL,
+      commission_agorot INTEGER NOT NULL,
+      currency      TEXT NOT NULL,
+      paid_at       TIMESTAMPTZ,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS affiliate_commissions_code_idx ON affiliate_commissions (code, created_at);
     CREATE TABLE IF NOT EXISTS segment_stats (
       segment        TEXT PRIMARY KEY,
       owners         INTEGER NOT NULL,
@@ -204,6 +235,7 @@ export async function ensureSchema() {
     ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS locale TEXT;
     ALTER TABLE owner_prefs ADD COLUMN IF NOT EXISTS segment TEXT;
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS trial_reminded_at TIMESTAMPTZ;
+    ALTER TABLE plan_overrides ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
     ALTER TABLE trigger_logs ADD COLUMN IF NOT EXISTS dm_message_id TEXT;
     ALTER TABLE trigger_logs ADD COLUMN IF NOT EXISTS dm_attempts INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE trigger_logs ADD COLUMN IF NOT EXISTS dm_retryable BOOLEAN NOT NULL DEFAULT false;

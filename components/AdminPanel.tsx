@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from 'react';
 interface Signup { id: number; phone: string; role: string; tool: string; locale: string; created_at: string }
 interface LogRow { id: number; platform: string; commenter_name: string; comment_text: string; matched_keyword: string; public_reply_status: string; dm_status: string; error_message: string | null; created_at: string; automation: string | null }
 interface Automation { id: string; name: string; platform: string; status: string; page_name: string | null; keywords: string[]; trigger_count: number; leads: number; owner_id: string }
+interface Affiliate { code: string; name: string; phone: string | null; email: string | null; note: string | null; rate_percent: number; months: number; status: string; clicks: number; referrals: number; earned_agorot: string | number; pending_agorot: string | number; created_at: string }
 interface Sub { id: number; owner_id: string; plan_id: string; interval: string; status: string; trial_ends_at: string | null; current_period_end: string | null; payer_name: string | null; payer_email: string | null; amount_agorot: number; currency: string; created_at: string }
 interface Data {
   signups: Signup[];
@@ -24,6 +25,7 @@ interface Data {
   subscriptions: Sub[];
   overrides: { owner_id: string; plan_id: string; note: string | null; created_at: string }[];
   segments: { segment: string; owners: number; triggers: number; delivery_rate: number; peak_hour: number | null; computed_at: string }[];
+  affiliates: Affiliate[];
   now: string;
 }
 
@@ -31,6 +33,7 @@ const TABS = [
   { id: 'beta', label: 'רשימת הבטא' },
   { id: 'delivery', label: 'מסירה ותקלות' },
   { id: 'automations', label: 'אוטומציות' },
+  { id: 'partners', label: 'שותפים' },
   { id: 'billing', label: 'מנויים' },
 ] as const;
 type TabId = typeof TABS[number]['id'];
@@ -79,6 +82,34 @@ export default function AdminPanel() {
     const a = document.createElement('a');
     a.href = url; a.download = `socialflow-beta-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click(); URL.revokeObjectURL(url);
+  }
+
+  async function act(payload: Record<string, unknown>) {
+    const res = await fetch('/api/admin/panel', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    });
+    const d = await res.json();
+    if (d.error) alert(d.error); else load();
+    return d;
+  }
+
+  async function addAffiliate() {
+    const name = prompt('שם השותף');
+    if (!name) return;
+    const phone = prompt('טלפון (אפשר לדלג)') || '';
+    const rate = prompt('אחוז עמלה', '50') || '50';
+    const months = prompt('לכמה חודשים מהצטרפות הלקוח', '12') || '12';
+    const d = await act({ action: 'create_affiliate', name, phone, rate_percent: Number(rate), months: Number(months) });
+    if (d.code) alert(`הקישור של ${name}:\n${location.origin}/he?aff=${d.code}`);
+  }
+
+  async function grantPlan() {
+    const owner_id = prompt('מזהה החשבון (owner_id)');
+    if (!owner_id) return;
+    const plan_id = prompt('מסלול: free, creator, pro, agency', 'pro') || 'pro';
+    const months = prompt('לכמה חודשים (0 = לתמיד)', '12') || '12';
+    const note = prompt('הערה', 'שנה חינם תמורת סרטון') || '';
+    await act({ action: 'grant_plan', owner_id, plan_id, months: Number(months), note });
   }
 
   async function signOut() {
@@ -219,6 +250,50 @@ export default function AdminPanel() {
               </tbody>
             </table>
           </div>
+        </section>
+      )}
+
+      {tab === 'partners' && (
+        <section className="sfad-card">
+          <div className="sfad-card-head">
+            <div className="sfad-card-title">שותפים</div>
+            <button type="button" className="sf-btn sf-btn-primary sf-btn-sm" onClick={addAffiliate}>שותף חדש</button>
+            <button type="button" className="sf-btn sf-btn-ghost sf-btn-sm" onClick={grantPlan}>הענקת מסלול</button>
+          </div>
+          {d.affiliates.length === 0 ? (
+            <p className="sfad-empty">עדיין אין שותפים. כפתור "שותף חדש" מייצר קישור אישי.</p>
+          ) : (
+            <div className="sfad-scroll">
+              <table className="sfad-table">
+                <thead><tr><th>שם</th><th>קישור</th><th>תנאים</th><th>כניסות</th><th>נרשמו</th><th>נצבר</th><th>לתשלום</th><th>סטטוס</th><th /></tr></thead>
+                <tbody>
+                  {d.affiliates.map((a) => (
+                    <tr key={a.code}>
+                      <td>{a.name}<br /><span className="sfad-dim" dir="ltr">{a.phone || ''}</span></td>
+                      <td>
+                        <button type="button" className="sfad-copy" onClick={() => navigator.clipboard.writeText(`${location.origin}/he?aff=${a.code}`)}>העתקה</button>
+                        <a href={`/he/partner/${a.code}`} target="_blank" rel="noreferrer">הדף שלו</a>
+                      </td>
+                      <td className="sfad-dim">{a.rate_percent}% · {a.months} חודשים</td>
+                      <td>{a.clicks}</td>
+                      <td><b>{a.referrals}</b></td>
+                      <td dir="ltr">{(Number(a.earned_agorot) / 100).toLocaleString('he-IL')}</td>
+                      <td dir="ltr"><b>{(Number(a.pending_agorot) / 100).toLocaleString('he-IL')}</b></td>
+                      <td><Status v={a.status} /></td>
+                      <td>
+                        {Number(a.pending_agorot) > 0 && (
+                          <button type="button" className="sfad-copy" onClick={() => confirm('לסמן את כל העמלות הפתוחות כשולמו?') && act({ action: 'pay_affiliate', code: a.code })}>שולם</button>
+                        )}
+                        <button type="button" className="sfad-copy" onClick={() => act({ action: 'set_affiliate_status', code: a.code, status: a.status === 'active' ? 'paused' : 'active' })}>
+                          {a.status === 'active' ? 'השהיה' : 'הפעלה'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       )}
 

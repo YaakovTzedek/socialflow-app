@@ -14,6 +14,21 @@ export const config = {
 };
 
 const COOKIE = 'sf_locale';
+const AFF_COOKIE = 'sf_aff';
+const AFF_DAYS = 90;
+
+/**
+ * A partner link (?aff=code) is remembered for ninety days. Set on whatever
+ * response the locale routing already produced, so the visitor is never sent
+ * through an extra redirect just to record where they came from.
+ */
+function rememberAffiliate(req: NextRequest, res: NextResponse): NextResponse {
+  const code = req.nextUrl.searchParams.get('aff');
+  if (code && /^[a-z0-9]{3,24}$/.test(code) && req.cookies.get(AFF_COOKIE)?.value !== code) {
+    res.cookies.set(AFF_COOKIE, code, { path: '/', maxAge: AFF_DAYS * 86400, sameSite: 'lax' });
+  }
+  return res;
+}
 
 export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
@@ -27,7 +42,7 @@ export function middleware(req: NextRequest) {
     }
     const res = NextResponse.next();
     res.cookies.set(COOKIE, seg, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' });
-    return res;
+    return rememberAffiliate(req, res);
   }
 
   const url = req.nextUrl.clone();
@@ -35,5 +50,5 @@ export function middleware(req: NextRequest) {
   url.search = search;
   const res = NextResponse.rewrite(url);
   res.cookies.set(COOKIE, DEFAULT_LOCALE, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' });
-  return res;
+  return rememberAffiliate(req, res);
 }

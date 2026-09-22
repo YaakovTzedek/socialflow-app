@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, hasDb, ensureSchema } from '@/lib/db';
 import { isAdmin } from '@/lib/admin';
+import { generateCode, isValidCode } from '@/lib/affiliates';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
   const [
     signups, signupStats, signupByLocale,
     deliverySummary, deliveryErrors, recentLogs,
-    automations, owners, subscriptions, overrides, segments,
+    automations, owners, subscriptions, overrides, segments, affiliates,
   ] = await Promise.all([
     sql!`SELECT id, phone, role, tool, locale, created_at FROM beta_signups ORDER BY created_at DESC LIMIT 500`,
     sql!`SELECT count(*)::int AS total,
@@ -45,12 +46,18 @@ export async function GET(req: NextRequest) {
          FROM subscriptions ORDER BY created_at DESC LIMIT 50`,
     sql!`SELECT owner_id, plan_id, note, created_at FROM plan_overrides ORDER BY created_at DESC LIMIT 20`,
     sql!`SELECT segment, owners, triggers, delivery_rate, peak_hour, computed_at FROM segment_stats ORDER BY owners DESC`,
+    sql!`
+      SELECT a.code, a.name, a.phone, a.email, a.note, a.rate_percent, a.months, a.status, a.clicks, a.created_at,
+             (SELECT count(*)::int FROM affiliate_referrals r WHERE r.code = a.code) AS referrals,
+             COALESCE((SELECT sum(c.commission_agorot)::bigint FROM affiliate_commissions c WHERE c.code = a.code), 0) AS earned_agorot,
+             COALESCE((SELECT sum(c.commission_agorot)::bigint FROM affiliate_commissions c WHERE c.code = a.code AND c.paid_at IS NULL), 0) AS pending_agorot
+      FROM affiliates a ORDER BY a.created_at DESC`,
   ]);
 
   return NextResponse.json({
     signups, signupStats: signupStats[0], signupByLocale,
     delivery: deliverySummary[0], deliveryErrors, recentLogs,
-    automations, owners: owners[0]?.n ?? 0, subscriptions, overrides, segments,
+    automations, owners: owners[0]?.n ?? 0, subscriptions, overrides, segments, affiliates,
     now: new Date().toISOString(),
   });
 }
@@ -64,4 +71,58 @@ export async function DELETE(req: NextRequest) {
   await ensureSchema();
   const rows = await sql!`DELETE FROM beta_signups WHERE id = ${id} RETURNING id`;
   return NextResponse.json({ ok: true, deleted: rows.length });
+}
+
+/** Admin actions: add a partner, mark commissions paid, grant a plan for a while. */
+export async function POST(req: NextRequest) {
+  if (!isAdmin()) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  if (!hasDb) return NextResponse.json({ error: 'db_not_configured' }, { status: 503 });
+  await ensureSchema();
+  const body = await req.json().catch(() => ({}));
+
+  if (body.action === 'create_affiliate') {
+    const name = String(body.name || '').trim().slice(0, 120);
+    if (!name) return NextResponse.json({ error: 'name_required' }, { status: 400 });
+    const code = isValidCode(body.code) ? body.code : generateCode(name);
+    const rate = Math.min(90, Math.max(1, Number(body.rate_percent) || 50));
+    const months = Math.min(60, Math.max(1, Number(body.months) || 12));
+    const [row] = await sql!`
+      INSERT INTO affiliates (code, name, phone, email, note, rate_percent, months)
+      VALUES (${code}, ${name}, ${body.phone ? String(body.phone).slice(0, 40) : null},
+              ${body.email ? String(body.email).slice(0, 160) : null},
+              ${body.note ? String(body.note).slice(0, 400) : null}, ${rate}, ${months})
+      ON CONFLICT (code) DO NOTHING RETURNING code`;
+    if (!row) return NextResponse.json({ error: 'code_taken' }, { status: 409 });
+    return NextResponse.json({ ok: true, code: row.code });
+  }
+
+  if (body.action === 'pay_affiliate') {
+    if (!isValidCode(body.code)) return NextResponse.json({ error: 'bad_code' }, { status: 400 });
+    const rows = await sql!`UPDATE affiliate_commissions SET paid_at = now() WHERE code = ${body.code} AND paid_at IS NULL RETURNING id`;
+    return NextResponse.json({ ok: true, marked: rows.length });
+  }
+
+  if (body.action === 'set_affiliate_status') {
+    if (!isValidCode(body.code)) return NextResponse.json({ error: 'bad_code' }, { status: 400 });
+    const status = body.status === 'paused' ? 'paused' : 'active';
+    await sql!`UPDATE affiliates SET status = ${status} WHERE code = ${body.code}`;
+    return NextResponse.json({ ok: true });
+  }
+
+  // Grant a plan to an account for a number of months, for example the free
+  // year a creator gets in exchange for a review. Months 0 makes it permanent.
+  if (body.action === 'grant_plan') {
+    const owner = String(body.owner_id || '').trim();
+    const plan = String(body.plan_id || '').trim();
+    if (!owner || !plan) return NextResponse.json({ error: 'missing' }, { status: 400 });
+    const months = Math.min(120, Math.max(0, Number(body.months) || 0));
+    const expires = months > 0 ? new Date(Date.now() + months * 30.44 * 86400000) : null;
+    await sql!`
+      INSERT INTO plan_overrides (owner_id, plan_id, note, expires_at)
+      VALUES (${owner}, ${plan}, ${String(body.note || 'granted from the panel').slice(0, 200)}, ${expires})
+      ON CONFLICT (owner_id) DO UPDATE SET plan_id = EXCLUDED.plan_id, note = EXCLUDED.note, expires_at = EXCLUDED.expires_at`;
+    return NextResponse.json({ ok: true, expires_at: expires });
+  }
+
+  return NextResponse.json({ error: 'unknown_action' }, { status: 400 });
 }

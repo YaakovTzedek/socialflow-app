@@ -8,6 +8,7 @@ import { getSession } from '@/lib/session';
 import { getBaseUrl, getRedirectUri } from '@/lib/url';
 import { sql, hasDb, ensureSchema } from '@/lib/db';
 import { isLocale, localePath, type Locale } from '@/lib/i18n/config';
+import { AFF_COOKIE, bindReferral } from '@/lib/affiliates';
 
 export async function GET(req: NextRequest) {
   const baseUrl = getBaseUrl();
@@ -53,6 +54,12 @@ export async function GET(req: NextRequest) {
     session.userName = me.name;
     session.tokenExpiresAt = Date.now() + (long.expires_in ?? 5184000) * 1000;
     await session.save();
+
+    // Credit the partner whose link brought this account, first touch only.
+    const affCode = req.cookies.get(AFF_COOKIE)?.value;
+    if (affCode && hasDb) {
+      try { await bindReferral(me.id, affCode); } catch { /* never block a login over attribution */ }
+    }
 
     // Back to where the login started (e.g. the OAuth consent screen), same-origin paths only.
     let next = '';

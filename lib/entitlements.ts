@@ -33,6 +33,17 @@ export interface Entitlement {
   subscription: Subscription | null;
 }
 
+/**
+ * While the closed beta runs, the MCP connection is open on every plan.
+ * It is the thing beta testers are invited for, so gating it behind Pro during
+ * the beta would hand them an account that cannot do what they were promised.
+ * Clear CLOSED_BETA when the product opens and the catalog limits apply again.
+ */
+function withBeta(plan: CatalogEntry): CatalogEntry {
+  if (process.env.CLOSED_BETA !== 'true' || plan.limits.mcp) return plan;
+  return { ...plan, limits: { ...plan.limits, mcp: true } };
+}
+
 export function monthStart(): Date {
   const d = new Date();
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
@@ -40,9 +51,11 @@ export function monthStart(): Date {
 
 export async function getEntitlement(ownerId: string): Promise<Entitlement> {
   await ensureSchema();
-  const [ov] = await sql!`SELECT plan_id FROM plan_overrides WHERE owner_id = ${ownerId}`;
+  const [ov] = await sql!`
+    SELECT plan_id FROM plan_overrides
+    WHERE owner_id = ${ownerId} AND (expires_at IS NULL OR expires_at > now())`;
   if (ov && ov.plan_id in PLAN_CATALOG) {
-    return { planId: ov.plan_id as PlanId, plan: planOf(ov.plan_id), source: 'override', subscription: null };
+    return { planId: ov.plan_id as PlanId, plan: withBeta(planOf(ov.plan_id)), source: 'override', subscription: null };
   }
   const [sub] = await sql!`
     SELECT * FROM subscriptions
@@ -50,16 +63,16 @@ export async function getEntitlement(ownerId: string): Promise<Entitlement> {
     ORDER BY created_at DESC LIMIT 1`;
   if (sub) {
     // A cancelled trial/paid period stays valid until its end date.
-    return { planId: sub.plan_id as PlanId, plan: planOf(sub.plan_id), source: 'subscription', subscription: sub as Subscription };
+    return { planId: sub.plan_id as PlanId, plan: withBeta(planOf(sub.plan_id)), source: 'subscription', subscription: sub as Subscription };
   }
   const [grace] = await sql!`
     SELECT * FROM subscriptions
     WHERE owner_id = ${ownerId} AND status = 'canceled' AND current_period_end > now()
     ORDER BY current_period_end DESC LIMIT 1`;
   if (grace) {
-    return { planId: grace.plan_id as PlanId, plan: planOf(grace.plan_id), source: 'subscription', subscription: grace as Subscription };
+    return { planId: grace.plan_id as PlanId, plan: withBeta(planOf(grace.plan_id)), source: 'subscription', subscription: grace as Subscription };
   }
-  return { planId: 'free', plan: PLAN_CATALOG.free, source: 'free', subscription: null };
+  return { planId: 'free', plan: withBeta(PLAN_CATALOG.free), source: 'free', subscription: null };
 }
 
 /** DMs sent this calendar month across all of the owner's automations. */
