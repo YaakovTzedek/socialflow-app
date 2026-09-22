@@ -1,85 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql, ensureSchema, hasDb } from '@/lib/db';
+import { sql, hasDb, ensureSchema } from '@/lib/db';
 
-// Temporary diagnostic endpoint guarded by a key. Remove after debugging.
+export const dynamic = 'force-dynamic';
+
+/**
+ * Read-only diagnostics, guarded by ADMIN_CLAIM_CODE. Exists because the
+ * database is unreachable from outside the deployment, so a production
+ * question like "the public reply went out but the private message did not"
+ * cannot be answered from a shell.
+ */
 export async function GET(req: NextRequest) {
-  if (req.nextUrl.searchParams.get('key') !== 'socialflow_verify_2026') {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  const expected = process.env.ADMIN_CLAIM_CODE;
+  const code = req.nextUrl.searchParams.get('code') || '';
+  if (!expected || code.length !== expected.length || code !== expected) {
+    return NextResponse.json({ error: 'not_found' }, { status: 404 });
   }
-  if (!hasDb) return NextResponse.json({ error: 'no_db' });
-
+  if (!hasDb) return NextResponse.json({ error: 'db_not_configured' }, { status: 503 });
   await ensureSchema();
+
+  const limit = Math.min(200, Math.max(1, Number(req.nextUrl.searchParams.get('limit')) || 60));
+
+  const summary = await sql!`
+    SELECT public_reply_status, dm_status, count(*)::int AS n
+    FROM trigger_logs GROUP BY 1, 2 ORDER BY n DESC`;
+
+  const errors = await sql!`
+    SELECT dm_status, error_message, count(*)::int AS n, max(created_at) AS last_at
+    FROM trigger_logs
+    WHERE error_message IS NOT NULL AND error_message <> ''
+    GROUP BY 1, 2 ORDER BY n DESC LIMIT 20`;
+
+  const recent = await sql!`
+    SELECT l.id, l.platform, l.post_id, l.commenter_name, l.matched_keyword,
+           l.public_reply_status, l.dm_status, l.error_message, l.created_at,
+           a.name AS automation, a.dm_enabled, a.dm_message IS NOT NULL AND a.dm_message <> '' AS has_dm_text,
+           a.dm_link, a.once_per_user, a.status AS automation_status
+    FROM trigger_logs l LEFT JOIN automations a ON a.id = l.automation_id
+    ORDER BY l.created_at DESC LIMIT ${limit}`;
+
   const automations = await sql!`
-    SELECT id, name, platform, page_id, page_name, post_id, post_scope,
-           keywords, public_replies, dm_enabled, status, trigger_count
-    FROM automations ORDER BY created_at DESC LIMIT 20`;
-  const logs = await sql!`
-    SELECT automation_id, platform, post_id, commenter_name, comment_text,
-           matched_keyword, public_reply_status, dm_status, error_message, created_at
-    FROM trigger_logs ORDER BY created_at DESC LIMIT 30`;
-  const pageTokens = await sql!`
-    SELECT page_id, page_name, ig_id, access_token, updated_at
-    FROM page_tokens ORDER BY updated_at DESC LIMIT 20`;
+    SELECT id, name, platform, status, dm_enabled, public_reply_enabled,
+           dm_message IS NOT NULL AND dm_message <> '' AS has_dm_text,
+           dm_link, keywords, trigger_count, created_at
+    FROM automations ORDER BY created_at DESC LIMIT 30`;
 
-  // Check + (re)subscribe each page to webhooks, and report status.
-  const subs: any[] = [];
-  const V = process.env.META_GRAPH_VERSION || 'v21.0';
-  const doSub = req.nextUrl.searchParams.get('subscribe') === '1';
-  for (const pt of pageTokens) {
-    const base = `https://graph.facebook.com/${V}/${pt.page_id}/subscribed_apps`;
-    try {
-      if (doSub) {
-        const r = await fetch(base, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            subscribed_fields: 'feed',
-            access_token: pt.access_token,
-          }).toString(),
-        });
-        subs.push({ page: pt.page_name, action: 'subscribe', result: await r.json() });
-      }
-      const check = await fetch(`${base}?access_token=${pt.access_token}`);
-      subs.push({ page: pt.page_name, action: 'check', result: await check.json() });
-    } catch (e: any) {
-      subs.push({ page: pt.page_name, error: e.message });
-    }
-  }
+  const [dm] = await sql!`SELECT count(*)::int AS n FROM dm_sent`;
 
-  const rawEvents = await sql!`
-    SELECT object, body, created_at FROM webhook_events
-    ORDER BY created_at DESC LIMIT 15`;
-
-  // Inspect the stored page token's granted scopes (does it have IG messaging?)
-  let tokenScopes: any = null;
-  try {
-    const pt = (await sql!`SELECT access_token FROM page_tokens LIMIT 1`)[0];
-    if (pt) {
-      const appToken = `${process.env.META_APP_ID}|${process.env.META_APP_SECRET}`;
-      const r = await fetch(
-        `https://graph.facebook.com/${V}/debug_token?input_token=${pt.access_token}&access_token=${appToken}`
-      );
-      const dt = await r.json();
-      tokenScopes = dt.data?.scopes || dt.error?.message || 'unknown';
-    }
-  } catch (e: any) {
-    tokenScopes = e.message;
-  }
-
-  return NextResponse.json({
-    page_token_scopes: tokenScopes,
-    raw_webhook_count: rawEvents.length,
-    raw_webhooks: rawEvents,
-    automations_count: automations.length,
-    automations,
-    logs_count: logs.length,
-    logs,
-    page_tokens: pageTokens.map((p: any) => ({
-      page_id: p.page_id,
-      page_name: p.page_name,
-      ig_id: p.ig_id,
-      has_token: !!p.access_token,
-    })),
-    subscriptions: subs,
-  });
+  return NextResponse.json({ summary, errors, automations, dmSentRows: dm?.n ?? 0, recent });
 }
