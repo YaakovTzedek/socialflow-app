@@ -13,7 +13,7 @@ import { sql, ensureSchema } from './db';
  */
 
 export type RecKey =
-  | 'bestFormat' | 'bestHour' | 'bestDay' | 'captionLength' | 'cadence'
+  | 'bestFormat' | 'bestHour' | 'bestDay' | 'captionLong' | 'captionShort' | 'cadence'
   | 'missedAutomation' | 'hotPost' | 'repeatTopic' | 'segmentFormat' | 'segmentHour'
   | 'firstAutomation' | 'connectMore';
 
@@ -30,10 +30,6 @@ export interface Recommendation {
 const MIN_POSTS_PER_FORMAT = 4;
 const MIN_POSTS_FOR_TIMING = 8;
 const MIN_POSTS_FOR_LENGTH = 10;
-
-const FORMAT_LABEL: Record<string, string> = {
-  REELS: 'reel', VIDEO: 'video', CAROUSEL_ALBUM: 'carousel', IMAGE: 'image', POST: 'post',
-};
 
 const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
 
@@ -69,10 +65,8 @@ export async function getRecommendations(ownerId: string, segment: string | null
       recs.push({
         key: 'bestFormat', weight: 90, tone: 'do',
         vars: {
-          format: FORMAT_LABEL[best.media_type] || String(best.media_type).toLowerCase(),
-          avg: best.avg_comments, n: best.n,
-          other: FORMAT_LABEL[worst.media_type] || String(worst.media_type).toLowerCase(),
-          otherAvg: worst.avg_comments,
+          formatKey: best.media_type, avg: best.avg_comments, n: best.n,
+          otherKey: worst.media_type, otherAvg: worst.avg_comments,
         },
       });
     }
@@ -96,7 +90,7 @@ export async function getRecommendations(ownerId: string, segment: string | null
       FROM post_stats WHERE owner_id = ${ownerId} AND published_at IS NOT NULL
       GROUP BY 1 HAVING count(*) >= 2 ORDER BY avg_comments DESC LIMIT 1`;
     const d = (days as any[])[0];
-    if (d && d.avg_comments >= 3) recs.push({ key: 'bestDay', weight: 60, tone: 'try', vars: { dow: d.dow, avg: d.avg_comments } });
+    if (d && d.avg_comments >= 3) recs.push({ key: 'bestDay', weight: 60, tone: 'try', vars: { dayIndex: d.dow, avg: d.avg_comments } });
   }
 
   /* ── Caption length, split at the median ─────────────────────────────── */
@@ -110,7 +104,7 @@ export async function getRecommendations(ownerId: string, segment: string | null
     if (len && len.long_avg != null && len.short_avg != null && Math.max(len.long_avg, len.short_avg) >= 3) {
       const longer = len.long_avg > len.short_avg;
       const hi = longer ? len.long_avg : len.short_avg, lo = longer ? len.short_avg : len.long_avg;
-      if (hi >= lo * 1.4) recs.push({ key: 'captionLength', weight: 45, tone: 'try', vars: { which: longer ? 'long' : 'short', mid: len.mid, hi, lo } });
+      if (hi >= lo * 1.4) recs.push({ key: longer ? 'captionLong' : 'captionShort', weight: 45, tone: 'try', vars: { mid: len.mid, hi, lo } });
     }
   }
 
@@ -178,7 +172,7 @@ export async function getRecommendations(ownerId: string, segment: string | null
   if (segment) {
     const [seg] = await sql!`SELECT best_format, best_format_avg, peak_hour, owners FROM segment_stats WHERE segment = ${segment}`;
     if (seg?.best_format && seg.owners >= 5) {
-      recs.push({ key: 'segmentFormat', weight: 40, tone: 'try', vars: { format: FORMAT_LABEL[seg.best_format] || seg.best_format, avg: seg.best_format_avg, owners: seg.owners } });
+      recs.push({ key: 'segmentFormat', weight: 40, tone: 'try', vars: { formatKey: seg.best_format, avg: seg.best_format_avg, owners: seg.owners } });
     }
     if (seg?.peak_hour != null && seg.owners >= 5) {
       recs.push({ key: 'segmentHour', weight: 35, tone: 'try', vars: { from: `${String(seg.peak_hour).padStart(2, '0')}:00`, owners: seg.owners } });

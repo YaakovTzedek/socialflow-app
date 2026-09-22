@@ -291,6 +291,16 @@ async function toolPublishPost(owner: string, a: Json, m: Messages) {
   return { published: true, platform: 'instagram', post_id: published.id, permalink, note: m.server.mcpPublishedNote };
 }
 
+/** Media types and weekday indexes become words in the caller's language. */
+function localiseVars(vars: Record<string, string | number>, m: Messages): Record<string, string | number> {
+  const out = { ...vars };
+  const formats = m.brain.formats as Record<string, string>;
+  if (out.formatKey) out.format = formats[String(out.formatKey)] || String(out.formatKey).toLowerCase();
+  if (out.otherKey) out.other = formats[String(out.otherKey)] || String(out.otherKey).toLowerCase();
+  if (out.dayIndex !== undefined) out.day = m.brain.days[Number(out.dayIndex)] || '';
+  return out;
+}
+
 /**
  * The Brain screen, as a tool. Same counts the owner sees in the app, plus the
  * rendered insight sentences, so an assistant asked "what worked best" answers
@@ -313,7 +323,7 @@ async function toolGetInsights(owner: string, a: Json, m: Messages) {
     insights: brain.insights.map((i) => fmt(templates[i.key] || '', i.vars as Record<string, string | number>)),
     post_history: await getHistorySummary(owner),
     recommendations: (await getRecommendations(owner, segment, 'UTC')).map((r) => ({
-      what: fmt((m.brain.recs as Record<string, string>)[r.key] || '', r.vars as Record<string, string | number>),
+      what: fmt((m.brain.recs as Record<string, string>)[r.key] || '', localiseVars(r.vars, m)),
       priority: r.tone,
       post: r.permalink || undefined,
     })),

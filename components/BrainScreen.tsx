@@ -33,6 +33,19 @@ interface Data {
 
 const PERIODS = [7, 30, 90];
 
+/**
+ * The engine hands over keys, not words: a media type and a day index. Turning
+ * them into language belongs here, where the reader's locale is known, so a
+ * Hebrew sentence does not end up with the word "video" wedged into it.
+ */
+function localise(vars: Record<string, string | number>, B: any): Record<string, string | number> {
+  const out = { ...vars };
+  if (out.formatKey) out.format = B.formats[out.formatKey as string] || String(out.formatKey).toLowerCase();
+  if (out.otherKey) out.other = B.formats[out.otherKey as string] || String(out.otherKey).toLowerCase();
+  if (out.dayIndex !== undefined) out.day = B.days[Number(out.dayIndex)] || '';
+  return out;
+}
+
 export default function BrainScreen() {
   const { m, t, num } = useI18n();
   const B = m.brain;
@@ -121,7 +134,7 @@ export default function BrainScreen() {
               <div key={r.key} className={`sfb-rec ${r.tone}`}>
                 <span className="sfb-rec-tag">{r.tone === 'fix' ? '!' : r.tone === 'do' ? '\u2192' : '~'}</span>
                 <div>
-                  <div>{t((B.recs as Record<string, string>)[r.key] || '', r.vars)}</div>
+                  <div>{t((B.recs as Record<string, string>)[r.key] || '', localise(r.vars, B))}</div>
                   {r.permalink && <a href={r.permalink} target="_blank" rel="noopener noreferrer" className="sfb-rec-link">{B.topPosts}</a>}
                 </div>
               </div>
