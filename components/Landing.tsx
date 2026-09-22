@@ -6,6 +6,7 @@ import { LoginLink } from './LoginLink';
 import { BetaForm } from './BetaForm';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useI18n } from './I18nProvider';
+import { PLAN_CATALOG, displayPrice } from '@/lib/plans';
 
 /**
  * Public landing page (logged-out root), ported from the Claude Design file
@@ -94,7 +95,7 @@ function FlowArrow({ flip = false }: { flip?: boolean }) {
 }
 
 export function Landing({ error }: { error?: string }) {
-  const { m, t, p, dir } = useI18n();
+  const { m, t, p, dir, locale } = useI18n();
   const H = m.home;
   const B = m.beta;
   const rtl = dir === 'rtl';
@@ -139,7 +140,12 @@ export function Landing({ error }: { error?: string }) {
         <div className="sf-shell sf-hero">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24, minWidth: 0 }}>
             <span className="sf-pill"><span className="sf-dot" />{H.pill}</span>
-            <h1 className="sf-h1">{H.h1a}<br /><span className="sf-grad-text">{H.h1grad}</span> {H.h1b}</h1>
+            <h1 className="sf-h1">
+              {/* The break is visual only. Without the spaces around it the
+                  accessible name, and anything that extracts text, reads the
+                  first two words glued into one nonsense word. */}
+              {H.h1a}{' '}<br /><span className="sf-grad-text">{H.h1grad}</span>{' '}{H.h1b}
+            </h1>
             <p style={{ fontSize: 22, lineHeight: 1.6, color: '#C9BBD3', margin: 0, maxWidth: 520, fontWeight: 600 }}>{H.lead}</p>
             {error && <div className="sf-error">{t(m.landing.loginError, { error })}</div>}
 
@@ -341,6 +347,40 @@ export function Landing({ error }: { error?: string }) {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* PRICE TEASER
+            The full table sat at roughly the seventh screen of nine, which
+            means the second question anyone asks was answered after almost
+            everything else. Three compact figures here, right after "how it
+            works", and the table stays where it is for whoever wants detail.
+            Every string is one the pricing page already owns, so this costs
+            no new translation. */}
+        <div className="sf-shell sf-priceteaser">
+          <div className="sf-priceteaser-head">
+            <div className="sf-display sf-h2">{m.pricing.title}</div>
+            <div className="sf-rule" />
+            <p>{m.pricing.description}</p>
+          </div>
+          <div className="sf-priceteaser-grid">
+            {(['free', 'creator', 'pro'] as const).map((id) => {
+              const plan = PLAN_CATALOG[id];
+              const price = displayPrice(id, 'month', locale);
+              return (
+                <div key={id} className={`sf-priceteaser-card${id === 'creator' ? ' on' : ''}`}>
+                  <div className="sf-priceteaser-name">{m.billing.plans[id]?.name || plan.name}</div>
+                  <div className="sf-priceteaser-price">
+                    {plan.priceIls === 0 ? m.pricing.free : price.main}
+                    {plan.priceIls > 0 && <span>{m.pricing.perMonth}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="sf-priceteaser-cta">
+            <Link href={p('/pricing')} className="sf-btn sf-btn-ghost">{m.pricing.nav}</Link>
+            <a href="#join" className="sf-btn sf-btn-primary">{m.beta.navCta}</a>
           </div>
         </div>
 

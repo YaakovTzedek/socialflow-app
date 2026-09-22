@@ -269,6 +269,20 @@ html:not([lang="he"]) .sfp-title { font-size: clamp(30px, 4.2vw, 48px); line-hei
    holds a form and not a button, and scroll-margin so the "join" anchor from
    the private message does not land under the sticky nav. */
 
+/* Price teaser on the landing: three figures right after "how it works",
+   because the full table sat past the seventh screen and the second thing
+   anyone asks is what it costs. */
+.sf-priceteaser { padding-block: 0 96px; }
+.sf-priceteaser-head { margin-block-end: 26px; }
+.sf-priceteaser-head p { max-width: 620px; margin: 14px 0 0; color: var(--muted); line-height: 1.75; }
+.sf-priceteaser-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+.sf-priceteaser-card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 22px; display: grid; gap: 8px; }
+.sf-priceteaser-card.on { border-color: rgba(225, 48, 108, .55); box-shadow: 0 20px 50px rgba(225, 48, 108, .15); }
+.sf-priceteaser-name { font-size: 13px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #FF8FB0; }
+.sf-priceteaser-price { font-size: 32px; font-weight: 800; color: #fff; display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+.sf-priceteaser-price span { font-size: 14px; font-weight: 600; color: var(--faint); }
+.sf-priceteaser-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-block-start: 22px; }
+
 /* ------------------------------------------------------------------ */
 /* /guide: the article people land on from the private message.        */
 /* Two columns on desktop, the rail on the side; one column on mobile, */
