@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, hasDb, ensureSchema } from '@/lib/db';
+import { billingConfigured, billingTestMode } from '@/lib/sumit';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,5 +70,15 @@ export async function GET(req: NextRequest) {
     poolUser = (u?.usename as string) || null;
   } catch { /* not every provider exposes it */ }
 
-  return NextResponse.json({ database: { host, projectRef, user: poolUser, name: ver?.db, schema: ver?.schema, version: String(ver?.v || '').slice(0, 60) }, summary, errors, automations, dmSentRows: dm?.n ?? 0, recent });
+  // Booleans only. Whether a key is present is a deployment question and safe
+  // to answer; the key itself is not, so no value is ever read out here.
+  const billing = {
+    configured: billingConfigured(),
+    testMode: billingTestMode(),
+    hasPublicKey: !!process.env.NEXT_PUBLIC_SUMIT_PUBLIC_KEY,
+    hasWebhookSecret: !!process.env.SUMIT_WEBHOOK_SECRET,
+    hasBrowserCompanyId: !!process.env.NEXT_PUBLIC_SUMIT_COMPANY_ID,
+  };
+
+  return NextResponse.json({ database: { host, projectRef, user: poolUser, name: ver?.db, schema: ver?.schema, version: String(ver?.v || '').slice(0, 60) }, billing, summary, errors, automations, dmSentRows: dm?.n ?? 0, recent });
 }
