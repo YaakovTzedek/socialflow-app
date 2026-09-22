@@ -174,6 +174,28 @@ export async function ensureSchema() {
       note       TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS post_stats (
+      owner_id      TEXT NOT NULL,
+      page_id       TEXT NOT NULL,
+      platform      TEXT NOT NULL,
+      post_id       TEXT NOT NULL,
+      media_type    TEXT,
+      caption       TEXT,
+      permalink     TEXT,
+      published_at  TIMESTAMPTZ,
+      likes         INTEGER,
+      comments      INTEGER,
+      reach         INTEGER,
+      impressions   INTEGER,
+      saves         INTEGER,
+      shares        INTEGER,
+      views         INTEGER,
+      followers     INTEGER,
+      fetched_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (owner_id, post_id)
+    );
+    CREATE INDEX IF NOT EXISTS post_stats_owner_time_idx ON post_stats (owner_id, published_at DESC);
+    CREATE INDEX IF NOT EXISTS post_stats_platform_idx ON post_stats (platform, media_type);
     CREATE TABLE IF NOT EXISTS affiliates (
       code        TEXT PRIMARY KEY,
       name        TEXT NOT NULL,
@@ -214,6 +236,9 @@ export async function ensureSchema() {
       link_rate      INTEGER,
       no_link_rate   INTEGER,
       peak_hour      INTEGER,
+      best_format    TEXT,
+      best_format_avg REAL,
+      median_comments REAL,
       top_keywords   JSONB NOT NULL DEFAULT '[]'::jsonb,
       computed_at    TIMESTAMPTZ NOT NULL DEFAULT now()
     );
@@ -236,6 +261,9 @@ export async function ensureSchema() {
     ALTER TABLE owner_prefs ADD COLUMN IF NOT EXISTS segment TEXT;
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS trial_reminded_at TIMESTAMPTZ;
     ALTER TABLE plan_overrides ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+    ALTER TABLE segment_stats ADD COLUMN IF NOT EXISTS best_format TEXT;
+    ALTER TABLE segment_stats ADD COLUMN IF NOT EXISTS best_format_avg REAL;
+    ALTER TABLE segment_stats ADD COLUMN IF NOT EXISTS median_comments REAL;
     ALTER TABLE trigger_logs ADD COLUMN IF NOT EXISTS dm_message_id TEXT;
     ALTER TABLE trigger_logs ADD COLUMN IF NOT EXISTS dm_attempts INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE trigger_logs ADD COLUMN IF NOT EXISTS dm_retryable BOOLEAN NOT NULL DEFAULT false;

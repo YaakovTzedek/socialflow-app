@@ -449,3 +449,16 @@ html:not([lang="he"]) .sfa-side-card .sfa-h { font-size: 22px; }
   .sfb-kpi strong { font-size: 25px; }
   .sfb-table td:first-child { max-width: 160px; }
 }
+
+.sfb-recs { display: flex; flex-direction: column; gap: 10px; margin-block-start: 14px; }
+.sfb-rec { display: flex; align-items: flex-start; gap: 12px; font-size: 15px; line-height: 1.65; color: var(--text, #FAF7FC); background: rgba(255, 255, 255, .03); border: 1px solid var(--line); border-radius: 13px; padding: 14px 16px; }
+.sfb-rec.fix { border-color: rgba(239, 68, 68, .45); background: rgba(239, 68, 68, .07); }
+.sfb-rec.do { border-color: rgba(225, 48, 108, .45); background: rgba(225, 48, 108, .07); }
+.sfb-rec-tag { width: 26px; height: 26px; border-radius: 8px; flex: none; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; background: rgba(255, 255, 255, .07); border: 1px solid var(--line); }
+.sfb-rec.fix .sfb-rec-tag { background: rgba(239, 68, 68, .2); color: #FF9B9B; }
+.sfb-rec.do .sfb-rec-tag { background: linear-gradient(140deg, #833AB4, #E1306C); color: #fff; border-color: transparent; }
+.sfb-rec-link { display: inline-block; font-size: 13px; font-weight: 700; margin-block-start: 6px; }
+.sfb-empty-line { color: var(--dim); font-size: 15px; margin: 12px 0 0; }
+.sfb-history { margin-block-start: 18px; border-block-start: 1px solid var(--line); padding-block-start: 14px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.sfb-history-line { font-size: 14px; color: var(--muted); flex: 1; min-width: 240px; }
+.sfb-history-sub { font-size: 12px; color: var(--faint, #8B7B99); width: 100%; }

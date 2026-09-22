@@ -17,6 +17,7 @@ import { sql, ensureSchema } from './db';
 import { listInstagramMedia, listPagePosts, getPostsInfoCached, createInstagramContainer, waitForContainer, publishInstagramContainer, getMediaPermalink, publishFacebookPost, type IgPublishKind } from './meta';
 import { getEntitlement } from './entitlements';
 import { getBrain, getSegment, getSegmentBenchmark } from './brain';
+import { getRecommendations, getHistorySummary } from './recommend';
 import { getMessages, negotiate, isLocale, fmt, type Locale, type Messages } from './i18n';
 
 export const PROTOCOL_VERSION = '2025-06-18';
@@ -310,6 +311,12 @@ async function toolGetInsights(owner: string, a: Json, m: Messages) {
     top_keywords: brain.keywords.map((r) => ({ keyword: r.label, triggers: r.triggers, leads: r.leads, comment_to_lead_percent: r.rate })),
     comments_by_hour_utc: brain.byHour,
     insights: brain.insights.map((i) => fmt(templates[i.key] || '', i.vars as Record<string, string | number>)),
+    post_history: await getHistorySummary(owner),
+    recommendations: (await getRecommendations(owner, segment, 'UTC')).map((r) => ({
+      what: fmt((m.brain.recs as Record<string, string>)[r.key] || '', r.vars as Record<string, string | number>),
+      priority: r.tone,
+      post: r.permalink || undefined,
+    })),
     segment: segment
       ? benchmark
         ? { name: segment, accounts: benchmark.owners, comment_to_lead_percent: benchmark.deliveryRate, top_keywords: benchmark.topKeywords, peak_hour: benchmark.peakHour, note: m.brain.benchPrivacy }

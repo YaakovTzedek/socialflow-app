@@ -255,6 +255,19 @@ export async function learnSegments(): Promise<{ segments: number }> {
       WHERE p.segment = ${r.segment}
       GROUP BY 1 ORDER BY n DESC LIMIT 1`;
 
+    // What format actually earns comments in this field, across accounts.
+    const [fmt] = await sql!`
+      SELECT ps.media_type, count(*)::int AS n, round(avg(COALESCE(ps.comments,0))::numeric,1)::float AS avg_comments
+      FROM owner_prefs p JOIN post_stats ps ON ps.owner_id = p.owner_id
+      WHERE p.segment = ${r.segment} AND ps.media_type IS NOT NULL
+      GROUP BY ps.media_type HAVING count(*) >= 20
+      ORDER BY avg_comments DESC LIMIT 1`;
+
+    const [med] = await sql!`
+      SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY COALESCE(ps.comments,0))::float AS median
+      FROM owner_prefs p JOIN post_stats ps ON ps.owner_id = p.owner_id
+      WHERE p.segment = ${r.segment}`;
+
     const kw = await sql!`
       SELECT lower(l.matched_keyword) AS keyword,
              count(DISTINCT a.owner_id)::int AS owners,
@@ -266,15 +279,20 @@ export async function learnSegments(): Promise<{ segments: number }> {
       ORDER BY leads DESC LIMIT 6`;
 
     await sql!`
-      INSERT INTO segment_stats (segment, owners, triggers, leads, delivery_rate, link_rate, no_link_rate, peak_hour, top_keywords, computed_at)
+      INSERT INTO segment_stats (segment, owners, triggers, leads, delivery_rate, link_rate, no_link_rate, peak_hour,
+        best_format, best_format_avg, median_comments, top_keywords, computed_at)
       VALUES (${r.segment}, ${r.owners}, ${r.triggers}, ${r.leads}, ${pct(r.leads, r.triggers)},
               ${r.with_total >= 50 ? pct(r.with_leads, r.with_total) : null},
               ${r.without_total >= 50 ? pct(r.without_leads, r.without_total) : null},
-              ${peak?.hour ?? null}, ${sql!.json((kw as any[]).map((k) => k.keyword))}, now())
+              ${peak?.hour ?? null},
+              ${fmt?.media_type ?? null}, ${fmt?.avg_comments ?? null}, ${med?.median ?? null},
+              ${sql!.json((kw as any[]).map((k) => k.keyword))}, now())
       ON CONFLICT (segment) DO UPDATE SET
         owners = EXCLUDED.owners, triggers = EXCLUDED.triggers, leads = EXCLUDED.leads,
         delivery_rate = EXCLUDED.delivery_rate, link_rate = EXCLUDED.link_rate,
         no_link_rate = EXCLUDED.no_link_rate, peak_hour = EXCLUDED.peak_hour,
+        best_format = EXCLUDED.best_format, best_format_avg = EXCLUDED.best_format_avg,
+        median_comments = EXCLUDED.median_comments,
         top_keywords = EXCLUDED.top_keywords, computed_at = now()`;
     written++;
   }

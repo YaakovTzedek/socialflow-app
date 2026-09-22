@@ -14,6 +14,8 @@ import { useI18n } from './I18nProvider';
 
 interface Row { id: string; label: string; sub?: string | null; permalink?: string | null; triggers: number; leads: number; rate: number }
 interface Insight { key: string; vars: Record<string, string | number>; tone: 'good' | 'warn' | 'info' }
+interface Rec { key: string; weight: number; tone: 'do' | 'try' | 'fix'; vars: Record<string, string | number>; permalink?: string | null }
+interface History { posts: number; instagram: number; facebook: number; comments: number; likes: number; fetched_at: string | null; oldest: string | null; newest: string | null }
 interface Benchmark { segment: string; owners: number; deliveryRate: number; linkRate: number | null; noLinkRate: number | null; peakHour: number | null; topKeywords: string[]; computedAt: string }
 interface Data {
   days: number;
@@ -25,6 +27,8 @@ interface Data {
   hasData: boolean;
   segment: string | null;
   benchmark: Benchmark | null;
+  recommendations: Rec[];
+  history: History | null;
 }
 
 const PERIODS = [7, 30, 90];
@@ -36,6 +40,7 @@ export default function BrainScreen() {
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pulling, setPulling] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -46,6 +51,20 @@ export default function BrainScreen() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [days]);
+
+  async function pullHistory() {
+    setPulling(true);
+    try {
+      const res = await fetch('/api/brain', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'ingest' }) });
+      const d = await res.json();
+      if (d.ok) {
+        // The recommendations are computed from what was just read, so reload.
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+        const fresh = await fetch(`/api/brain?days=${days}&tz=${encodeURIComponent(tz)}`).then((r) => r.json());
+        if (!fresh.error) setData(fresh);
+      }
+    } finally { setPulling(false); }
+  }
 
   async function pickSegment(segment: string) {
     const res = await fetch('/api/brain', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ segment }) });
@@ -88,6 +107,46 @@ export default function BrainScreen() {
         <div className="sfb-kpi"><strong>{num(data.totals.leads)}</strong><span>{B.kpiLeads}</span></div>
         <div className="sfb-kpi"><strong>{data.totals.deliveryRate}%</strong><span>{B.kpiRate}</span></div>
         <div className="sfb-kpi"><strong>{num(data.totals.replies)}</strong><span>{B.kpiReplies}</span></div>
+      </div>
+
+      {/* What to do next, before what already happened. */}
+      <div className="sfa-card">
+        <div className="sfb-card-title">{B.recsTitle}</div>
+        <div className="sfa-sub">{B.recsSub}</div>
+        {data.recommendations.length === 0 ? (
+          <p className="sfb-empty-line">{B.recsEmpty}</p>
+        ) : (
+          <div className="sfb-recs">
+            {data.recommendations.map((r) => (
+              <div key={r.key} className={`sfb-rec ${r.tone}`}>
+                <span className="sfb-rec-tag">{r.tone === 'fix' ? '!' : r.tone === 'do' ? '\u2192' : '~'}</span>
+                <div>
+                  <div>{t((B.recs as Record<string, string>)[r.key] || '', r.vars)}</div>
+                  {r.permalink && <a href={r.permalink} target="_blank" rel="noopener noreferrer" className="sfb-rec-link">{B.topPosts}</a>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="sfb-history">
+          {data.history && data.history.posts > 0 ? (
+            <>
+              <div className="sfb-history-line">
+                {t(B.historyText, {
+                  posts: num(data.history.posts), comments: num(data.history.comments), likes: num(data.history.likes),
+                  oldest: data.history.oldest ? data.history.oldest.slice(0, 10) : '', newest: data.history.newest ? data.history.newest.slice(0, 10) : '',
+                })}
+              </div>
+              {data.history.fetched_at && <div className="sfb-history-sub">{t(B.historyUpdated, { date: data.history.fetched_at.slice(0, 16).replace('T', ' ') })}</div>}
+            </>
+          ) : (
+            <div className="sfb-history-line">{B.historyNone}</div>
+          )}
+          <button type="button" className="sf-btn sf-btn-ghost sf-btn-sm" onClick={pullHistory} disabled={pulling}>
+            {pulling ? B.historyPulling : B.historyPull}
+          </button>
+        </div>
       </div>
 
       {data.insights.length > 0 && (

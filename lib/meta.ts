@@ -663,3 +663,74 @@ export async function publishFacebookPost(
   } catch { /* the post is live either way */ }
   return { id, permalink };
 }
+
+/* ------------------------------------------------------------------------ */
+/* Post history                                                               */
+/* ------------------------------------------------------------------------ */
+
+export interface MediaInsight { reach?: number; impressions?: number; saved?: number; shares?: number; views?: number }
+
+/**
+ * Reach, saves and shares for one Instagram media item.
+ *
+ * Meta renamed and retired these metric names more than once, and asking for a
+ * metric an account cannot serve fails the WHOLE call rather than that one
+ * field. So the metrics are tried in descending order of richness and the
+ * first set that answers wins; an account that serves none simply has no
+ * insight row, which the recommendations treat as missing rather than zero.
+ */
+export async function getMediaInsights(mediaId: string, pageToken: string): Promise<MediaInsight | null> {
+  const attempts = [
+    'reach,saved,shares,views,total_interactions',
+    'reach,saved,shares',
+    'reach,impressions,saved',
+    'reach',
+  ];
+  for (const metric of attempts) {
+    try {
+      const d = await graphGet<{ data?: { name: string; values?: { value: number }[] }[] }>(`${mediaId}/insights`, { metric, access_token: pageToken });
+      const out: MediaInsight = {};
+      for (const row of d.data || []) {
+        const v = row.values?.[0]?.value;
+        if (typeof v !== 'number') continue;
+        if (row.name === 'reach') out.reach = v;
+        else if (row.name === 'impressions') out.impressions = v;
+        else if (row.name === 'saved') out.saved = v;
+        else if (row.name === 'shares') out.shares = v;
+        else if (row.name === 'views') out.views = v;
+      }
+      if (Object.keys(out).length) return out;
+    } catch { /* try a narrower metric set */ }
+  }
+  return null;
+}
+
+/** Every media item on the account, paging past the 25 the list call returns. */
+export async function listAllInstagramMedia(igUserId: string, pageToken: string, max = 200): Promise<InstagramMedia[]> {
+  const out: InstagramMedia[] = [];
+  let url: string | null = null;
+  let params: Record<string, string> | null = {
+    fields: 'id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count',
+    limit: '50',
+    access_token: pageToken,
+  };
+  let path: string | null = `${igUserId}/media`;
+
+  while (out.length < max) {
+    const data: { data?: InstagramMedia[]; paging?: { next?: string } } = url
+      ? await (async () => { const r = await fetch(url as string, { cache: 'no-store' }); const j = await r.json(); if (j.error) throw new Error(j.error.message); return j; })()
+      : await graphGet(path as string, params as Record<string, string>);
+    out.push(...(data.data || []));
+    if (!data.paging?.next || !(data.data || []).length) break;
+    url = data.paging.next; path = null; params = null;
+  }
+  return out.slice(0, max);
+}
+
+/** The account's follower count, the denominator for an engagement rate. */
+export async function getInstagramFollowers(igUserId: string, pageToken: string): Promise<number | null> {
+  try {
+    const d = await graphGet<{ followers_count?: number }>(igUserId, { fields: 'followers_count', access_token: pageToken });
+    return typeof d.followers_count === 'number' ? d.followers_count : null;
+  } catch { return null; }
+}
