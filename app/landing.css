@@ -414,6 +414,12 @@ html:not([lang="he"]) .sfp-title { font-size: clamp(30px, 4.2vw, 48px); line-hei
 .sfp-range a { font-size: 14px; font-weight: 700; padding: 8px 16px; border-radius: 999px; text-decoration: none; color: var(--muted); background: var(--card); border: 1px solid var(--line); transition: color .18s, background .18s, border-color .18s; }
 .sfp-range a:hover { color: #fff; border-color: rgba(225, 48, 108, .45); }
 .sfp-range a.on { color: #fff; background: linear-gradient(90deg, #833AB4, #E1306C); border-color: transparent; }
+.sfp-range-day { display: inline-flex; align-items: center; gap: 6px; margin-inline-start: 4px; }
+.sfp-range-day input[type="date"] { font: inherit; font-size: 14px; color: var(--muted); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; color-scheme: dark; }
+.sfp-range-day input[type="date"]:focus-visible { outline: 2px solid rgba(225, 48, 108, .6); outline-offset: 2px; }
+.sfp-range-day button { font: inherit; font-size: 14px; font-weight: 700; color: #fff; background: rgba(255, 255, 255, .08); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+.sfp-range-day button:hover { border-color: rgba(225, 48, 108, .5); }
+@media (max-width: 520px) { .sfp-range-day { width: 100%; margin-inline-start: 0; } .sfp-range-day input[type="date"] { flex: 1; } }
 .sfp-range-note { font-size: 13.5px; color: var(--faint); line-height: 1.7; margin-block-start: 16px; }
 
 .sfp-guide-cta { margin-block-start: 56px; scroll-margin-block-start: 90px; background: linear-gradient(140deg, rgba(131, 58, 180, .3), rgba(247, 119, 55, .16)); border: 1px solid var(--line); border-radius: 22px; padding: 32px; max-width: 760px; }

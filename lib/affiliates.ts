@@ -94,41 +94,54 @@ export async function recordCommission(opts: {
 }
 
 /** What one partner sees on their own page: counts only, never customer names. */
+/** A window to report on. Both ends optional: no ends at all means all time. */
+export interface StatsRange { from?: Date | null; to?: Date | null; label?: string }
+
 /**
- * A partner's numbers, optionally for the last `days` only.
+ * A partner's numbers, optionally for one window only.
  *
- * `days = 0` means all time and is the default. Referrals and commissions carry
- * timestamps so they filter cleanly; clicks were a bare counter until dated
- * rows were added, so a ranged view counts rows and the page says since when
- * that count is complete rather than quietly under-reporting.
+ * Referrals and commissions carry timestamps so they filter cleanly. Clicks were
+ * a bare counter until dated rows were added, so a windowed view counts rows and
+ * the page says from when that count is complete rather than quietly
+ * under-reporting the past.
  */
-export async function partnerStats(code: string, days = 0) {
+export async function partnerStats(code: string, range: StatsRange = {}) {
   await ensureSchema();
   const aff = await getAffiliate(code);
   if (!aff) return null;
-  const since = days > 0 ? new Date(Date.now() - days * 86400000) : null;
-  const [referrals] = since
-    ? await sql!`SELECT count(*)::int AS n FROM affiliate_referrals WHERE code = ${code} AND first_seen_at >= ${since}`
-    : await sql!`SELECT count(*)::int AS n FROM affiliate_referrals WHERE code = ${code}`;
-  const totals = since
-    ? await sql!`
-        SELECT currency,
-               sum(commission_agorot)::bigint AS total,
-               sum(commission_agorot) FILTER (WHERE paid_at IS NULL)::bigint AS pending
-        FROM affiliate_commissions WHERE code = ${code} AND created_at >= ${since} GROUP BY currency`
-    : await sql!`
-        SELECT currency,
-               sum(commission_agorot)::bigint AS total,
-               sum(commission_agorot) FILTER (WHERE paid_at IS NULL)::bigint AS pending
-        FROM affiliate_commissions WHERE code = ${code} GROUP BY currency`;
+  const from = range.from ?? null;
+  const to = range.to ?? null;
+  const windowed = !!(from || to);
+
+  const [referrals] = await sql!`
+    SELECT count(*)::int AS n FROM affiliate_referrals
+    WHERE code = ${code}
+      AND (${from}::timestamptz IS NULL OR first_seen_at >= ${from})
+      AND (${to}::timestamptz IS NULL OR first_seen_at < ${to})`;
+
+  const totals = await sql!`
+    SELECT currency,
+           sum(commission_agorot)::bigint AS total,
+           sum(commission_agorot) FILTER (WHERE paid_at IS NULL)::bigint AS pending
+    FROM affiliate_commissions
+    WHERE code = ${code}
+      AND (${from}::timestamptz IS NULL OR created_at >= ${from})
+      AND (${to}::timestamptz IS NULL OR created_at < ${to})
+    GROUP BY currency`;
+
   let clicks = aff.clicks;
-  if (since) {
-    const [c] = await sql!`SELECT count(*)::int AS n FROM affiliate_clicks WHERE code = ${code} AND created_at >= ${since}`;
+  if (windowed) {
+    const [c] = await sql!`
+      SELECT count(*)::int AS n FROM affiliate_clicks
+      WHERE code = ${code}
+        AND (${from}::timestamptz IS NULL OR created_at >= ${from})
+        AND (${to}::timestamptz IS NULL OR created_at < ${to})`;
     clicks = c?.n ?? 0;
   }
+
   return {
-    days,
-    clicksTrackedSince: since ? await clickTrackingSince(code) : null,
+    windowed,
+    clicksTrackedSince: windowed ? await clickTrackingSince(code) : null,
     code: aff.code,
     name: aff.name,
     ratePercent: aff.rate_percent,
