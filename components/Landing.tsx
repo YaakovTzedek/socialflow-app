@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { LandingFaq } from './LandingFaq';
 import { LoginLink } from './LoginLink';
+import { BetaForm } from './BetaForm';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useI18n } from './I18nProvider';
 
@@ -95,6 +96,7 @@ function FlowArrow({ flip = false }: { flip?: boolean }) {
 export function Landing({ error }: { error?: string }) {
   const { m, t, p, dir } = useI18n();
   const H = m.home;
+  const B = m.beta;
   const rtl = dir === 'rtl';
   const arrowPath = rtl ? 'M19 12H5M11 18l-6-6 6-6' : 'M5 12h14M13 6l6 6-6 6';
 
@@ -127,7 +129,7 @@ export function Landing({ error }: { error?: string }) {
               <a href="#faq">{H.navFaq}</a>
             </div>
             <LanguageSwitcher />
-            <LoginLink className="sf-btn sf-btn-primary sf-btn-sm">{H.startFree}</LoginLink>
+            <a href="#join" className="sf-btn sf-btn-primary sf-btn-sm">{B.navCta}</a>
           </div>
         </div>
 
@@ -151,10 +153,10 @@ export function Landing({ error }: { error?: string }) {
             </div>
 
             <div className="sf-hero-cta" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-              <LoginLink className="sf-btn sf-btn-primary sf-btn-lg">
-                {H.startFree}
+              <a href="#join" className="sf-btn sf-btn-primary sf-btn-lg">
+                {B.navCta}
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={arrowPath} /></svg>
-              </LoginLink>
+              </a>
               <a href="#how" className="sf-btn sf-btn-ghost sf-btn-lg">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="#F04B7E" aria-hidden="true" style={rtl ? { transform: 'scaleX(-1)' } : undefined}><path d="M8 5.5v13l11-6.5z" /></svg>
                 {H.watchDemo}
@@ -408,16 +410,13 @@ export function Landing({ error }: { error?: string }) {
         </div>
 
         {/* CTA */}
-        <div className="sf-shell" style={{ paddingBlock: '0 96px' }}>
+        <div className="sf-shell" style={{ paddingBlock: '0 96px' }} id="join">
           <div className="sf-cta">
             <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <div className="sf-display sf-h2-cta">{H.ctaTitle}</div>
-              <div style={{ fontSize: 19, lineHeight: 1.7, color: '#C9BBD3', maxWidth: 480 }}>{H.ctaText}</div>
-              <LoginLink className="sf-btn sf-btn-primary sf-btn-lg" >
-                {H.startFree}
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={arrowPath} /></svg>
-              </LoginLink>
-              <div className="sf-trustline">{H.trust.map((x, i) => <span key={x}>{i > 0 && <i>·</i>}{x}</span>)}</div>
+              <span className="sf-pill"><span className="sf-dot" />{B.badge}</span>
+              <div className="sf-display sf-h2-cta">{B.title}</div>
+              <div style={{ fontSize: 19, lineHeight: 1.7, color: '#C9BBD3', maxWidth: 480 }}>{B.lead}</div>
+              <BetaForm />
             </div>
             <div className="sf-floats">
               {H.floats.map((label, i) => {
@@ -449,6 +448,7 @@ export function Landing({ error }: { error?: string }) {
                 <Link href={p('/terms')}>{H.footerTerms}</Link>
                 <Link href={p('/privacy')}>{H.footerPrivacy}</Link>
                 <Link href={p('/data-deletion')}>{H.footerDeletion}</Link>
+                <LoginLink>{B.signIn}</LoginLink>
               </div>
               <div style={{ fontSize: 14, color: '#8B7B99' }}>{H.copyright}</div>
             </div>

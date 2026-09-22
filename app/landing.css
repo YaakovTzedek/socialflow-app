@@ -197,3 +197,24 @@ html[lang="ar"] .sf-hand, html[lang="ja"] .sf-hand, html[lang="ar"] .sf-sign { f
   .sfa-lang select { padding: 6px 8px; font-size: 12px; }
   .sf-trustline { font-size: 14px; }
 }
+
+/* Beta waiting list (replaces the sign-in call to action while SocialFlow is closed) */
+.sf-beta { display: flex; flex-direction: column; gap: 14px; max-width: 460px; }
+.sf-beta .sf-btn { justify-content: center; }
+.sf-beta-field { display: flex; flex-direction: column; gap: 6px; }
+.sf-beta-field > span { font-size: 14px; font-weight: 700; color: var(--muted); }
+.sf-beta-field input {
+  font-family: inherit; font-size: 16px; color: var(--text);
+  background: rgba(10, 6, 16, .55); border: 1px solid rgba(255, 255, 255, .16); border-radius: 13px;
+  padding-inline: 15px; padding-block: 13px; width: 100%;
+  transition: border-color .15s, box-shadow .15s;
+}
+.sf-beta-field input::placeholder { color: var(--faint); }
+.sf-beta-field input:focus { outline: none; border-color: rgba(225, 48, 108, .75); box-shadow: 0 0 0 3px rgba(225, 48, 108, .2); }
+.sf-beta-hp { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); opacity: 0; pointer-events: none; }
+.sf-beta-note { font-size: 13px; color: var(--faint); }
+.sf-beta button[disabled] { opacity: .65; cursor: default; }
+.sf-beta-done { flex-direction: row; align-items: center; gap: 14px; background: rgba(34, 197, 94, .1); border: 1px solid rgba(34, 197, 94, .45); border-radius: 18px; padding: 20px; }
+.sf-beta-check { width: 44px; height: 44px; border-radius: 50%; flex: none; background: #22c55e; display: flex; align-items: center; justify-content: center; }
+.sf-beta-done-title { font-weight: 800; font-size: 18px; color: #fff; }
+.sf-beta-done-text { font-size: 15px; color: var(--muted); margin-block-start: 4px; }

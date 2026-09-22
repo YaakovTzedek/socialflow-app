@@ -174,6 +174,15 @@ export async function ensureSchema() {
       note       TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS beta_signups (
+      id         BIGSERIAL PRIMARY KEY,
+      phone      TEXT NOT NULL UNIQUE,
+      role       TEXT NOT NULL,
+      tool       TEXT NOT NULL,
+      locale     TEXT NOT NULL DEFAULT 'en',
+      source     TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
     CREATE TABLE IF NOT EXISTS owner_prefs (
       owner_id   TEXT PRIMARY KEY,
       locale     TEXT NOT NULL DEFAULT 'en',
