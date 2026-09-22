@@ -58,7 +58,7 @@ export const post: BlogPost = {
 <p>It is the other way round. The mechanic is a page capability, and Instagram borrows it.</p>
 
 <h2>What is identical and what actually differs</h2>
-<p>Identical: the permission model, the keyword match, the pairing of a public reply with a private message, and the messaging window that governs what you may send afterwards. Different: where the message lands, what counts as an eligible post, and how much comment volume there is to work with.</p>
+<p>Identical: the permission model, the keyword match, and the pairing of a public reply with a private message. Different: where the message lands, what counts as an eligible post, and how much comment volume there is.</p>
 <p>If you already understand the Instagram version, you know most of this. The full mechanics of keyword choice, the public reply and the private message are in <a href="/blog/comment-link-and-ill-send-it">how the Instagram reply for link funnel actually works</a>, and none of it changes here.</p>
 <table>
 <thead><tr><th>Piece</th><th>Facebook page</th><th>Instagram professional account</th></tr></thead>
@@ -80,14 +80,14 @@ export const post: BlogPost = {
 <p>If you also want the Instagram side, the professional account has to be linked to that same page. That link is the whole reason one connection can cover both, and it is the first thing to check when Instagram automations do not appear after a successful Facebook connection.</p>
 
 <h2>How a private reply behaves on Facebook against Instagram</h2>
-<p>On Facebook, the private reply opens a Messenger thread from the page and arrives as a normal notification. On Instagram, the same message lands in the main inbox for followers and in message requests for everyone else, where a lot of it is never seen.</p>
+<p>On Facebook, the private reply opens a Messenger thread and arrives as a normal notification. On Instagram, the same message lands in the inbox for followers and in message requests for everyone else, where much of it is never seen.</p>
 <p>That difference is the single strongest argument for running the Facebook half. On Instagram you have to write the public reply so it tells people to go looking in their requests folder. On Facebook you do not, because Messenger simply notifies them.</p>
 <p>Meta documentation describes the Facebook private reply as one per comment, sent within a window measured in days from the comment rather than at any time you like. Treat that as a summary rather than a quotation, and check the current developer docs before building anything that depends on the exact limit.</p>
 <p>The practical consequence of one reply per comment is that you get a single shot per commenter, per comment. If your message is three paragraphs with the link at the bottom, that shot is wasted. One line of context, one link, one question.</p>
 <p>The ordinary messaging window then applies as usual. Once the person answers, you have a normal conversation for the standard period, and past that you are back to approved message types. So the useful work happens in the first exchange, which is also when the person actually cares.</p>
 
 <h2>Groups, and why a group is not a page</h2>
-<p>A group is not a page, and this matters more than it sounds. The permissions here are granted per page and cover posts the page owns. A post inside a group, including a group you created and run, is not a page post, so the mechanic does not reach it.</p>
+<p>A group is not a page. These permissions are granted per page and cover posts the page owns. A post inside a group, including one you run, is not a page post, so the mechanic does not reach it.</p>
 <p>There is a reason beyond the API surface. A group belongs, socially, to its members. People post there under an expectation that a business is not harvesting the thread, and an automated private message to a group member who commented is exactly the behaviour that produces reports.</p>
 <p>Meta has also wound down what third party tools can do with groups over several years, so anything you read about group automation from a few years ago should be assumed out of date.</p>
 <p>The workable pattern is the boring one: publish the offer as a page post, run the automation there, and use the group to point members at it. The comment then happens on the post, where the permission actually exists, and the group stays a group.</p>
@@ -100,7 +100,7 @@ export const post: BlogPost = {
 <p>Live video is the interesting case. Comments during a live stream arrive faster than anything else a page produces, and the post remains on the page afterwards with the thread attached, so a keyword announced on air keeps working for weeks after the broadcast ends.</p>
 
 <h2>Why Facebook still matters for an audience that has aged with it</h2>
-<p>Because for a great many businesses the buyer is not twenty two. The people who joined Facebook in their twenties are now in their forties, running households and holding budgets, and a lot of them never moved their primary account anywhere else.</p>
+<p>Because for a great many businesses the buyer is not twenty two. People who joined Facebook in their twenties are now in their forties, holding budgets, and many never moved their primary account anywhere else.</p>
 <p>That is an argument about your audience, not a general claim about platforms. The way to settle it is to look at where your actual enquiries came from over the last six months, rather than at where the industry says attention is.</p>
 <p>There is a second argument, and it is about competition rather than size. The comment to DM mechanic is saturated on Instagram, where audiences have seen it hundreds of times. On a Facebook page it is still unusual enough that people read the public reply.</p>
 <p>The volume context is worth keeping in view. <a href="https://www.socialinsider.io/social-media-benchmarks/instagram">Socialinsider benchmark study of Instagram</a>, built on 35 million posts across 447,613 active pages from January to December 2025, reports average engagement at 0.48 percent, down 24 percent year on year, with a median of 3 comments on a reel for accounts of 1,000 to 5,000 followers and 12 at 10,000 to 50,000.</p>

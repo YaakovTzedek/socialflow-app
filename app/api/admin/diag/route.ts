@@ -46,5 +46,12 @@ export async function GET(req: NextRequest) {
 
   const [dm] = await sql!`SELECT count(*)::int AS n FROM dm_sent`;
 
-  return NextResponse.json({ summary, errors, automations, dmSentRows: dm?.n ?? 0, recent });
+  // Which database is actually serving production. Host and version only: the
+  // connection string itself is a secret and never leaves the deployment.
+  const raw = process.env.SOCIALFLOW_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
+  let host = 'unknown';
+  try { host = new URL(raw).host; } catch { /* malformed or absent */ }
+  const [ver] = await sql!`SELECT version() AS v, current_database() AS db, current_schema() AS schema`;
+
+  return NextResponse.json({ database: { host, name: ver?.db, schema: ver?.schema, version: String(ver?.v || '').slice(0, 60) }, summary, errors, automations, dmSentRows: dm?.n ?? 0, recent });
 }
