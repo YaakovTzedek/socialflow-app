@@ -407,6 +407,15 @@ html:not([lang="he"]) .sfp-title { font-size: clamp(30px, 4.2vw, 48px); line-hei
 .sfg-hand-mark { font-family: var(--font-hand, "Caveat"), cursive; font-size: 30px; line-height: 1.2; color: #FCAF45; }
 .sfg-hand p { margin: 0; color: var(--muted); line-height: 1.75; }
 
+/* Date range on a partner's own page. Server rendered links rather than a
+   client widget: the page has no session and no JavaScript of its own, and a
+   partner opening it on a phone should get numbers, not a bundle. */
+.sfp-range { display: flex; flex-wrap: wrap; gap: 8px; margin-block-end: 20px; }
+.sfp-range a { font-size: 14px; font-weight: 700; padding: 8px 16px; border-radius: 999px; text-decoration: none; color: var(--muted); background: var(--card); border: 1px solid var(--line); transition: color .18s, background .18s, border-color .18s; }
+.sfp-range a:hover { color: #fff; border-color: rgba(225, 48, 108, .45); }
+.sfp-range a.on { color: #fff; background: linear-gradient(90deg, #833AB4, #E1306C); border-color: transparent; }
+.sfp-range-note { font-size: 13.5px; color: var(--faint); line-height: 1.7; margin-block-start: 16px; }
+
 .sfp-guide-cta { margin-block-start: 56px; scroll-margin-block-start: 90px; background: linear-gradient(140deg, rgba(131, 58, 180, .3), rgba(247, 119, 55, .16)); border: 1px solid var(--line); border-radius: 22px; padding: 32px; max-width: 760px; }
 .sfp-guide-cta h2 { font-size: 26px; font-weight: 800; color: #fff; margin: 0 0 8px; }
 .sfp-guide-cta p { font-size: 16px; line-height: 1.7; color: var(--muted); margin: 0 0 22px; }

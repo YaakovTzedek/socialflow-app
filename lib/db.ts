@@ -217,6 +217,16 @@ export async function ensureSchema() {
       first_seen_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
     CREATE INDEX IF NOT EXISTS affiliate_referrals_code_idx ON affiliate_referrals (code);
+    -- One row per click, so a partner can ask how last week went and not only
+    -- how all of time went. The lifetime counter on the affiliates row stays:
+    -- it predates this table and still answers the all-time question for the
+    -- clicks that happened before rows were kept.
+    CREATE TABLE IF NOT EXISTS affiliate_clicks (
+      id          BIGSERIAL PRIMARY KEY,
+      code        TEXT NOT NULL,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS affiliate_clicks_code_time_idx ON affiliate_clicks (code, created_at DESC);
     CREATE TABLE IF NOT EXISTS affiliate_commissions (
       id            BIGSERIAL PRIMARY KEY,
       code          TEXT NOT NULL,

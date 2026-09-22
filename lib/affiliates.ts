@@ -44,6 +44,15 @@ export async function getAffiliate(code: string): Promise<Affiliate | null> {
 
 export async function countClick(code: string): Promise<void> {
   await sql!`UPDATE affiliates SET clicks = clicks + 1 WHERE code = ${code} AND status = 'active'`;
+  // A dated row as well as the counter, so the partner page can answer "this
+  // week" and not only "ever".
+  try { await sql!`INSERT INTO affiliate_clicks (code) SELECT ${code} WHERE EXISTS (SELECT 1 FROM affiliates WHERE code = ${code} AND status = 'active')`; } catch { /* the counter above is the source of truth */ }
+}
+
+/** First day rows were kept, so the page can say what a ranged click count covers. */
+export async function clickTrackingSince(code: string): Promise<string | null> {
+  const [row] = await sql!`SELECT min(created_at) AS at FROM affiliate_clicks WHERE code = ${code}`;
+  return row?.at ? new Date(row.at).toISOString() : null;
 }
 
 /**
@@ -85,22 +94,46 @@ export async function recordCommission(opts: {
 }
 
 /** What one partner sees on their own page: counts only, never customer names. */
-export async function partnerStats(code: string) {
+/**
+ * A partner's numbers, optionally for the last `days` only.
+ *
+ * `days = 0` means all time and is the default. Referrals and commissions carry
+ * timestamps so they filter cleanly; clicks were a bare counter until dated
+ * rows were added, so a ranged view counts rows and the page says since when
+ * that count is complete rather than quietly under-reporting.
+ */
+export async function partnerStats(code: string, days = 0) {
   await ensureSchema();
   const aff = await getAffiliate(code);
   if (!aff) return null;
-  const [referrals] = await sql!`SELECT count(*)::int AS n FROM affiliate_referrals WHERE code = ${code}`;
-  const totals = await sql!`
-    SELECT currency,
-           sum(commission_agorot)::bigint AS total,
-           sum(commission_agorot) FILTER (WHERE paid_at IS NULL)::bigint AS pending
-    FROM affiliate_commissions WHERE code = ${code} GROUP BY currency`;
+  const since = days > 0 ? new Date(Date.now() - days * 86400000) : null;
+  const [referrals] = since
+    ? await sql!`SELECT count(*)::int AS n FROM affiliate_referrals WHERE code = ${code} AND first_seen_at >= ${since}`
+    : await sql!`SELECT count(*)::int AS n FROM affiliate_referrals WHERE code = ${code}`;
+  const totals = since
+    ? await sql!`
+        SELECT currency,
+               sum(commission_agorot)::bigint AS total,
+               sum(commission_agorot) FILTER (WHERE paid_at IS NULL)::bigint AS pending
+        FROM affiliate_commissions WHERE code = ${code} AND created_at >= ${since} GROUP BY currency`
+    : await sql!`
+        SELECT currency,
+               sum(commission_agorot)::bigint AS total,
+               sum(commission_agorot) FILTER (WHERE paid_at IS NULL)::bigint AS pending
+        FROM affiliate_commissions WHERE code = ${code} GROUP BY currency`;
+  let clicks = aff.clicks;
+  if (since) {
+    const [c] = await sql!`SELECT count(*)::int AS n FROM affiliate_clicks WHERE code = ${code} AND created_at >= ${since}`;
+    clicks = c?.n ?? 0;
+  }
   return {
+    days,
+    clicksTrackedSince: since ? await clickTrackingSince(code) : null,
     code: aff.code,
     name: aff.name,
     ratePercent: aff.rate_percent,
     months: aff.months,
-    clicks: aff.clicks,
+    clicks,
     referrals: referrals?.n ?? 0,
     earnings: (totals as any[]).map((t) => ({
       currency: t.currency,
