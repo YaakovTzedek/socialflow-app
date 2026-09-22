@@ -4,7 +4,6 @@ import '../globals.css';
 import '../app.css';
 import { I18nProvider } from '@/components/I18nProvider';
 import { LOCALES, DEFAULT_LOCALE, FONT_LINKS, FONT_STACK, dirOf, getMessages, isLocale, prefixOf, type Locale } from '@/lib/i18n';
-import { landingJsonLd } from '@/lib/seo';
 
 const BASE = (process.env.NEXT_PUBLIC_BASE_URL || 'https://isocialflow.com').replace(/\/$/, '');
 
@@ -41,10 +40,6 @@ export default function LocaleLayout({ children, params }: { children: React.Rea
         <link href={FONT_LINKS[locale]} rel="stylesheet" />
       </head>
       <body className="font-sans antialiased">
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(landingJsonLd(locale, messages)) }}
-        />
         <I18nProvider locale={locale} messages={messages}>{children}</I18nProvider>
       </body>
     </html>
