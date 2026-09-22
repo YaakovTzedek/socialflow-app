@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
 
   // Which database is actually serving production. Host and version only: the
   // connection string itself is a secret and never leaves the deployment.
-  const raw = process.env.SOCIALFLOW_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
+  const raw = process.env.SOCIALFLOW_DATABASE_URL || '';
   let host = 'unknown';
   let projectRef: string | null = null;
   try {

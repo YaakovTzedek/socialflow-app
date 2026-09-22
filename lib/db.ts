@@ -2,7 +2,7 @@ import postgres from 'postgres';
 
 /**
  * Postgres connection (Supabase, or any Postgres reachable over TCP).
- * Reads the connection string from DATABASE_URL or POSTGRES_URL.
+ * Reads the connection string from SOCIALFLOW_DATABASE_URL, and nothing else.
  *
  * History: the app started on Neon (Vercel Postgres) over its HTTP driver. On
  * 20.9.2026 the Neon free plan hit its quota ("HTTP status 402 ... exceeded the
@@ -16,10 +16,12 @@ import postgres from 'postgres';
  * pooling does not support prepared statements, hence prepare:false. One
  * connection per serverless invocation is plenty and avoids pool exhaustion.
  */
-// SOCIALFLOW_DATABASE_URL wins so the Supabase pooler URL can coexist with the
-// DATABASE_URL/POSTGRES_URL that the (dead) Neon integration still injects.
-const connectionString =
-  process.env.SOCIALFLOW_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
+// One variable, no fallback. This used to read DATABASE_URL and POSTGRES_URL as
+// well, which the dead Neon integration still injected: if SOCIALFLOW_DATABASE_URL
+// ever went missing the app would quietly connect to a different database and
+// look healthy while serving nothing. On 22.9.2026 the database moved to its own
+// Supabase project and the fallback came out with it. Missing means broken, loudly.
+const connectionString = process.env.SOCIALFLOW_DATABASE_URL || '';
 
 export const hasDb = !!connectionString;
 
@@ -48,7 +50,7 @@ let initialized = false;
 
 /** Create tables on first use (idempotent). */
 export async function ensureSchema() {
-  if (!sql) throw new Error('Database not configured (set DATABASE_URL).');
+  if (!sql) throw new Error('Database not configured (set SOCIALFLOW_DATABASE_URL).');
   if (initialized) return;
   const schemaName = schema.replace(/"/g, '');
   // One round trip for the whole DDL: every statement is IF NOT EXISTS, and the
