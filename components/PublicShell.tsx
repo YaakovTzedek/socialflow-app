@@ -2,6 +2,7 @@ import Link from 'next/link';
 import '@/app/landing.css';
 import { getMessages, localePath, type Locale } from '@/lib/i18n';
 import { LoginLink } from './LoginLink';
+import { slugFor, manychatPricingNav } from '@/lib/slugs';
 
 /**
  * Chrome for the public pages that are not the landing: blog and pricing.
@@ -31,7 +32,7 @@ export function PublicShell({
             <div className="sf-nav-links" style={{ flex: 1 }}>
               <Link href={p('/blog')}>{m.blog.nav}</Link>
               <Link href={p('/pricing')}>{m.pricing.nav}</Link>
-              <Link href={p('/vs/manychat')}>{m.common.compareNav}</Link>
+              <Link href={p(slugFor(locale, '/manychat-alternative'))}>{m.common.compareNav}</Link>
             </div>
             <LoginLink className="sf-nav-login">{m.common.login}</LoginLink>
             <Link href={p('/')} className="sf-btn sf-btn-primary sf-btn-sm sf-nav-cta">{m.beta.navCta}</Link>
@@ -51,7 +52,8 @@ export function PublicShell({
           <div className="sf-shell" style={{ paddingBlock: 30, display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 15 }}>
             <Link href={p('/blog')}>{m.blog.nav}</Link>
             <Link href={p('/pricing')}>{m.pricing.nav}</Link>
-            <Link href={p('/vs/manychat')}>{m.common.compareNav}</Link>
+            <Link href={p(slugFor(locale, '/manychat-alternative'))}>{m.common.compareNav}</Link>
+            <Link href={p('/manychat-pricing')}>{manychatPricingNav(locale)}</Link>
             <Link href={p('/terms')}>{m.landing.footerTerms}</Link>
             <Link href={p('/privacy')}>{m.landing.footerPrivacy}</Link>
             <span style={{ marginInlineStart: 'auto', color: '#8B7B99', fontSize: 14 }}>{m.landing.copyright}</span>

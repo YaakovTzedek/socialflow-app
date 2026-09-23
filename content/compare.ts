@@ -15,17 +15,40 @@ import { PLAN_CATALOG } from '@/lib/plans';
  */
 
 /** Indicative only, reviewed by hand like USD_RATES in lib/plans. */
-const ILS_PER_USD = 3.7;
-const ils = (usd: number) => Math.round((usd * ILS_PER_USD) / 5) * 5;
+export const ILS_PER_USD = 3.7;
+export const ils = (usd: number) => Math.round((usd * ILS_PER_USD) / 5) * 5;
 
-/** Checked 23.9.2026. */
-const MC = {
-  free: { usd: 0, contacts: 25, automations: 4 },
-  essential: { usd: 17, yearly: 14, contacts: 250, over: 0.10, seats: 2 },
-  pro: { usd: 39, yearly: 29, contacts: 2500, over: 0.05, seats: 3 },
-  business: { usd: 99, yearly: 69, contacts: 7500, over: 0.025, seats: 5 },
-  advanced: { usd: 199, yearly: 139, contacts: 25000, seats: 10 },
+/**
+ * ManyChat's prices and limits: the ONE place they live. The comparison, the
+ * pricing page and the alternative page all read from here, so a price change
+ * is a one-line edit. `usd` is month-to-month billing, `yearly` the monthly
+ * equivalent when billed annually, `over` / `overYearly` the price of each
+ * active contact past the included number.
+ *
+ * Checked 23.9.2026 against the help centre plan articles (Free, Essential,
+ * Pro, Business, Advanced, Active Contacts) and a 2026 pricing roundup.
+ */
+export const MC_CHECKED = { iso: '2026-09-23', en: '23 September 2026', he: '23 בספטמבר 2026' };
+export const MC = {
+  free: { usd: 0, contacts: 25, automations: 4, channels: 2, seats: 1 },
+  essential: { usd: 17, yearly: 14, contacts: 250, over: 0.10, overYearly: 0.08, seats: 2 },
+  pro: { usd: 39, yearly: 29, contacts: 2500, over: 0.05, overYearly: 0.038, seats: 3 },
+  business: { usd: 99, yearly: 69, contacts: 7500, over: 0.025, overYearly: 0.018, seats: 5 },
+  advanced: { usd: 199, yearly: 139, contacts: 25000, over: 0.004, overYearly: 0.0028, seats: 10 },
+  /** Usage alerts ManyChat sends, as a share of the included contacts. */
+  alerts: [70, 90, 100],
 };
+
+/** A per-contact rate as a price tag shows it: 0.1 becomes 0.10, 0.0028 stays. */
+export const rate = (x: number) => x.toFixed(Math.max(2, (String(x).split('.')[1] || '').length));
+
+/** Cost of one month on a ManyChat tier, month-to-month billing, for a given number of active contacts. */
+export function mcMonthCost(tier: 'essential' | 'pro' | 'business' | 'advanced', contacts: number) {
+  const t = MC[tier];
+  const extra = Math.max(0, contacts - t.contacts);
+  const overage = Math.round(extra * t.over * 100) / 100;
+  return { base: t.usd, extra, overage, total: Math.round((t.usd + overage) * 100) / 100 };
+}
 
 export interface CompareRow {
   label: string;
@@ -59,17 +82,46 @@ export interface Compare {
   ctaBtn: string;
 }
 
+const HELP = 'https://help.manychat.com/hc/en-us/articles/';
+/** Where every ManyChat figure on the site comes from. Shared by all ManyChat pages. */
+export const MC_SOURCES: Record<'en' | 'he', Source[]> = {
+  en: [
+    { label: 'ManyChat official pricing page', url: 'https://manychat.com/pricing' },
+    { label: 'ManyChat help centre: Active Contacts', url: `${HELP}25800323349020-Active-Contacts` },
+    { label: 'ManyChat help centre: Free plan', url: `${HELP}25800197498652-Free-plan` },
+    { label: 'ManyChat help centre: Essential plan', url: `${HELP}25800276116508-Essential-plan` },
+    { label: 'ManyChat help centre: Pro plan', url: `${HELP}25800228332572-Pro-plan` },
+    { label: 'ManyChat help centre: Business plan', url: `${HELP}25800254159900-Business-plan` },
+    { label: 'ManyChat help centre: Advanced plan', url: `${HELP}25800308984988-Advanced-plan` },
+    { label: 'SetSmart: ManyChat pricing 2026, all five tiers and annual prices', url: 'https://setsmart.io/blog/manychat-pricing' },
+    { label: 'ManyChat community: request for Hebrew and Arabic RTL support', url: 'https://community.manychat.com/ideas/urgent-request-add-right-to-left-rtl-support-for-hebrew-arabic-5124' },
+    { label: 'ManyChat community: request for an API for the AI agent era', url: 'https://community.manychat.com/ideas/manychat-api-for-the-ai-agent-era-broadcast-templates-metrics-flow-management-9298' },
+  ],
+  he: [
+    { label: 'ManyChat, עמוד התמחור הרשמי', url: 'https://manychat.com/pricing' },
+    { label: 'ManyChat, מרכז העזרה: אנשי קשר פעילים', url: `${HELP}25800323349020-Active-Contacts` },
+    { label: 'ManyChat, מרכז העזרה: המסלול החינמי', url: `${HELP}25800197498652-Free-plan` },
+    { label: 'ManyChat, מרכז העזרה: מסלול Essential', url: `${HELP}25800276116508-Essential-plan` },
+    { label: 'ManyChat, מרכז העזרה: מסלול Pro', url: `${HELP}25800228332572-Pro-plan` },
+    { label: 'ManyChat, מרכז העזרה: מסלול Business', url: `${HELP}25800254159900-Business-plan` },
+    { label: 'ManyChat, מרכז העזרה: מסלול Advanced', url: `${HELP}25800308984988-Advanced-plan` },
+    { label: 'SetSmart: סקירת מחירי ManyChat ל-2026, כולל מחירים שנתיים', url: 'https://setsmart.io/blog/manychat-pricing' },
+    { label: 'ManyChat, קהילה: בקשה לתמיכה בעברית ובערבית', url: 'https://community.manychat.com/ideas/urgent-request-add-right-to-left-rtl-support-for-hebrew-arabic-5124' },
+    { label: 'ManyChat, קהילה: בקשה ל-API לעידן סוכני AI', url: 'https://community.manychat.com/ideas/manychat-api-for-the-ai-agent-era-broadcast-templates-metrics-flow-management-9298' },
+  ],
+};
+
 /* -------------------------------------------------------------------------- */
 /* Hebrew                                                                      */
 /* -------------------------------------------------------------------------- */
 
 const he: Compare = {
-  title: 'SocialFlow מול ManyChat (מנישאט): ההשוואה המלאה',
-  metaTitle: 'SocialFlow מול ManyChat (מנישאט): השוואת מחירים, יכולות ו-MCP, בעברית',
+  title: "מאני צ'אט (ManyChat) בעברית: מה זה, כמה עולה ומה החלופה",
+  metaTitle: "מאני צ'אט (ManyChat) בעברית: מה זה, כמה עולה ומה החלופה",
   description:
-    'השוואה מלאה בין SocialFlow ל-ManyChat: מה בדיוק אתם משלמים עליו בכל אחד מהם, כמה זה עולה בשקלים, מה קורה כשעוברים את המגבלה, ולמה יש לנו שרת MCP מובנה ולהם אין. כל המספרים עם מקור ותאריך.',
+    "מה זה ManyChat (מאני צ'אט, מאניצאט), כמה הוא עולה ב-2026 לפי מסלול, מה קורה כשעוברים את מכסת אנשי הקשר, ולמה SocialFlow היא החלופה בעברית: חיוב לפי הודעה, בשקלים, עם שרת MCP מובנה. כל מספר עם מקור ותאריך.",
   keywords:
-    'ManyChat, מנישאט, ManyChat בעברית, אלטרנטיבה ל-ManyChat, אוטומציה לתגובות באינסטגרם, תגובה להודעה פרטית, SocialFlow, MCP, מחירי ManyChat',
+    "ManyChat, מאני צ'אט, מאניצאט, מאני צאט, ManyChat בעברית, מחירי ManyChat, חלופה ל-ManyChat, אוטומציה לתגובות באינסטגרם, SocialFlow, MCP",
   lead: 'שתי המערכות עושות את אותו הדבר הבסיסי: מישהו מגיב על פוסט, ומקבל הודעה פרטית עם הקישור. ההבדל הוא במה שאתם משלמים עליו, באיזו שפה המערכת מדברת אליכם, ובמה אפשר לעשות בלי לפתוח אותה בכלל.',
 
   tldr: [
@@ -104,7 +156,7 @@ const he: Compare = {
         {
           label: 'תעריף חריגה',
           us: 'אין. משדרגים מסלול או ממתינים לחודש הבא',
-          them: `${MC.essential.over} דולר לאיש קשר ב-Essential, ${MC.pro.over} ב-Pro, ${MC.business.over} ב-Business`,
+          them: `${rate(MC.essential.over)} דולר לאיש קשר ב-Essential, ${rate(MC.pro.over)} ב-Pro, ${rate(MC.business.over)} ב-Business`,
         },
         { label: 'מטבע החיוב', us: 'שקלים, כולל מע"מ, עם חשבונית', them: 'דולרים, מע"מ בנפרד', key: true },
       ],
@@ -114,8 +166,8 @@ const he: Compare = {
       rows: [
         {
           label: 'חינם',
-          us: `0 ש"ח, ${PLAN_CATALOG.free.limits.activeAutomations} אוטומציות פעילות, ${PLAN_CATALOG.free.limits.dmsPerMonth} הודעות בחודש`,
-          them: `0 דולר, ${MC.free.automations} אוטומציות, ${MC.free.contacts} אנשי קשר פעילים`,
+          us: `0 ש"ח, ${PLAN_CATALOG.free.limits.dmsPerMonth} הודעות פרטיות בחודש`,
+          them: `0 דולר, ${MC.free.contacts} אנשי קשר פעילים בחודש`,
           key: true,
         },
         {
@@ -133,11 +185,6 @@ const he: Compare = {
           label: 'מסלול סוכנות',
           us: `Agency, ${PLAN_CATALOG.agency.priceIls} ש"ח לחודש`,
           them: `Business ${MC.business.usd} דולר, Advanced ${MC.advanced.usd} דולר`,
-        },
-        {
-          label: 'הנחה שנתית',
-          us: 'חודשיים חינם בתשלום שנתי',
-          them: 'המחיר המפורסם באתר הוא כבר התעריף השנתי',
         },
         { label: 'תקופת התנסות', us: 'חודש של Pro בשקל אחד', them: 'מסלול חינם קבוע, בלי תקופת ניסיון בתשלום' },
       ],
@@ -205,6 +252,14 @@ const he: Compare = {
   ],
 
   body: `
+<h2>מה זה ManyChat (מאני צ'אט)</h2>
+<p>ManyChat, שבעברית כותבים לפעמים מאני צ'אט או מאניצאט, היא פלטפורמה בינלאומית לאוטומציה של שיחות באינסטגרם, בפייסבוק מסנג'ר, בוואטסאפ ובעוד ערוצים. השימוש הנפוץ בישראל: מישהו מגיב על פוסט או ריל במילת מפתח, ומקבל הודעה פרטית עם קישור.</p>
+<p>הממשק באנגלית, החיוב בדולרים, והמחיר נקבע לפי מספר <strong>אנשי הקשר הפעילים</strong> בחודש. זה הפרט שכדאי להבין לפני שבוחרים מסלול, ועליו העמוד הזה.</p>
+
+<h2>כמה עולה מאני צ'אט ב-2026</h2>
+<p>יש מסלול חינמי וארבעה מסלולים בתשלום. המחירים בדולרים, לפני מע"מ, בחיוב חודשי: Essential ב-${MC.essential.usd} דולר (בערך ${ils(MC.essential.usd)} ש"ח), Pro ב-${MC.pro.usd} דולר (בערך ${ils(MC.pro.usd)} ש"ח), Business ב-${MC.business.usd} דולר ו-Advanced ב-${MC.advanced.usd} דולר. בתשלום שנתי המחיר לחודש יורד ל-${MC.essential.yearly}, ${MC.pro.yearly}, ${MC.business.yearly} ו-${MC.advanced.yearly} דולר.</p>
+<p>כל מסלול כולל מכסה של אנשי קשר פעילים: ${MC.free.contacts} בחינמי, ${MC.essential.contacts.toLocaleString('en')} ב-Essential, ${MC.pro.contacts.toLocaleString('en')} ב-Pro, ${MC.business.contacts.toLocaleString('en')} ב-Business ו-${MC.advanced.contacts.toLocaleString('en')} ב-Advanced. מעבר למכסה כל איש קשר נוסף מחויב בנפרד. הפירוק המלא, כולל חישוב של חודש עם ריל מוצלח, נמצא ב<a href="/he/manychat-pricing">עמוד מחירי ManyChat</a>.</p>
+<!--table-->
 <h2>מה ההבדל האמיתי, במשפט אחד</h2>
 <p>ManyChat מחייבת אתכם על <strong>אנשים</strong>. SocialFlow מחייבת אתכם על <strong>הודעות</strong>. כל שאר ההבדלים נגזרים מזה.</p>
 
@@ -227,6 +282,7 @@ const he: Compare = {
 <p>ל-ManyChat אין תמיכה מובנית בכיווניות ימין לשמאל. בפורום הקהילה שלהם יש בקשה פתוחה שכותרתה "בקשה דחופה: הוסיפו תמיכה בימין לשמאל לעברית ולערבית", והפתרון שהשוק מצא הוא תוסף כרום של צד שלישי.</p>
 <p>כלומר כדי לכתוב הודעה בעברית בלי שהפיסוק יקפוץ לצד הלא נכון, אתם מתקינים תוסף בדפדפן. זה עובד. זה גם אומר משהו על סדר העדיפויות.</p>
 <p>SocialFlow נכתבה עם כיווניות לוגית מהשורה הראשונה, ומדברת תשע שפות. עברית היא אחת מהן, לא תרגום שהודבק בסוף.</p>
+<p>רוצים לראות איך זה נראה בפועל? <a href="/he/guide">המדריך המלא</a> מראה אוטומציה מהתחלה ועד הסוף, ו<a href="/he/pricing">עמוד המחירים</a> מפרט כל מסלול בשקלים.</p>
 
 <h2>כמה זה באמת עולה, על חודש אחד טוב</h2>
 <p>נניח ריל שעבד: 3,000 אנשים הגיבו החודש וקיבלו הודעה פרטית.</p>
@@ -236,7 +292,7 @@ const he: Compare = {
 
 <h2>המעבר לוקח דקות, לא פרויקט</h2>
 <p>החיבור עובר דרך אותו ממשק רשמי של Meta שכבר אישרתם פעם. מתחברים עם הפייסבוק, בוחרים את הדף ואת חשבון האינסטגרם העסקי, וזהו.</p>
-<p>את האוטומציות בונים מחדש, וזה לוקח דקות: בוחרים פוסט, כותבים מילת מפתח, מדביקים קישור. או, אם אתם על Pro, מחברים את החשבון ל-Claude או ל-ChatGPT ומבקשים מהם להקים את הכול בשפה חופשית.</p>
+<p>את האוטומציות בונים מחדש, וזה לוקח דקות: בוחרים פוסט, כותבים מילת מפתח, מדביקים קישור. את האוטומציה הראשונה לכל דף מקימים באפליקציה, כדי לשמור את ההרשאה של Meta. מהשנייה והלאה, אם אתם על Pro, אפשר לבקש מ-Claude או מ-ChatGPT להקים אותן בשפה חופשית.</p>
 <p>אין ייצוא, אין ייבוא, אין תקופת חפיפה שבה משלמים על שתי מערכות.</p>
 
 <h2>למי SocialFlow מתאים</h2>
@@ -250,6 +306,14 @@ const he: Compare = {
 
   faqTitle: 'שאלות נפוצות',
   faqs: [
+    {
+      q: "מה זה מאני צ'אט?",
+      a: "ManyChat, או מאני צ'אט בתעתיק לעברית, היא פלטפורמה לאוטומציה של שיחות באינסטגרם, בפייסבוק ובערוצים נוספים. השימוש הנפוץ הוא תגובה אוטומטית למי שמגיב על פוסט, עם הודעה פרטית שמכילה קישור. הממשק באנגלית והחיוב בדולרים, לפי מספר אנשי הקשר הפעילים בחודש.",
+    },
+    {
+      q: "האם מאני צ'אט חינמי?",
+      a: `יש מסלול חינמי שכולל עד ${MC.free.contacts} אנשי קשר פעילים בחודש, והודעות שנשלחות ממנו נושאות את המיתוג "Powered by Manychat". המסלולים בתשלום מתחילים ב-${MC.essential.usd} דולר לחודש בחיוב חודשי. ב-SocialFlow המסלול החינמי כולל ${PLAN_CATALOG.free.limits.dmsPerMonth} הודעות פרטיות בחודש, בלי כרטיס אשראי.`,
+    },
     {
       q: 'מה זה איש קשר פעיל ב-ManyChat?',
       a: 'כל אדם שיצר איתכם אינטראקציה דרך המערכת במהלך חודש החיוב הנוכחי. אם אותו אדם פנה חמש פעמים באותו חודש הוא עדיין נספר כאחד, אבל מספיק שהוא הגיב פעם אחת כדי להיספר. במסלול Pro נכללים 2,500, ומעבר לזה התעריף הוא חמישה סנט לאיש קשר.',
@@ -283,13 +347,7 @@ const he: Compare = {
   sourcesTitle: 'מקורות',
   sourcesNote:
     'המחירים והמגבלות של ManyChat נבדקו ב-23 בספטמבר 2026 ונכונים למבנה התמחור שהם השיקו במרץ 2026. תמחור משתנה, ולכן שווה לוודא מולם לפני החלטה. ההמרה לשקלים היא הערכה בלבד ולא כוללת מע"מ. המספרים של SocialFlow נקראים ישירות מקטלוג המסלולים של המוצר.',
-  sources: [
-    { label: 'ManyChat, עמוד התמחור הרשמי', url: 'https://manychat.com/pricing' },
-    { label: 'ManyChat, מרכז העזרה: אנשי קשר פעילים', url: 'https://help.manychat.com/hc/en-us/articles/25800323349020-Active-Contacts' },
-    { label: 'ManyChat, מרכז העזרה: מסלול Pro', url: 'https://help.manychat.com/hc/en-us/articles/25800228332572-Pro-plan' },
-    { label: 'ManyChat, קהילה: בקשה לתמיכה בעברית ובערבית', url: 'https://community.manychat.com/ideas/urgent-request-add-right-to-left-rtl-support-for-hebrew-arabic-5124' },
-    { label: 'ManyChat, קהילה: בקשה ל-API לעידן סוכני AI', url: 'https://community.manychat.com/ideas/manychat-api-for-the-ai-agent-era-broadcast-templates-metrics-flow-management-9298' },
-  ],
+  sources: MC_SOURCES.he,
 
   ctaTitle: 'רוצים לבדוק בעצמכם?',
   ctaText: 'המסלול החינמי לא מבקש כרטיס אשראי. מחברים דף, מקימים אוטומציה אחת, ורואים על הריל הבא אם זה עובד לכם.',
@@ -327,7 +385,7 @@ const en: Compare = {
       rows: [
         { label: 'Billing unit', us: 'Private messages sent this month', them: 'Active contacts, anyone who interacted this month', key: true },
         { label: 'Passing the limit', us: 'Sending stops and you get an alert', them: 'Automations keep running, overage goes on the next invoice', key: true },
-        { label: 'Overage rate', us: 'None. Upgrade, or wait for next month', them: `$${MC.essential.over} per contact on Essential, $${MC.pro.over} on Pro, $${MC.business.over} on Business` },
+        { label: 'Overage rate', us: 'None. Upgrade, or wait for next month', them: `$${rate(MC.essential.over)} per contact on Essential, $${rate(MC.pro.over)} on Pro, $${rate(MC.business.over)} on Business` },
         { label: 'Billing currency', us: 'Shekels in Israel, dollars elsewhere', them: 'Dollars' },
       ],
     },
@@ -336,14 +394,13 @@ const en: Compare = {
       rows: [
         {
           label: 'Free',
-          us: `$0, ${PLAN_CATALOG.free.limits.activeAutomations} active automations, ${PLAN_CATALOG.free.limits.dmsPerMonth} messages a month`,
-          them: `$0, ${MC.free.automations} automations, ${MC.free.contacts} active contacts`,
+          us: `$0, ${PLAN_CATALOG.free.limits.dmsPerMonth} private messages a month`,
+          them: `$0, ${MC.free.contacts} active contacts a month`,
           key: true,
         },
         { label: 'Entry tier', us: `Creator, $${PLAN_CATALOG.creator.priceUsd} a month`, them: `Essential, $${MC.essential.usd} a month` },
         { label: 'Professional tier', us: `Pro, $${PLAN_CATALOG.pro.priceUsd} a month`, them: `Pro, $${MC.pro.usd} a month`, key: true },
         { label: 'Agency tier', us: `Agency, $${PLAN_CATALOG.agency.priceUsd} a month`, them: `Business $${MC.business.usd}, Advanced $${MC.advanced.usd}` },
-        { label: 'Annual discount', us: 'Two months free on annual billing', them: 'The advertised price is already the annual rate' },
         { label: 'Trial', us: 'A month of Pro for one unit of currency', them: 'A permanent free tier, no paid trial' },
       ],
     },
@@ -416,7 +473,7 @@ const en: Compare = {
 
 <h2>Switching takes minutes, not a project</h2>
 <p>The connection runs through the same official Meta interface you have already approved once. Sign in with Facebook, pick the page and the Instagram business account, done.</p>
-<p>Automations are rebuilt, and that takes minutes: pick a post, type a keyword, paste a link. Or, on Pro, connect the account to Claude or ChatGPT and ask them to set the whole thing up in plain language.</p>
+<p>Automations are rebuilt, and that takes minutes: pick a post, type a keyword, paste a link. The first automation for each page is created in the app, so the Meta permission is stored. From the second one on, on Pro, you can ask Claude or ChatGPT to build them in plain language.</p>
 <p>No export, no import, no overlap month where you pay for two systems.</p>
 
 <h2>Who SocialFlow is for</h2>
@@ -463,13 +520,7 @@ const en: Compare = {
   sourcesTitle: 'Sources',
   sourcesNote:
     'ManyChat prices and limits were checked on 23 September 2026 and reflect the pricing structure they launched in March 2026. Pricing changes, so verify with them before deciding. SocialFlow figures are read directly from the product plan catalogue.',
-  sources: [
-    { label: 'ManyChat official pricing page', url: 'https://manychat.com/pricing' },
-    { label: 'ManyChat help centre: Active Contacts', url: 'https://help.manychat.com/hc/en-us/articles/25800323349020-Active-Contacts' },
-    { label: 'ManyChat help centre: Pro plan', url: 'https://help.manychat.com/hc/en-us/articles/25800228332572-Pro-plan' },
-    { label: 'ManyChat community: request for Hebrew and Arabic RTL support', url: 'https://community.manychat.com/ideas/urgent-request-add-right-to-left-rtl-support-for-hebrew-arabic-5124' },
-    { label: 'ManyChat community: request for an API for the AI agent era', url: 'https://community.manychat.com/ideas/manychat-api-for-the-ai-agent-era-broadcast-templates-metrics-flow-management-9298' },
-  ],
+  sources: MC_SOURCES.en,
 
   ctaTitle: 'Want to check for yourself?',
   ctaText: 'The free tier asks for no card. Connect a page, build one automation, and see on your next reel whether it works for you.',

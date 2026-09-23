@@ -8,6 +8,7 @@ import { BetaForm } from './BetaForm';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useI18n } from './I18nProvider';
 import { PLAN_CATALOG, displayPrice } from '@/lib/plans';
+import { slugFor, manychatPricingNav } from '@/lib/slugs';
 
 /**
  * Public landing page (logged-out root), ported from the Claude Design file
@@ -576,7 +577,8 @@ export function Landing({ error }: { error?: string }) {
                 <Link href={p('/terms')}>{H.footerTerms}</Link>
                 <Link href={p('/privacy')}>{H.footerPrivacy}</Link>
                 <Link href={p('/pricing')}>{m.pricing.nav}</Link>
-                <Link href={p('/vs/manychat')}>{m.common.compareNav}</Link>
+                <Link href={p(slugFor(locale, '/manychat-alternative'))}>{m.common.compareNav}</Link>
+                <Link href={p('/manychat-pricing')}>{manychatPricingNav(locale)}</Link>
                 <Link href={p('/blog')}>{m.blog.nav}</Link>
                 <Link href={p('/data-deletion')}>{H.footerDeletion}</Link>
                 <LoginLink>{B.signIn}</LoginLink>

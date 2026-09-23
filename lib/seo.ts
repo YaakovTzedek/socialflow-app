@@ -1,14 +1,15 @@
 import { LOCALES, prefixOf, type Locale } from '@/lib/i18n';
 import type { Messages } from '@/lib/i18n/messages/en';
 import { PLAN_CATALOG, type PlanId } from '@/lib/plans';
+import { slugFor } from '@/lib/slugs';
 
 export const SEO_BASE = (process.env.NEXT_PUBLIC_BASE_URL || 'https://isocialflow.com').replace(/\/$/, '');
 
 /** Public pages, in sitemap order. Everything else needs a session. */
-export const PUBLIC_PATHS = ['/', '/pricing', '/guide', '/vs/manychat', '/blog', '/terms', '/privacy', '/data-deletion'] as const;
+export const PUBLIC_PATHS = ['/', '/pricing', '/guide', '/manychat-alternative', '/manychat-pricing', '/blog', '/terms', '/privacy', '/data-deletion'] as const;
 
 export function urlFor(locale: Locale, path: string) {
-  const p = path === '/' ? '' : path;
+  const p = path === '/' ? '' : slugFor(locale, path);
   return `${SEO_BASE}${prefixOf(locale)}${p}` || `${SEO_BASE}/`;
 }
 
