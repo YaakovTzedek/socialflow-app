@@ -184,7 +184,7 @@ ${shot('mcp-tools.webp', 'SocialFlow MCP connection screen listing the tools the
 <h2>How much does an Instagram auto responder cost?</h2>
 <p>SocialFlow bills by private messages sent each month, not by the number of people who commented. The free plan has ${free.activeAutomations} active automations and ${n(free.dmsPerMonth, 'en')} private messages a month, and adds a short "Sent with SocialFlow" line to each message. Paid plans remove it.</p>
 ${pricingTable('en')}
-<p>Annual billing gives two months free. Full details are on the <a href="${L('/pricing')}">pricing page</a>. For a side by side with another tool, see <a href="${L('/vs/manychat')}">SocialFlow vs ManyChat</a>. For the method behind the keyword and the wording, read the <a href="${L('/guide')}">guide to turning comments into leads</a>.</p>
+<p>Annual billing gives two months free. Full details are on the <a href="${L('/pricing')}">pricing page</a>. For a side by side with another tool, see <a href="${L('/manychat-alternative')}">the ManyChat alternative page</a>. For the method behind the keyword and the wording, read the <a href="${L('/guide')}">guide to turning comments into leads</a>.</p>
 </section>
 `,
 
@@ -341,7 +341,7 @@ ${shot('mcp-tools.webp', 'מסך חיבור ה-MCP ב-SocialFlow עם רשימת
 <h2>כמה עולה מענה אוטומטי באינסטגרם?</h2>
 <p>SocialFlow מחייבת לפי הודעות פרטיות שנשלחו בחודש, לא לפי מספר האנשים שהגיבו. במסלול החינמי יש ${free.activeAutomations} אוטומציות פעילות ו-${n(free.dmsPerMonth, 'he')} הודעות פרטיות בחודש, ובכל הודעה מופיעה שורה קצרה "נשלח עם SocialFlow". במסלולים בתשלום היא יורדת. המחירים כוללים מע"מ.</p>
 ${pricingTable('he')}
-<p>בתשלום שנתי מקבלים חודשיים במתנה. כל הפרטים ב<a href="${L('/pricing')}">עמוד המחירים</a>. להשוואה מול כלי אחר יש את <a href="${L('/vs/manychat')}">SocialFlow מול ManyChat</a>. ולשיטה שמאחורי מילת המפתח והנוסחים, <a href="${L('/guide')}">המדריך להפיכת תגובות ללידים</a>.</p>
+<p>בתשלום שנתי מקבלים חודשיים במתנה. כל הפרטים ב<a href="${L('/pricing')}">עמוד המחירים</a>. להשוואה מול כלי אחר יש את <a href="${L('/manychat')}">SocialFlow מול ManyChat</a>. ולשיטה שמאחורי מילת המפתח והנוסחים, <a href="${L('/guide')}">המדריך להפיכת תגובות ללידים</a>.</p>
 </section>
 `,
 
