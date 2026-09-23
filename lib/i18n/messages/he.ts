@@ -11,7 +11,7 @@ const he: Messages = {
     pause: 'השהיה', resume: 'הפעלה', active: 'פעילה', paused: 'מושהית', error: 'שגיאה', yes: 'כן', no: 'לא',
     facebook: 'פייסבוק', instagram: 'אינסטגרם', facebookPage: 'דף פייסבוק', instagramBusiness: 'אינסטגרם עסקי',
     user: 'משתמש', commenter: 'מגיב', anyComment: 'כל תגובה', unknownError: 'משהו השתבש',
-    language: 'שפה', logout: 'התנתקות', login: 'כניסה', compareNav: 'מול ManyChat', connectAccount: 'חבר חשבון', connectAnother: '+ חבר חשבון נוסף',
+    language: 'שפה', logout: 'התנתקות', login: 'כניסה', compareNav: 'מול ManyChat', autoResponderNav: 'מענה אוטומטי באינסטגרם', connectAccount: 'חבר חשבון', connectAnother: '+ חבר חשבון נוסף',
     connectedToMeta: 'מחובר ל-Meta', signInWithFacebook: 'התחברות עם פייסבוק',
     followers: 'עוקבים', posts: 'פוסטים', media: 'מדיה', comments: 'תגובות',
   },

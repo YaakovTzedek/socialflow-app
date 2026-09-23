@@ -52,6 +52,7 @@ export function PublicShell({
             <Link href={p('/blog')}>{m.blog.nav}</Link>
             <Link href={p('/pricing')}>{m.pricing.nav}</Link>
             <Link href={p('/vs/manychat')}>{m.common.compareNav}</Link>
+            <Link href={p('/instagram-auto-responder')}>{m.common.autoResponderNav}</Link>
             <Link href={p('/terms')}>{m.landing.footerTerms}</Link>
             <Link href={p('/privacy')}>{m.landing.footerPrivacy}</Link>
             <span style={{ marginInlineStart: 'auto', color: '#8B7B99', fontSize: 14 }}>{m.landing.copyright}</span>

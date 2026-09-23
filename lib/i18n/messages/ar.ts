@@ -11,7 +11,7 @@ const ar: Messages = {
     pause: 'إيقاف مؤقت', resume: 'استئناف', active: 'نشطة', paused: 'متوقفة مؤقتاً', error: 'خطأ', yes: 'نعم', no: 'لا',
     facebook: 'Facebook', instagram: 'Instagram', facebookPage: 'صفحة Facebook', instagramBusiness: 'حساب Instagram للأعمال',
     user: 'المستخدم', commenter: 'المعلّق', anyComment: 'أي تعليق', unknownError: 'حدث خطأ ما',
-    language: 'اللغة', logout: 'تسجيل الخروج', login: 'دخول', compareNav: 'مقارنة مع ManyChat', connectAccount: 'ربط حساب', connectAnother: '+ ربط حساب آخر',
+    language: 'اللغة', logout: 'تسجيل الخروج', login: 'دخول', compareNav: 'مقارنة مع ManyChat', autoResponderNav: 'الرد التلقائي على إنستغرام', connectAccount: 'ربط حساب', connectAnother: '+ ربط حساب آخر',
     connectedToMeta: 'متصل بـ Meta', signInWithFacebook: 'تسجيل الدخول عبر Facebook',
     followers: 'متابع', posts: 'المنشورات', media: 'الوسائط', comments: 'تعليقات',
   },

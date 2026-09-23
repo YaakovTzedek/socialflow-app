@@ -11,7 +11,7 @@ const hu: Messages = {
     pause: 'Szüneteltetés', resume: 'Folytatás', active: 'Aktív', paused: 'Szünetel', error: 'Hiba', yes: 'Igen', no: 'Nem',
     facebook: 'Facebook', instagram: 'Instagram', facebookPage: 'Facebook-oldal', instagramBusiness: 'Instagram üzleti fiók',
     user: 'Felhasználó', commenter: 'Hozzászóló', anyComment: 'Bármely hozzászólás', unknownError: 'Valami hiba történt',
-    language: 'Nyelv', logout: 'Kijelentkezés', login: 'Belépés', compareNav: 'vs ManyChat', connectAccount: 'Fiók csatlakoztatása', connectAnother: '+ Másik fiók csatlakoztatása',
+    language: 'Nyelv', logout: 'Kijelentkezés', login: 'Belépés', compareNav: 'vs ManyChat', autoResponderNav: 'Instagram automatikus válasz', connectAccount: 'Fiók csatlakoztatása', connectAnother: '+ Másik fiók csatlakoztatása',
     connectedToMeta: 'Csatlakoztatva a Metához', signInWithFacebook: 'Bejelentkezés Facebookkal',
     followers: 'követő', posts: 'Bejegyzések', media: 'Média', comments: 'hozzászólás',
   },

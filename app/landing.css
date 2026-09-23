@@ -552,3 +552,14 @@ html:not([lang="he"]) .sfp-title { font-size: clamp(30px, 4.2vw, 48px); line-hei
 .sfad-copy { background: none; border: 0; color: #FF8FB0; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; padding: 0; margin-inline-end: 10px; }
 .sfad-copy:hover { color: #fff; }
 .sfp-partner-link { font-size: 15px; background: rgba(10, 6, 16, .55); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; overflow-wrap: anywhere; color: #FF8FB0; margin: 8px 0 12px; }
+
+/* /instagram-auto-responder: the answer block, the definition box and real
+   product screenshots inside the article body. */
+.sfp-tldr .sfa-answer { font-size: 17px; line-height: 1.7; color: var(--text); margin: 0 0 8px; }
+.sfp-tldr .sfa-answer:last-child { margin-block-end: 0; }
+.sfa-def { background: var(--card); border: 1px solid var(--line); border-inline-start: 3px solid #E1306C; border-radius: 16px; padding: 18px 22px; margin: 6px 0 20px; }
+.sfa-def-term { font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #FF8FB0; margin-block-end: 6px; }
+.sfa-def p { margin: 0; }
+.sfa-shot { margin: 18px 0 22px; }
+.sfa-shot img { display: block; width: 100%; height: auto; border-radius: 14px; border: 1px solid var(--line); background: #140c1c; }
+.sfa-shot figcaption { font-size: 14px; line-height: 1.6; color: var(--faint); margin-block-start: 8px; }

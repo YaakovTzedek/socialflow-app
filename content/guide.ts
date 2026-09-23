@@ -149,6 +149,7 @@ const he: Guide = {
   </div>
 </div>
 <p class="sfg-tip">הכלל פשוט: אם כלי מבקש את הסיסמה שלכם לאינסטגרם, זה הסימן לעצור.</p>
+<p>כל הכללים של מטא, עם קישורים לתיעוד שלהם, מרוכזים בעמוד <a href="/he/instagram-auto-responder">מענה אוטומטי באינסטגרם</a>.</p>
 </section>
 
 <section id="now">
@@ -279,6 +280,7 @@ const en: Guide = {
   </div>
 </div>
 <p class="sfg-tip">Simple rule: if a tool asks for your Instagram password, stop.</p>
+<p>Every Meta rule, with links to Meta documentation, is on the <a href="/instagram-auto-responder">Instagram auto responder</a> page.</p>
 </section>
 
 <section id="now">
