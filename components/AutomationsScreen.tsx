@@ -103,13 +103,13 @@ export default function AutomationsScreen() {
                     <h3>{a.name}<span className={`sfa-tag ${a.status === 'active' ? 'sfa-tag-sent' : 'sfa-tag-unsent'}`}>{a.status === 'active' ? m.common.active : m.common.paused}</span></h3>
                     <div className="meta">
                       <span>{a.page_name || a.page_id}</span>
-                      <span>· {a.post_scope === 'all_posts' ? A.allPosts : A.specificPost}</span>
+                      <span>· {a.post_scope === 'story_replies' ? A.storyReplies : a.post_scope === 'all_posts' ? A.allPosts : A.specificPost}</span>
                       {a.public_reply_enabled && <span>· {A.publicReply}</span>}
                       {a.dm_enabled && <span>· {A.privateMessage}</span>}
                       <span>· {a.match_type === 'exact' ? A.exactMatch : A.containsMatch}</span>
                     </div>
-                    <div className="kws">{a.keywords?.length ? a.keywords.map((k) => <span key={k}>{k}</span>) : <span>{m.common.anyComment}</span>}</div>
-                    {a.post_scope !== 'all_posts' && (
+                    <div className="kws">{a.keywords?.length ? a.keywords.map((k) => <span key={k}>{k}</span>) : <span>{a.post_scope === 'story_replies' ? A.storyReplies : m.common.anyComment}</span>}</div>
+                    {a.post_scope === 'specific_post' && (
                       <div className="post">
                         {a.post?.image ? <img src={a.post.image} alt="" /> : <span className="ph">▦</span>}
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -177,7 +177,9 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
   const { m, t } = useI18n(); const A = m.automations;
   const VARS = [A.varName, A.varKeyword, A.varPage];
   const [target, setTarget] = useState<Target | null>(null);
-  const [allPosts, setAllPosts] = useState(false);
+  const [scope, setScope] = useState<'specific_post' | 'all_posts' | 'story_replies'>('specific_post');
+  const allPosts = scope === 'all_posts';
+  const story = scope === 'story_replies';
   const [posts, setPosts] = useState<PostItem[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [postId, setPostId] = useState('');
@@ -193,7 +195,7 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!target || allPosts) { setPosts([]); return; }
+    if (!target || scope !== 'specific_post') { setPosts([]); return; }
     (async () => {
       setLoadingPosts(true);
       try {
@@ -204,25 +206,28 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
           : (data.posts || []).map((x: any) => ({ id: x.id, text: x.message || x.story || m.posts.noText, image: x.full_picture, likes: x.likes?.summary?.total_count, comments: x.comments?.summary?.total_count })));
       } finally { setLoadingPosts(false); }
     })();
-  }, [target, allPosts]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [target, scope]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const step = !target ? 1 : !allPosts && !postId ? 2 : keywords.length === 0 ? 3 : !replies.some((r) => r.trim()) && publicOn ? 4 : dmOn && !dmLink && !dmMessage.trim() ? 5 : 6;
-  const canSave = !!target && (allPosts || !!postId);
+  // Story replies arrive as DMs: no public reply, and the private message is the whole point.
+  const publicActive = publicOn && !story;
+  const dmActive = dmOn || story;
+  const step = !target ? 1 : scope === 'specific_post' && !postId ? 2 : keywords.length === 0 ? 3 : !replies.some((r) => r.trim()) && publicActive ? 4 : dmActive && !dmLink && !dmMessage.trim() ? 5 : 6;
+  const canSave = !!target && (scope !== 'specific_post' || !!postId) && (!story || !!dmMessage.trim());
 
   const save = async (status: 'active' | 'paused') => {
     if (!target) return;
     setSaving(true);
     try {
       await fetch(`/api/pages/${target.page_id}/subscribe`, { method: 'POST' }).catch(() => {});
-      const autoName = name.trim() || (keywords.length ? `${keywords[0]} · ${target.name}` : `${m.common.anyComment} · ${target.name}`);
+      const autoName = name.trim() || (keywords.length ? `${keywords[0]} · ${target.name}` : `${story ? A.storyReplies : m.common.anyComment} · ${target.name}`);
       const res = await fetch('/api/automations', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: autoName, platform: target.platform, page_id: target.page_id, ig_id: target.ig_id,
-          post_scope: allPosts ? 'all_posts' : 'specific_post', post_id: allPosts ? null : postId,
+          post_scope: scope, post_id: scope === 'specific_post' ? postId : null,
           keywords, match_type: matchType,
-          public_reply_enabled: publicOn, public_replies: replies.map((r) => r.trim()).filter(Boolean),
-          dm_enabled: dmOn, dm_message: dmOn ? dmMessage.trim() || null : null, dm_link: dmOn ? dmLink.trim() || null : null,
+          public_reply_enabled: publicActive, public_replies: publicActive ? replies.map((r) => r.trim()).filter(Boolean) : [],
+          dm_enabled: dmActive, dm_message: dmActive ? dmMessage.trim() || null : null, dm_link: dmActive ? dmLink.trim() || null : null,
           once_per_user: oncePerUser, status,
         }),
       });
@@ -258,7 +263,7 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
             {targets.length === 0 ? <div className="sfa-sub">{A.noTargets}</div> : (
               <div className="sfa-targets">
                 {targets.map((x) => (
-                  <button type="button" key={x.key} className={`sfa-target${target?.key === x.key ? ' sel' : ''}`} onClick={() => { setTarget(x); setPostId(''); }}>
+                  <button type="button" key={x.key} className={`sfa-target${target?.key === x.key ? ' sel' : ''}`} onClick={() => { setTarget(x); setPostId(''); if (x.platform !== 'instagram' && scope === 'story_replies') setScope('specific_post'); }}>
                     <span className={`sfa-plat sfa-plat-lg ${x.platform === 'instagram' ? 'sfa-plat-ig' : 'sfa-plat-fb'}`}>{x.platform === 'instagram' ? '◎' : 'f'}</span>
                     <div><strong style={x.platform === 'instagram' ? { direction: 'ltr', textAlign: 'start' } : undefined}>{x.name}</strong><small>{x.platform === 'instagram' ? m.common.instagramBusiness : m.common.facebookPage}</small></div>
                     <span className="sfa-check">{target?.key === x.key ? '✓' : ''}</span>
@@ -271,9 +276,14 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
           <section className={`sfa-step${step >= 2 ? ' active' : ''}`}>
             <div className="sfa-step-h">
               <div><span className="sfa-step-n">2</span>{A.step2}</div>
-              <button type="button" className={`sfa-pill-btn${allPosts ? ' on' : ''}`} onClick={() => { setAllPosts((v) => !v); setPostId(''); }} disabled={!target}>{A.allPostsBtn}</button>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button type="button" className={`sfa-pill-btn${allPosts ? ' on' : ''}`} onClick={() => { setScope(allPosts ? 'specific_post' : 'all_posts'); setPostId(''); }} disabled={!target}>{A.allPostsBtn}</button>
+                {target?.platform === 'instagram' && (
+                  <button type="button" className={`sfa-pill-btn${story ? ' on' : ''}`} onClick={() => { setScope(story ? 'specific_post' : 'story_replies'); setPostId(''); }}>{A.storyRepliesBtn}</button>
+                )}
+              </div>
             </div>
-            {!target ? <div className="sfa-sub">{A.chooseTargetFirst}</div> : allPosts ? <div className="sfa-sub">{A.allPostsNote}</div> : loadingPosts ? <div className="sfa-loading"><span className="sfa-spinner" />{A.loadingPosts}</div> : posts.length === 0 ? (
+            {!target ? <div className="sfa-sub">{A.chooseTargetFirst}</div> : story ? <div className="sfa-sub">{A.storyRepliesNote}</div> : allPosts ? <div className="sfa-sub">{A.allPostsNote}</div> : loadingPosts ? <div className="sfa-loading"><span className="sfa-spinner" />{A.loadingPosts}</div> : posts.length === 0 ? (
               <input className="sfa-input" dir="ltr" value={postId} onChange={(e) => setPostId(e.target.value)} placeholder={A.pastePostId} />
             ) : (
               <div className="sfa-posts">
@@ -293,15 +303,15 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
                 <option value="contains">{A.matchContains}</option><option value="exact">{A.matchExact}</option>
               </select>
             </div>
-            <div className="sfa-sub">{A.keywordsNote}</div>
+            <div className="sfa-sub">{story ? A.storyKeywordsNote : A.keywordsNote}</div>
             <KeywordChips keywords={keywords} setKeywords={setKeywords} />
           </section>
 
           <section className={`sfa-step${step >= 4 ? ' active' : ''}`}>
             <div className="sfa-step-h"><div><span className="sfa-step-n">4</span>{A.step4}</div>
-              <button type="button" className={`sfa-toggle${publicOn ? ' on' : ''}`} onClick={() => setPublicOn((v) => !v)} aria-label={A.publicReplyAria}><span /></button>
+              {!story && <button type="button" className={`sfa-toggle${publicOn ? ' on' : ''}`} onClick={() => setPublicOn((v) => !v)} aria-label={A.publicReplyAria}><span /></button>}
             </div>
-            {publicOn ? (
+            {story ? <div className="sfa-sub">{A.storyNoPublicReply}</div> : publicOn ? (
               <>
                 <div className="sfa-sub">{A.rotateNote}</div>
                 <div className="sfa-stack">
@@ -316,10 +326,11 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
 
           <section className={`sfa-step${step >= 5 ? ' active' : ''}`}>
             <div className="sfa-step-h"><div><span className="sfa-step-n">5</span>{A.step5}</div>
-              <button type="button" className={`sfa-toggle${dmOn ? ' on' : ''}`} onClick={() => setDmOn((v) => !v)} aria-label={A.dmAria}><span /></button>
+              {!story && <button type="button" className={`sfa-toggle${dmOn ? ' on' : ''}`} onClick={() => setDmOn((v) => !v)} aria-label={A.dmAria}><span /></button>}
             </div>
-            {dmOn ? (
+            {dmActive ? (
               <>
+                {story && !dmMessage.trim() && <div className="sfa-sub">{A.storyDmRequired}</div>}
                 <textarea className="sfa-textarea" value={dmMessage} onChange={(e) => setDmMessage(e.target.value)} placeholder={A.dmPlaceholder} />
                 <div className="sfa-vars">{VARS.map((v) => <button type="button" key={v} onClick={() => setDmMessage((x) => (x ? x + ' ' : '') + v)}>{v}</button>)}</div>
                 <label className="sfa-label" style={{ marginTop: 14 }}>{A.dmLinkLabel}</label>
@@ -332,16 +343,16 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
             <div className="sfa-step-h"><div><span className="sfa-step-n">6</span>{A.step6}</div></div>
             <div className="sfa-stack" style={{ gap: 12 }}>
               <div className="sfa-setting"><div><strong>{A.oncePerUser}</strong><small>{A.oncePerUserNote}</small></div><button type="button" className={`sfa-toggle${oncePerUser ? ' on' : ''}`} onClick={() => setOncePerUser((v) => !v)} aria-label={A.oncePerUser}><span /></button></div>
-              <div className="sfa-setting"><div><strong>{A.noOldComments}</strong><small>{A.noOldCommentsNote}</small></div><button type="button" className="sfa-toggle on" disabled aria-label={A.alwaysOn}><span /></button></div>
+              <div className="sfa-setting"><div><strong>{story ? A.storyNoOld : A.noOldComments}</strong><small>{story ? A.storyNoOldNote : A.noOldCommentsNote}</small></div><button type="button" className="sfa-toggle on" disabled aria-label={A.alwaysOn}><span /></button></div>
             </div>
           </section>
         </div>
 
         <aside className="sfa-preview" aria-label={A.previewTitle}>
           <div className="sfa-eyebrow">{A.previewTitle}</div>
-          <div className="sfa-msg"><span className={`sfa-av ${target?.platform === 'instagram' ? 'sfa-av-ig' : 'sfa-av-fb'}`}>{target?.platform === 'instagram' ? '' : 'f'}</span><div className="sfa-bubble sfa-bubble-user"><small>{A.previewComment}{selectedPost ? `: ${selectedPost.text.slice(0, 30)}` : ''}</small>{t(A.previewCommentSample, { kw: keywords[0] || A.previewDefaultKw })}</div></div>
-          {publicOn && <div className="sfa-msg"><span className="sfa-av sfa-av-sf" /><div className="sfa-bubble sfa-bubble-public"><small>{A.publicReply}</small>{previewReply || A.previewReplyEmpty}</div></div>}
-          {dmOn && <div className="sfa-msg"><span className="sfa-av sfa-av-ig" /><div className="sfa-bubble sfa-bubble-dm"><small>{A.privateMessage}</small><span style={{ whiteSpace: 'pre-wrap' }}>{previewDm || A.previewDmEmpty}</span>{dmLink && <><br /><a href={dmLink} target="_blank" rel="noreferrer" style={{ direction: 'ltr', display: 'inline-block' }}>{dmLink}</a></>}</div></div>}
+          <div className="sfa-msg"><span className={`sfa-av ${target?.platform === 'instagram' ? 'sfa-av-ig' : 'sfa-av-fb'}`}>{target?.platform === 'instagram' ? '' : 'f'}</span><div className="sfa-bubble sfa-bubble-user"><small>{story ? A.previewStoryReply : `${A.previewComment}${selectedPost ? `: ${selectedPost.text.slice(0, 30)}` : ''}`}</small>{t(A.previewCommentSample, { kw: keywords[0] || A.previewDefaultKw })}</div></div>
+          {publicActive && <div className="sfa-msg"><span className="sfa-av sfa-av-sf" /><div className="sfa-bubble sfa-bubble-public"><small>{A.publicReply}</small>{previewReply || A.previewReplyEmpty}</div></div>}
+          {dmActive && <div className="sfa-msg"><span className="sfa-av sfa-av-ig" /><div className="sfa-bubble sfa-bubble-dm"><small>{A.privateMessage}</small><span style={{ whiteSpace: 'pre-wrap' }}>{previewDm || A.previewDmEmpty}</span>{dmLink && <><br /><a href={dmLink} target="_blank" rel="noreferrer" style={{ direction: 'ltr', display: 'inline-block' }}>{dmLink}</a></>}</div></div>}
           <div className="sfa-lead-in"><i>✓</i><div><strong>{A.previewLead}</strong><small>{A.previewLeadText}</small></div></div>
         </aside>
       </div>
@@ -366,15 +377,17 @@ function Editor({ a, onCancel, onSaved, onError }: { a: Automation; onCancel: ()
   const [name, setName] = useState(a.name);
   const [keywords, setKeywords] = useState<string[]>(a.keywords || []);
   const [matchType, setMatchType] = useState<'contains' | 'exact'>((a.match_type as any) || 'contains');
-  const [publicOn, setPublicOn] = useState(a.public_reply_enabled);
+  const story = a.post_scope === 'story_replies';
+  const [publicOn, setPublicOn] = useState(a.public_reply_enabled && !story);
   const [replies, setReplies] = useState<string[]>(a.public_replies?.length ? a.public_replies : ['']);
-  const [dmOn, setDmOn] = useState(a.dm_enabled);
+  const [dmOn, setDmOn] = useState(a.dm_enabled || story);
   const [dmMessage, setDmMessage] = useState(a.dm_message || '');
   const [dmLink, setDmLink] = useState(a.dm_link || '');
   const [oncePerUser, setOncePerUser] = useState(a.once_per_user);
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
+    if (story && !dmMessage.trim()) { onError(A.storyDmRequired); return; }
     setSaving(true);
     try {
       const body = {
@@ -401,7 +414,7 @@ function Editor({ a, onCancel, onSaved, onError }: { a: Automation; onCancel: ()
         </div>
       </div>
       <div><label className="sfa-label">{A.editKeywords}</label><KeywordChips keywords={keywords} setKeywords={setKeywords} /></div>
-      <div>
+      {story ? <div className="sfa-sub">{A.storyNoPublicReply}</div> : <div>
         <div className="sfa-step-h" style={{ marginBottom: 6 }}><div>{A.step4}</div><button type="button" className={`sfa-toggle${publicOn ? ' on' : ''}`} onClick={() => setPublicOn((v) => !v)} aria-label={A.publicReplyAria}><span /></button></div>
         {publicOn && (
           <div className="sfa-stack">
@@ -411,9 +424,9 @@ function Editor({ a, onCancel, onSaved, onError }: { a: Automation; onCancel: ()
             <button type="button" className="sfa-btn sfa-btn-dashed sfa-btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => setReplies((rs) => [...rs, ''])}>{A.addVariant}</button>
           </div>
         )}
-      </div>
+      </div>}
       <div>
-        <div className="sfa-step-h" style={{ marginBottom: 6 }}><div>{A.step5}</div><button type="button" className={`sfa-toggle${dmOn ? ' on' : ''}`} onClick={() => setDmOn((v) => !v)} aria-label={A.dmAria}><span /></button></div>
+        <div className="sfa-step-h" style={{ marginBottom: 6 }}><div>{A.step5}</div>{!story && <button type="button" className={`sfa-toggle${dmOn ? ' on' : ''}`} onClick={() => setDmOn((v) => !v)} aria-label={A.dmAria}><span /></button>}</div>
         {dmOn && (
           <>
             <textarea className="sfa-textarea" value={dmMessage} onChange={(e) => setDmMessage(e.target.value)} placeholder={A.dmPlaceholder} />

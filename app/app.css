@@ -462,3 +462,46 @@ html:not([lang="he"]) .sfa-side-card .sfa-h { font-size: 22px; }
 .sfb-history { margin-block-start: 18px; border-block-start: 1px solid var(--line); padding-block-start: 14px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .sfb-history-line { font-size: 14px; color: var(--muted); flex: 1; min-width: 240px; }
 .sfb-history-sub { font-size: 12px; color: var(--faint, #8B7B99); width: 100%; }
+
+/* /inbox: Instagram DM inbox (25.9). List + thread side by side; one at a time on phones. */
+.sfa-inbox-tools { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.sfa-inbox-acc { display: block; min-width: 200px; }
+.sfa-inbox-acc .sfa-select { padding: 9px 12px; font-weight: 600; }
+.sfa-inbox { display: grid; grid-template-columns: minmax(260px, 360px) 1fr; gap: 16px; align-items: start; }
+.sfa-inbox-list { padding: 6px; display: flex; flex-direction: column; gap: 2px; max-height: 72vh; overflow-y: auto; }
+.sfa-inbox-row { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: start; background: transparent; border: 1px solid transparent; border-radius: 12px; padding: 10px; color: var(--text); cursor: pointer; }
+.sfa-inbox-row:hover { background: rgba(255, 255, 255, .04); }
+.sfa-inbox-row.sel { background: linear-gradient(90deg, rgba(255, 255, 255, .06), rgba(131, 58, 180, .12)); border-color: rgba(225, 48, 108, .5); }
+.sfa-inbox-row .body { flex: 1; min-width: 0; }
+.sfa-inbox-row .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.sfa-inbox-row .top strong { font-size: 14px; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sfa-inbox-row .top small { font-size: 12px; color: var(--faint); white-space: nowrap; }
+.sfa-inbox-row p { margin: 3px 0 0; font-size: 13px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sfa-inbox-row p b { color: var(--muted); font-weight: 600; }
+.sfa-inbox-row .sfa-tag { font-size: 11px; padding: 3px 8px; flex: none; }
+.sfa-story-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; margin-inline-end: 6px; border-radius: 999px; background: linear-gradient(90deg, rgba(249, 206, 52, .2), rgba(238, 42, 123, .2)); border: 1px solid rgba(238, 42, 123, .5); color: #F58AAE; vertical-align: middle; }
+.sfa-bubble .sfa-story-badge { display: table; margin-bottom: 6px; }
+.sfa-inbox-thread { display: flex; flex-direction: column; min-height: 420px; max-height: 72vh; }
+.sfa-inbox-thread-h { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.sfa-inbox-thread-h strong { color: #fff; font-size: 15px; }
+.sfa-inbox-back { display: none; }
+.sfa-inbox-msgs { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.sfa-inbox-msg { display: flex; flex-direction: column; align-items: flex-start; max-width: 80%; }
+.sfa-inbox-msg.out { align-self: flex-end; align-items: flex-end; }
+.sfa-inbox-msg .sfa-bubble { max-width: 100%; overflow-wrap: anywhere; }
+.sfa-inbox-msg.out .sfa-bubble { border-radius: 14px 14px 4px 14px; }
+.sfa-inbox-msg .when { font-size: 11px; color: var(--faint); margin-top: 3px; }
+.sfa-inbox-reply { border-top: 1px solid var(--line); padding: 12px 16px; display: grid; gap: 8px; }
+.sfa-inbox-reply .row { display: flex; gap: 10px; align-items: flex-end; }
+.sfa-inbox-reply .sfa-textarea { min-height: 56px; }
+.sfa-inbox-reply .sfa-textarea:disabled { opacity: .55; cursor: not-allowed; }
+@media (max-width: 900px) {
+  .sfa-inbox { grid-template-columns: 1fr; }
+  .sfa-inbox.has-thread .sfa-inbox-list { display: none; }
+  .sfa-inbox:not(.has-thread) .sfa-inbox-thread { display: none; }
+  .sfa-inbox-back { display: inline-flex; }
+  .sfa-inbox-list, .sfa-inbox-thread { max-height: none; }
+  .sfa-inbox-msgs { max-height: 60vh; }
+  .sfa-inbox-msg { max-width: 92%; }
+  .sfa-inbox-reply .row { flex-direction: column; align-items: stretch; }
+}

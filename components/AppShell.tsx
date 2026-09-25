@@ -42,6 +42,7 @@ export default function AppShell({ userName, title, children }: { userName: stri
   const NAV: { href: string; label: string; icon: string }[] = [
     { href: '/dashboard', label: m.nav.dashboard, icon: '⌂' },
     { href: '/automations', label: m.nav.automations, icon: '⚡' },
+    { href: '/inbox', label: m.nav.inbox, icon: '✉' },
     { href: '/brain', label: m.nav.brain, icon: '◇' },
     { href: '/logs', label: m.nav.logs, icon: '☰' },
     { href: '/posts', label: m.nav.posts, icon: '◎' },

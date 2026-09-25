@@ -12,7 +12,11 @@ import {
   listPagePosts,
   listInstagramMedia,
   getInstagramUsername,
+  listInstagramConversations,
+  getConversationMessages,
+  sendInstagramMessage,
 } from '@/lib/meta';
+import { isInbound, isStoryReply, storyIdOf } from '@/lib/inbox';
 
 export const maxDuration = 60;
 
@@ -51,7 +55,7 @@ function dmTextFor(a: any, branding: string | null): string {
 async function retryFailedDms(brandingLine: (owner: string) => Promise<string | null>): Promise<{ retried: number; recovered: number }> {
   const rows = await sql!`
     SELECT l.id, l.comment_id, l.platform, a.id AS automation_id, a.owner_id, a.page_id,
-           a.dm_message, a.dm_link, a.once_per_user, l.commenter_id, l.dm_attempts,
+           a.dm_message, a.dm_link, a.once_per_user, a.post_scope, l.commenter_id, l.dm_attempts,
            t.access_token, t.ig_id
     FROM trigger_logs l
     JOIN automations a ON a.id = l.automation_id
@@ -66,7 +70,11 @@ async function retryFailedDms(brandingLine: (owner: string) => Promise<string | 
   for (const r of rows as any[]) {
     const msg = dmTextFor(r, await brandingLine(r.owner_id));
     try {
-      const sent = r.platform === 'instagram'
+      // A story reply is answered as a plain DM to the sender (comment_id holds
+      // the message id there, which private replies cannot target).
+      const sent = r.post_scope === 'story_replies'
+        ? await sendInstagramMessage(String(r.commenter_id || ''), msg, r.access_token)
+        : r.platform === 'instagram'
         ? await sendInstagramPrivateReply(r.ig_id || '', r.comment_id, msg, r.access_token)
         : await sendPrivateReply(r.comment_id, msg, r.access_token);
       await sql!`
@@ -98,6 +106,178 @@ function keywordMatch(text: string, keywords: string[], matchType: string): stri
     if (matchType === 'exact' ? t === k : t.includes(k)) return kw;
   }
   return null;
+}
+
+/** Conversations re-read per page on each pass, and messages per conversation. */
+const STORY_CONVERSATIONS = 25;
+const STORY_MESSAGES = 10;
+/** Pages whose inbox is read at the same time. */
+const STORY_PAGE_CONCURRENCY = 2;
+/** Meta refuses a DM after 24 hours; stay safely inside it. */
+const STORY_MAX_AGE_MS = 23 * 60 * 60 * 1000;
+
+/**
+ * Story replies: answer Instagram DMs that reply to a Story.
+ *
+ * There are no webhooks, so each page with an active story_replies automation
+ * has its inbox re-read: only conversations updated since story_poll_state
+ * says we last looked, and in them only inbound messages carrying a `story`
+ * field created after that moment. The first pass for a page only records
+ * now(). A message is claimed in processed_comments (message id as
+ * comment_id) before anything is sent, and one message triggers at most one
+ * automation (the oldest that matches). Every trigger lands in trigger_logs,
+ * so the log, the brain and the monthly DM quota count it like a comment.
+ */
+async function pollStoryReplies(opts: {
+  automations: any[];
+  exhausted: Set<string>;
+  started: number;
+  brandingLine: (owner: string) => Promise<string | null>;
+}): Promise<any[]> {
+  const { automations, exhausted, started, brandingLine } = opts;
+  const summary: any[] = [];
+  const byPage = new Map<string, any[]>();
+  for (const a of automations) {
+    if (a.platform !== 'instagram') continue;
+    const list = byPage.get(a.page_id) || [];
+    list.push(a);
+    byPage.set(a.page_id, list);
+  }
+
+  await mapPool(Array.from(byPage.entries()), STORY_PAGE_CONCURRENCY, async ([pageId, autosAll]) => {
+    if (Date.now() - started > TIME_BUDGET_MS) {
+      summary.push({ story_page: pageId, skipped: 'time_budget' });
+      return;
+    }
+    // Owners past their quota are skipped and the page is not advanced, so an
+    // upgrade inside the 24 hour window still catches up on those replies.
+    const autos = autosAll.filter((a) => !exhausted.has(a.owner_id));
+    if (!autos.length) {
+      summary.push({ story_page: pageId, skipped: 'dm_quota' });
+      return;
+    }
+    try {
+      const [tokenRow] = await sql!`SELECT access_token, ig_id FROM page_tokens WHERE page_id = ${pageId} LIMIT 1`;
+      if (!tokenRow) {
+        summary.push({ story_page: pageId, skipped: 'no_page_token' });
+        return;
+      }
+      const pageToken = tokenRow.access_token as string;
+      const igId = (tokenRow.ig_id as string | null) || null;
+      // Without our IG id we cannot tell their messages from ours.
+      if (!igId) {
+        summary.push({ story_page: pageId, skipped: 'no_instagram' });
+        return;
+      }
+
+      const [state] = await sql!`SELECT last_checked FROM story_poll_state WHERE page_id = ${pageId}`;
+      if (!state) {
+        await sql!`INSERT INTO story_poll_state (page_id, last_checked) VALUES (${pageId}, now()) ON CONFLICT DO NOTHING`;
+        summary.push({ story_page: pageId, baseline: true });
+        return;
+      }
+      const lastChecked = new Date(state.last_checked as any).getTime();
+      // Taken before reading, so a message that lands while this pass runs is
+      // still newer than the next pass's cutoff.
+      const passStart = new Date();
+
+      const convs = await listInstagramConversations(pageId, pageToken, STORY_CONVERSATIONS);
+      // A minute of slack for clock skew between Meta and us; dedupe covers overlap.
+      const fresh = convs.filter((c) => !c.updated_time || Date.parse(c.updated_time) > lastChecked - 60_000);
+      const perConv = await mapPool(fresh, META_CONCURRENCY, async (c) => {
+        try {
+          return { msgs: await getConversationMessages(c.id, pageToken, STORY_MESSAGES) };
+        } catch (e: any) {
+          return { msgs: [] as any[], error: e.message as string };
+        }
+      });
+
+      const ordered = [...autos].sort((x, y) => Date.parse(x.created_at) - Date.parse(y.created_at));
+      let matched = 0;
+      for (const { msgs } of perConv) {
+        // Oldest first, so the log reads in the order people wrote.
+        for (const msg of [...msgs].reverse()) {
+          if (!msg?.id || !isStoryReply(msg) || !isInbound(msg, igId, pageId)) continue;
+          const created = msg.created_time ? Date.parse(msg.created_time) : NaN;
+          if (Number.isNaN(created) || created <= lastChecked) continue;
+          if (Date.now() - created > STORY_MAX_AGE_MS) continue;
+          const text = msg.message || '';
+          const senderId = String(msg.from?.id || '');
+          if (!senderId) continue;
+
+          let a: any = null;
+          let kw: string | null = null;
+          for (const cand of ordered) {
+            if (cand.created_at && created < Date.parse(cand.created_at)) continue;
+            if (cand.keywords?.length > 0) {
+              const k = keywordMatch(text, cand.keywords, cand.match_type);
+              if (!k) continue;
+              kw = k;
+            } else {
+              kw = null;
+            }
+            a = cand;
+            break;
+          }
+          if (!a) continue;
+
+          const claimed = await sql!`
+            INSERT INTO processed_comments (automation_id, comment_id)
+            VALUES (${a.id}, ${msg.id}) ON CONFLICT DO NOTHING RETURNING comment_id`;
+          if (claimed.length === 0) continue;
+
+          let dmStatus = 'skipped';
+          let err: string | null = null;
+          let dmMessageId: string | null = null;
+          let dmRetryable = false;
+          if (a.dm_enabled && a.dm_message) {
+            const already = a.once_per_user
+              ? await sql!`SELECT 1 FROM dm_sent WHERE automation_id = ${a.id} AND commenter_id = ${senderId} LIMIT 1`
+              : [];
+            if (already.length > 0) {
+              dmStatus = 'skipped_duplicate';
+            } else {
+              const out = dmTextFor(a, await brandingLine(a.owner_id));
+              try {
+                const sent = await sendInstagramMessage(senderId, out, pageToken);
+                dmStatus = 'sent';
+                dmMessageId = sent.messageId;
+                await sql!`INSERT INTO dm_sent (automation_id, commenter_id) VALUES (${a.id}, ${senderId}) ON CONFLICT DO NOTHING`;
+              } catch (e: any) {
+                dmStatus = 'failed';
+                dmRetryable = e?.retryable !== false;
+                err = e.message;
+              }
+              await sleep(DM_PACE_MS);
+            }
+          }
+
+          await sql!`UPDATE automations SET trigger_count = trigger_count + 1 WHERE id = ${a.id}`;
+          await sql!`
+            INSERT INTO trigger_logs (automation_id, platform, post_id, comment_id,
+              commenter_id, commenter_name, comment_text, matched_keyword,
+              public_reply_status, dm_status, error_message, dm_message_id, dm_attempts, dm_retryable)
+            VALUES (${a.id}, 'instagram', ${storyIdOf(msg)}, ${msg.id}, ${senderId},
+              ${msg.from?.username || msg.from?.name || ''}, ${text}, ${kw}, 'skipped', ${dmStatus}, ${err},
+              ${dmMessageId}, ${dmStatus === 'skipped_duplicate' || dmStatus === 'skipped' ? 0 : 1}, ${dmRetryable})`;
+          matched++;
+        }
+      }
+
+      // Advance only when every conversation was read; a failed read is retried next pass.
+      const fetchErrors = perConv.filter((p) => p.error).length;
+      if (!fetchErrors) {
+        await sql!`UPDATE story_poll_state SET last_checked = ${passStart} WHERE page_id = ${pageId}`;
+      }
+      summary.push({
+        story_page: pageId, conversations_read: fresh.length, new_matches: matched,
+        ...(fetchErrors ? { fetch_errors: fetchErrors } : {}),
+      });
+    } catch (e: any) {
+      summary.push({ story_page: pageId, error: e.message });
+    }
+  });
+  return summary;
 }
 
 async function mapPool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
@@ -136,10 +316,14 @@ export async function GET(req: NextRequest) {
   const debug = req.nextUrl.searchParams.get('debug') === '1';
   await ensureSchema();
   const all = await sql!`SELECT * FROM automations WHERE status = 'active' ORDER BY created_at`;
+  // Story-reply automations read the DM inbox, not post comments: they get
+  // their own pass below and never enter the comment loop.
+  const storyAutos = all.filter((a: any) => a.post_scope === 'story_replies');
+  const commentAutos = all.filter((a: any) => a.post_scope !== 'story_replies');
   // Rotate the starting point every run so a slow pass never starves the same
   // automations twice in a row.
-  const offset = all.length ? Math.floor(started / 180_000) % all.length : 0;
-  const automations = [...all.slice(offset), ...all.slice(0, offset)];
+  const offset = commentAutos.length ? Math.floor(started / 180_000) % commentAutos.length : 0;
+  const automations = [...commentAutos.slice(offset), ...commentAutos.slice(0, offset)];
   const summary: any[] = [];
   const debugComments: any[] = [];
   // Plan metering: an owner past this month's DM quota is skipped entirely
@@ -380,6 +564,16 @@ export async function GET(req: NextRequest) {
   };
   await mapPool(automations, 4, processAutomation);
 
+  // Replies to Instagram Stories (DM inbox), inside the same time budget.
+  let storySummary: any[] = [];
+  if (storyAutos.length && Date.now() - started < TIME_BUDGET_MS) {
+    try {
+      storySummary = await pollStoryReplies({ automations: storyAutos, exhausted, started, brandingLine });
+    } catch (e: any) {
+      storySummary = [{ error: e.message }];
+    }
+  }
+
   // Recover the messages Meta refused for a transient reason on an earlier pass.
   let retry = { retried: 0, recovered: 0 };
   if (Date.now() - started < TIME_BUDGET_MS) {
@@ -391,6 +585,7 @@ export async function GET(req: NextRequest) {
     took_ms: Date.now() - started,
     dm_retry: retry,
     summary,
+    ...(storySummary.length ? { story_replies: storySummary } : {}),
     ...(debug ? { debug_comments: debugComments } : {}),
   });
 }

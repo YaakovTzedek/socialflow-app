@@ -88,23 +88,38 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const {
-      name,
+    let {
       platform = 'facebook',
-      page_id,
-      ig_id = null,
       post_id = null,
-      post_scope = 'specific_post',
-      keywords = [],
-      match_type = 'contains',
       public_reply_enabled = true,
       public_replies = [],
       dm_enabled = false,
+    } = body;
+    const {
+      name,
+      page_id,
+      ig_id = null,
+      post_scope = 'specific_post',
+      keywords = [],
+      match_type = 'contains',
       dm_message = null,
       dm_link = null,
       once_per_user = true,
       status = 'active',
     } = body;
+
+    // Story replies answer DMs on Instagram: there is no post and no public
+    // reply, only the private message.
+    if (post_scope === 'story_replies') {
+      platform = 'instagram';
+      post_id = null;
+      public_reply_enabled = false;
+      public_replies = [];
+      dm_enabled = true;
+      if (!dm_message || !String(dm_message).trim()) {
+        return NextResponse.json({ error: 'missing_dm_message' }, { status: 400 });
+      }
+    }
 
     if (!name || !page_id) {
       return NextResponse.json({ error: 'missing_fields' }, { status: 400 });

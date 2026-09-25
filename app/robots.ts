@@ -7,7 +7,7 @@ import { SEO_BASE } from '@/lib/seo';
  * that decide whether SocialFlow can be quoted in an AI answer.
  */
 export default function robots(): MetadataRoute.Robots {
-  const disallow = ['/api/', '/dashboard', '/automations', '/logs', '/posts', '/billing', '/mcp', '/oauth', '/admin'];
+  const disallow = ['/api/', '/dashboard', '/automations', '/logs', '/inbox', '/posts', '/billing', '/mcp', '/oauth', '/admin'];
   const allowAll = { allow: '/', disallow };
   return {
     rules: [

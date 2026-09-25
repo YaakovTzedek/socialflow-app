@@ -27,6 +27,11 @@ export async function PATCH(
     if (patch.match_type && !['contains', 'exact'].includes(String(patch.match_type))) delete patch.match_type;
     if ('keywords' in patch) patch.keywords = Array.isArray(patch.keywords) ? patch.keywords.map((k: unknown) => String(k).trim()).filter(Boolean) : [];
     if ('public_replies' in patch) patch.public_replies = Array.isArray(patch.public_replies) ? patch.public_replies.map((k: unknown) => String(k).trim()).filter(Boolean) : [];
+    if (patch.public_reply_enabled) {
+      // A story-reply automation has no comment to answer publicly.
+      const [cur] = await sql!`SELECT post_scope FROM automations WHERE id = ${params.id} AND owner_id = ${session.userId}`;
+      if (cur?.post_scope === 'story_replies') patch.public_reply_enabled = false;
+    }
     if (patch.status === 'active') {
       const block = await automationActivationBlock(session.userId, params.id);
       if (block) return NextResponse.json({ error: 'plan_limit', reason: block.reason, limit: block.limit, plan: block.plan }, { status: 402 });

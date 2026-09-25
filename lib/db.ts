@@ -269,6 +269,14 @@ export async function ensureSchema() {
       segment    TEXT,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    -- Story-reply automations (post_scope = 'story_replies'): when the poller
+    -- last read each page's Instagram inbox. The first pass only records now(),
+    -- so messages from before the feature was switched on are never answered.
+    -- Dedupe reuses processed_comments with the message id as comment_id.
+    CREATE TABLE IF NOT EXISTS story_poll_state (
+      page_id      TEXT PRIMARY KEY,
+      last_checked TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
     ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS locale TEXT;
     ALTER TABLE owner_prefs ADD COLUMN IF NOT EXISTS segment TEXT;
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS trial_reminded_at TIMESTAMPTZ;

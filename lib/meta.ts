@@ -413,6 +413,107 @@ export async function sendInstagramPrivateReply(
   return postPrivateReply(commentId, message, pageToken);
 }
 
+/* ---------------------------------------------------------------------------
+ * Instagram DM inbox (page-scoped conversations)
+ *
+ * Verified against a real page token (25.9.2026): listing conversations works,
+ * but asking for nested messages inside the list times out, so messages are
+ * fetched per conversation. Sending goes through the PAGE inbox (me/messages)
+ * with the page token; the IG-user messages endpoint is refused.
+ * ------------------------------------------------------------------------- */
+
+export interface IgConversation {
+  id: string;
+  updated_time?: string;
+  participants?: { data?: { id: string; username?: string; name?: string }[] };
+}
+
+export interface IgMessage {
+  id: string;
+  created_time?: string;
+  from?: { id: string; username?: string; name?: string };
+  to?: { data?: { id: string; username?: string; name?: string }[] };
+  message?: string;
+  /** Present when the message is a reply to (or mention in) a Story. */
+  story?: { reply_to?: { id?: string; link?: string }; mention?: { id?: string; link?: string } } & Record<string, any>;
+  attachments?: { data?: { mime_type?: string; image_data?: any; video_data?: any; file_url?: string; type?: string }[] };
+}
+
+/** The Instagram conversations of a page, newest first. */
+export async function listInstagramConversations(
+  pageId: string,
+  pageToken: string,
+  limit = 25
+): Promise<IgConversation[]> {
+  const data = await graphGet<{ data: IgConversation[] }>(`${pageId}/conversations`, {
+    platform: 'instagram',
+    // Only the fields verified to answer fast; participants come from the messages.
+    fields: 'id,updated_time',
+    limit: String(limit),
+    access_token: pageToken,
+  });
+  return data.data || [];
+}
+
+/** The latest messages of one conversation, as Meta returns them (newest first). */
+export async function getConversationMessages(
+  conversationId: string,
+  pageToken: string,
+  limit = 30
+): Promise<IgMessage[]> {
+  const data = await graphGet<{ messages?: { data?: IgMessage[] } }>(conversationId, {
+    fields: `messages.limit(${Math.max(1, Math.min(100, limit))}){id,created_time,from,to,message,story,attachments}`,
+    access_token: pageToken,
+  });
+  return data.messages?.data || [];
+}
+
+/**
+ * Send a plain DM to an Instagram user (by their IGSID) from the page inbox.
+ * Same defensive parsing and retryable flag as the private replies: Meta only
+ * accepts it within 24 hours of the user's last message.
+ */
+export async function sendInstagramMessage(
+  recipientId: string,
+  message: string,
+  pageToken: string
+): Promise<{ messageId: string; recipientId?: string }> {
+  const res = await fetch(`${GRAPH_BASE}/me/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      recipient: { id: recipientId },
+      message: { text: message },
+      messaging_type: 'RESPONSE',
+      access_token: pageToken,
+    }),
+    cache: 'no-store',
+  });
+
+  const raw = await res.text();
+  let data: any = null;
+  try { data = raw ? JSON.parse(raw) : null; } catch { /* not JSON */ }
+
+  if (!res.ok || data?.error) {
+    const e = data?.error;
+    const detail = e ? `${e.message || 'error'}${e.code ? ` (code ${e.code}${e.error_subcode ? `/${e.error_subcode}` : ''})` : ''}` : (raw ? raw.slice(0, 200) : 'empty response');
+    const error: any = new Error(`HTTP ${res.status}: ${detail}`);
+    error.status = res.status;
+    error.metaCode = e?.code;
+    error.retryable = isRetryable(res.status, e?.code);
+    throw error;
+  }
+
+  const messageId = data?.message_id || data?.id;
+  if (!messageId) {
+    const error: any = new Error(`HTTP ${res.status} with no message id: ${raw ? raw.slice(0, 200) : 'empty response'}`);
+    error.status = res.status;
+    error.retryable = true;
+    throw error;
+  }
+  return { messageId, recipientId: data?.recipient_id };
+}
+
 /** Subscribe a page to webhook events (feed comments). Requires page token. */
 export async function subscribePageWebhook(
   pageId: string,
