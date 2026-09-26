@@ -77,11 +77,11 @@ function toolsFor(m: Messages) {
     { name: 'get_automation', description: T.get_automation, inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'], additionalProperties: false } },
     { name: 'create_automation', description: T.create_automation, inputSchema: { type: 'object', properties: {
         page_id: { type: 'string', description: A.page_id }, platform: { type: 'string', enum: ['instagram', 'facebook'] }, post_id: { type: 'string', description: A.post_id }, all_posts: { type: 'boolean', default: false },
-        post_scope: { type: 'string', enum: ['specific_post', 'all_posts', 'story_replies'], description: A.post_scope },
+        post_scope: { type: 'string', enum: ['specific_post', 'all_posts', 'story_replies', 'dm_inbound'], description: A.post_scope },
         name: { type: 'string', description: A.name }, keywords: { type: 'array', items: { type: 'string' }, description: A.keywords }, match_type: { type: 'string', enum: ['contains', 'exact'], default: 'contains' },
         public_replies: { type: 'array', items: { type: 'string' }, description: A.public_replies }, dm_message: { type: 'string', description: A.dm_message }, dm_link: { type: 'string', description: A.dm_link },
         once_per_user: { type: 'boolean', default: true }, status: { type: 'string', enum: ['active', 'paused'], default: 'active' } }, required: ['page_id', 'platform'], additionalProperties: false } },
-    { name: 'update_automation', description: T.update_automation, inputSchema: { type: 'object', properties: { id: { type: 'string' }, status: { type: 'string', enum: ['active', 'paused'] }, post_scope: { type: 'string', enum: ['specific_post', 'all_posts', 'story_replies'], description: A.post_scope }, name: { type: 'string' }, keywords: { type: 'array', items: { type: 'string' } }, match_type: { type: 'string', enum: ['contains', 'exact'] }, public_reply_enabled: { type: 'boolean' }, public_replies: { type: 'array', items: { type: 'string' } }, dm_enabled: { type: 'boolean' }, dm_message: { type: 'string' }, dm_link: { type: 'string' }, once_per_user: { type: 'boolean' } }, required: ['id'], additionalProperties: false } },
+    { name: 'update_automation', description: T.update_automation, inputSchema: { type: 'object', properties: { id: { type: 'string' }, status: { type: 'string', enum: ['active', 'paused'] }, post_scope: { type: 'string', enum: ['specific_post', 'all_posts', 'story_replies', 'dm_inbound'], description: A.post_scope }, name: { type: 'string' }, keywords: { type: 'array', items: { type: 'string' } }, match_type: { type: 'string', enum: ['contains', 'exact'] }, public_reply_enabled: { type: 'boolean' }, public_replies: { type: 'array', items: { type: 'string' } }, dm_enabled: { type: 'boolean' }, dm_message: { type: 'string' }, dm_link: { type: 'string' }, once_per_user: { type: 'boolean' } }, required: ['id'], additionalProperties: false } },
     { name: 'delete_automation', description: T.delete_automation, inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'], additionalProperties: false } },
     { name: 'get_activity', description: T.get_activity, inputSchema: { type: 'object', properties: { automation_id: { type: 'string' }, limit: { type: 'integer', minimum: 1, maximum: 200, default: 50 }, since_hours: { type: 'integer', minimum: 1, maximum: 720, description: A.since_hours } }, additionalProperties: false } },
     { name: 'get_report', description: T.get_report, inputSchema: { type: 'object', properties: { period: { type: 'string', enum: ['today', '7d', '30d'], default: '7d' } }, additionalProperties: false } },
@@ -186,22 +186,25 @@ async function toolGetAutomation(owner: string, a: Json) {
 async function toolCreateAutomation(owner: string, a: Json, m: Messages) {
   const pageId = String(a.page_id || '');
   const story = a.post_scope === 'story_replies';
-  const platform = story ? 'instagram' : a.platform === 'facebook' ? 'facebook' : 'instagram';
-  const allPosts = !story && (a.all_posts === true || a.post_scope === 'all_posts');
-  const scope = story ? 'story_replies' : allPosts ? 'all_posts' : 'specific_post';
-  const postId = story || allPosts ? null : String(a.post_id || '');
+  // dm_inbound: a welcome DM to every new inbound Instagram conversation (ad replies included). Like story_replies: no post, no public reply.
+  const inbound = a.post_scope === 'dm_inbound';
+  const dmOnly = story || inbound;
+  const platform = dmOnly ? 'instagram' : a.platform === 'facebook' ? 'facebook' : 'instagram';
+  const allPosts = !dmOnly && (a.all_posts === true || a.post_scope === 'all_posts');
+  const scope = story ? 'story_replies' : inbound ? 'dm_inbound' : allPosts ? 'all_posts' : 'specific_post';
+  const postId = dmOnly || allPosts ? null : String(a.post_id || '');
   if (!pageId) throw new Error(m.server.mcpPageIdRequired);
   if (scope === 'specific_post' && !postId) throw new Error(m.server.mcpPostIdRequired);
   const t = await pageToken(owner, pageId);
   if (!t) throw new Error(m.server.mcpPageNotReady);
-  if (story && !t.ig_id) throw new Error(m.server.mcpNoIg);
+  if (dmOnly && !t.ig_id) throw new Error(m.server.mcpNoIg);
   const keywords = Array.isArray(a.keywords) ? (a.keywords as unknown[]).map((k) => String(k).trim()).filter(Boolean) : [];
-  // A story reply arrives as a DM: there is no comment to answer publicly.
-  const replies = story ? [] : Array.isArray(a.public_replies) ? (a.public_replies as unknown[]).map((k) => String(k).trim()).filter(Boolean) : [];
+  // A story reply or an inbound DM arrives as a DM: there is no comment to answer publicly.
+  const replies = dmOnly ? [] : Array.isArray(a.public_replies) ? (a.public_replies as unknown[]).map((k) => String(k).trim()).filter(Boolean) : [];
   const dmMessage = a.dm_message ? String(a.dm_message) : null;
   const dmLink = a.dm_link ? String(a.dm_link) : null;
-  if (story && !dmMessage?.trim()) throw new Error(m.server.mcpStoryNeedsDm);
-  const name = String(a.name || (keywords[0] ? `${keywords[0]} · ${t.page_name || pageId}` : `${m.common.anyComment} · ${t.page_name || pageId}`));
+  if (dmOnly && !dmMessage?.trim()) throw new Error(story ? m.server.mcpStoryNeedsDm : m.server.mcpInboundNeedsDm);
+  const name = String(a.name || (keywords[0] ? `${keywords[0]} · ${t.page_name || pageId}` : `${inbound ? m.automations.dmInbound : m.common.anyComment} · ${t.page_name || pageId}`));
   const id = randomUUID();
   await sql!`
     INSERT INTO automations (id, owner_id, name, platform, page_id, page_name, ig_id, post_id, post_scope, keywords, match_type,
@@ -224,11 +227,12 @@ async function toolUpdateAutomation(owner: string, a: Json, m: Messages) {
     const scope = String(a.post_scope);
     const [cur] = await sql!`SELECT platform, post_id, dm_message FROM automations WHERE id = ${id} AND owner_id = ${owner}`;
     if (!cur) throw new Error('not_found');
-    if (scope === 'story_replies') {
-      if (cur.platform !== 'instagram') throw new Error(m.server.mcpStoryNeedsInstagram);
+    if (scope === 'story_replies' || scope === 'dm_inbound') {
+      const story = scope === 'story_replies';
+      if (cur.platform !== 'instagram') throw new Error(story ? m.server.mcpStoryNeedsInstagram : m.server.mcpInboundNeedsInstagram);
       const dm = 'dm_message' in patch ? patch.dm_message : cur.dm_message;
-      if (!dm || !String(dm).trim()) throw new Error(m.server.mcpStoryNeedsDm);
-      patch.post_scope = 'story_replies';
+      if (!dm || !String(dm).trim()) throw new Error(story ? m.server.mcpStoryNeedsDm : m.server.mcpInboundNeedsDm);
+      patch.post_scope = scope;
       patch.public_reply_enabled = false;
       patch.dm_enabled = true;
     } else if (scope === 'all_posts') {
@@ -239,7 +243,7 @@ async function toolUpdateAutomation(owner: string, a: Json, m: Messages) {
     }
   } else if (patch.public_reply_enabled) {
     const [cur] = await sql!`SELECT post_scope FROM automations WHERE id = ${id} AND owner_id = ${owner}`;
-    if (cur?.post_scope === 'story_replies') patch.public_reply_enabled = false;
+    if (cur?.post_scope === 'story_replies' || cur?.post_scope === 'dm_inbound') patch.public_reply_enabled = false;
   }
   if (!Object.keys(patch).length) throw new Error(m.server.mcpNothingToUpdate);
   await sql!`UPDATE automations SET ${sql!(patch as any, ...Object.keys(patch))} WHERE id = ${id} AND owner_id = ${owner}`;
