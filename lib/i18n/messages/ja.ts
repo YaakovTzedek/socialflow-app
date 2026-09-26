@@ -16,6 +16,7 @@ const ja: Messages = {
     followers: 'フォロワー', posts: '投稿', media: 'メディア', comments: 'コメント',
   },
   nav: { dashboard: 'ダッシュボード', automations: '自動化', brain: 'Brain', logs: 'アクティビティログ', inbox: 'メッセージ', posts: '投稿とコメント', mcp: 'MCP 接続', billing: 'プランと請求' },
+  tabs: { dashboard: 'ホーム', automations: '自動化', inbox: 'メッセージ', brain: 'Brain', more: 'その他', menuTitle: 'その他', search: '検索', close: '閉じる', navLabel: 'メインナビゲーション' },
   shell: {
     sideCardTitle: 'もっと多くの会話を。\nもっと多くの顧客を。',
     sideCardText: '別のページやアカウントを接続して、リーチを広げましょう。',

@@ -16,6 +16,7 @@ const fr: Messages = {
     followers: 'abonnés', posts: 'Publications', media: 'Médias', comments: 'commentaires',
   },
   nav: { dashboard: 'Tableau de bord', automations: 'Automatisations', brain: 'Brain', logs: "Journal d'activité", inbox: 'Messages', posts: 'Publications et commentaires', mcp: 'Connexion MCP', billing: 'Forfait et facturation' },
+  tabs: { dashboard: 'Accueil', automations: 'Automatis.', inbox: 'Messages', brain: 'Brain', more: 'Plus', menuTitle: 'Plus', search: 'Rechercher', close: 'Fermer', navLabel: 'Navigation principale' },
   shell: {
     sideCardTitle: 'Plus de conversations.\nPlus de clients.',
     sideCardText: 'Connectez une autre page ou un autre compte et élargissez votre portée.',

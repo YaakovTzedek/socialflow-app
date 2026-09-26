@@ -16,6 +16,7 @@ const ar: Messages = {
     followers: 'متابع', posts: 'المنشورات', media: 'الوسائط', comments: 'تعليقات',
   },
   nav: { dashboard: 'لوحة التحكم', automations: 'الأتمتات', brain: 'Brain', logs: 'سجل النشاط', inbox: 'الرسائل', posts: 'المنشورات والتعليقات', mcp: 'اتصال MCP', billing: 'الباقة والفوترة' },
+  tabs: { dashboard: 'الرئيسية', automations: 'الأتمتات', inbox: 'الرسائل', brain: 'Brain', more: 'المزيد', menuTitle: 'المزيد', search: 'بحث', close: 'إغلاق', navLabel: 'التنقل الرئيسي' },
   shell: {
     sideCardTitle: 'محادثات أكثر.\nعملاء أكثر.',
     sideCardText: 'اربط صفحة أو حساباً آخر ووسّع نطاق وصولك.',

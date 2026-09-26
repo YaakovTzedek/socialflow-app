@@ -287,27 +287,92 @@
 .sfa-inline-form { display: flex; gap: 8px; align-items: center; }
 .sfa-inline-form .sfa-input { padding: 9px 12px; font-size: 14px; }
 
+/* Phone chrome pieces: hidden on desktop. */
+.sfa-top-logo, .sfa-search-toggle, .sfa-search-close, .sfa-tabbar, .sfa-sheet-bg { display: none; }
+.sfa-avatar { border: 0; padding: 0; font-family: inherit; font-size: 15px; }
+@media (min-width: 901px) { .sfa-top .sfa-avatar { pointer-events: none; } }
+.sfa-icon-btn { width: 44px; height: 44px; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; background: transparent; border: 1px solid transparent; color: var(--muted); cursor: pointer; padding: 0; }
+.sfa-icon-btn:hover { color: #fff; background: rgba(255, 255, 255, .05); }
+.sfa-top .sfa-search-toggle { display: none; }
+
 @media (max-width: 900px) {
+  /* Phones (26.9.2026): the sidebar is gone; a one-row header on top and an
+     app-style tab bar fixed to the bottom (see AppShell). */
   .sfa { flex-direction: column; }
-  /* Phones: logo on top, then one row of nav chips that scrolls sideways (the wrapped version stacked
-     every item on its own line and pushed the screen down, 26.9.2026). */
-  .sfa-side { width: 100%; height: auto; position: static; flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 0 10px; border-inline-end: 0; border-bottom: 1px solid var(--line); }
-  .sfa-logo { padding: 0 16px; }
-  .sfa-nav { flex-direction: row; flex-wrap: nowrap; gap: 6px; overflow-x: auto; padding: 2px 16px 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; }
-  .sfa-nav::-webkit-scrollbar { display: none; }
-  .sfa-nav a { flex: none; width: auto; padding: 8px 13px; font-size: 14px; white-space: nowrap; scroll-snap-align: start; border-color: var(--line); }
-  .sfa-nav a.active { border-color: rgba(225, 48, 108, .6); }
-  .sfa-side-foot { display: none; }
-  .sfa-top { padding: 10px 16px; flex-wrap: wrap; gap: 10px; }
-  .sfa-user strong { font-size: 13px; }
-  .sfa-title { font-size: 28px; }
-  .sfa-search { order: 3; flex-basis: 100%; max-width: none; }
-  .sfa-content { padding: 16px; }
+  .sfa-side { display: none; }
+  .sfa-desk { display: none !important; }
+  .sfa-top { padding: 8px 12px; padding-top: calc(8px + env(safe-area-inset-top)); gap: 8px; flex-wrap: nowrap; min-height: 60px; }
+  .sfa-top-logo { display: inline-flex; align-items: center; flex: none; }
+  .sfa-title { font-size: 26px; min-width: 0; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+  .sfa-spacer { display: none; }
+  .sfa-search { display: none; }
+  .sfa-top .sfa-search-toggle { display: inline-flex; }
+  .sfa-user { gap: 0; }
+  .sfa-top .sfa-avatar { width: 38px; height: 38px; cursor: pointer; }
+  /* Search expanded: it takes the title's place in the same row. */
+  .sfa-searching .sfa-title, .sfa-searching .sfa-top .sfa-search-toggle, .sfa-searching .sfa-top-logo { display: none; }
+  .sfa-searching .sfa-search { display: flex; flex: 1; max-width: none; min-width: 0; padding: 6px 6px 6px 12px; }
+  .sfa-searching .sfa-search input { font-size: 16px; }
+  .sfa-search-close { display: inline-flex; width: 34px; height: 34px; align-items: center; justify-content: center; border: 0; background: transparent; color: var(--muted); cursor: pointer; padding: 0; flex: none; }
+
+  .sfa-content { padding: 14px 14px calc(92px + env(safe-area-inset-bottom)); gap: 16px; }
   .sfa-head .sfa-h { font-size: 40px; }
-  .sfa-dash-grid, .sfa-builder, .sfa-posts-grid { grid-template-columns: 1fr; }
+  .sfa-head > .sfa-btn, .sfa-head > a.sfa-btn { width: 100%; }
+  .sfa-dash-grid, .sfa-builder, .sfa-posts-grid { grid-template-columns: minmax(0, 1fr); }
   .sfa-preview { position: static; }
   .sfa-pages-list { max-height: 260px; }
+  .sfa-toast { bottom: calc(86px + env(safe-area-inset-bottom)); max-width: calc(100vw - 32px); }
+  .sfa-sticky-bar { bottom: calc(76px + env(safe-area-inset-bottom)); padding: 12px 14px; }
+  .sfa-sticky-bar .sfa-actions { width: 100%; }
+  .sfa-sticky-bar .sfa-actions .sfa-btn { flex: 1; }
+
+  /* bottom tab bar */
+  .sfa-tabbar {
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+    position: fixed; inset-inline: 0; bottom: 0; z-index: 40;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+    background: rgba(20, 12, 28, .94); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255, 255, 255, .09);
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, .35);
+  }
+  .sfa-tabbar a, .sfa-tabbar button {
+    min-height: 54px; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    color: var(--dim); background: transparent; border: 0; padding: 4px 2px; cursor: pointer; font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sfa .sfa-tabbar a:hover { color: var(--dim); }
+  .sfa-tab-ico { width: 46px; height: 30px; border-radius: 999px; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+  .sfa-tab-lbl { font-size: 11.5px; font-weight: 700; line-height: 1.1; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sfa .sfa-tabbar .on, .sfa .sfa-tabbar .on:hover { color: #fff; }
+  .sfa-tabbar .on .sfa-tab-ico { background: linear-gradient(90deg, #833AB4, #E1306C, #f77737); box-shadow: 0 0 16px rgba(225, 48, 108, .45); color: #fff; }
+  .sfa-tabbar .on .sfa-tab-lbl { background: linear-gradient(90deg, #c77dff, #F58AAE, #ffb07a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  /* "More" bottom sheet */
+  .sfa-sheet-bg { display: flex; align-items: flex-end; position: fixed; inset: 0; z-index: 60; background: rgba(5, 3, 10, .6); animation: sfaFade .15s ease-out; }
+  .sfa-sheet {
+    width: 100%; max-height: 86vh; overflow-y: auto; background: linear-gradient(180deg, #221530, #140c1c);
+    border-top: 1px solid rgba(225, 48, 108, .45); border-radius: 22px 22px 0 0;
+    padding: 8px 16px calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 12px;
+    animation: sfaUp .2s ease-out; box-shadow: 0 -20px 50px rgba(0, 0, 0, .5);
+  }
+  .sfa-sheet-grab { width: 42px; height: 5px; border-radius: 999px; background: rgba(255, 255, 255, .2); margin: 2px auto 4px; }
+  .sfa-sheet-user { display: flex; align-items: center; gap: 12px; }
+  .sfa-sheet-user > div { flex: 1; min-width: 0; }
+  .sfa-sheet-user strong { display: block; font-size: 16px; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sfa-sheet-user small { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--faint); }
+  .sfa-sheet-links { display: grid; gap: 4px; background: rgba(255, 255, 255, .03); border: 1px solid var(--line); border-radius: 16px; padding: 6px; }
+  .sfa .sfa-sheet-links a { display: flex; align-items: center; gap: 12px; min-height: 50px; padding: 4px 10px; border-radius: 12px; color: var(--text); font-weight: 700; font-size: 16px; }
+  .sfa .sfa-sheet-links a:hover { color: #fff; }
+  .sfa-sheet-links .sfa-tab-ico { width: 38px; height: 38px; border-radius: 11px; background: rgba(255, 255, 255, .05); color: var(--muted); flex: none; }
+  .sfa .sfa-sheet-links a.on { background: linear-gradient(90deg, rgba(255, 255, 255, .06), rgba(131, 58, 180, .16)); }
+  .sfa-sheet-links a.on .sfa-tab-ico { background: linear-gradient(135deg, #833AB4, #E1306C); color: #fff; }
+  .sfa-sheet-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 4px 14px; border: 1px solid var(--line); border-radius: 14px; font-weight: 700; color: var(--muted); }
+  .sfa-sheet-row .sfa-lang select { min-height: 40px; font-size: 15px; padding: 6px 12px; }
+  .sfa .sfa-sheet-connect { width: 100%; min-height: 48px; }
+  .sfa .sfa-sheet-logout { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; border-radius: 14px; border: 1px solid rgba(239, 68, 68, .4); color: #ff9b9b; font-weight: 700; font-size: 16px; }
 }
+@keyframes sfaUp { from { transform: translateY(40px); opacity: .4; } to { transform: none; opacity: 1; } }
+@keyframes sfaFade { from { opacity: 0; } to { opacity: 1; } }
 
 /* automations list: post preview + counters + inline editor (21.9) */
 .sfa-auto .post { display: flex; gap: 12px; align-items: center; margin-top: 12px; padding: 10px 12px; background: rgba(255, 255, 255, .03); border: 1px solid var(--line); border-radius: 12px; }
@@ -341,7 +406,7 @@
 .sfa-tabs button { background: transparent; border: 1px solid var(--line); color: #C9BBD3; border-radius: 999px; padding: 7px 14px; font-size: 14px; cursor: pointer; }
 .sfa-tabs button.on { border-color: var(--cy); color: #fff; background: rgba(225, 48, 108, .12); }
 .sfa-howto ol { margin: 0 0 10px; padding-inline-start: 20px; color: #C9BBD3; font-size: 15px; line-height: 1.7; }
-.sfa-howto pre { direction: ltr; text-align: end; background: #140c1c; border: 1px solid rgba(255, 255, 255, .1); border-radius: 12px; padding: 12px 14px; overflow-x: auto; margin: 0 0 10px; }
+.sfa-howto pre { direction: ltr; text-align: left; background: #140c1c; border: 1px solid rgba(255, 255, 255, .1); border-radius: 12px; padding: 12px 14px; overflow-x: auto; margin: 0 0 10px; }
 .sfa-howto pre code { background: none; border: 0; padding: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .sfa-examples { margin: 0; padding-inline-start: 20px; color: #C9BBD3; font-size: 15px; line-height: 1.8; }
 @media (max-width: 900px) { .sfa-mcp-grid { grid-template-columns: 1fr; } }
@@ -509,4 +574,119 @@ html:not([lang="he"]) .sfa-side-card .sfa-h { font-size: 22px; }
   .sfa-inbox-msgs { max-height: 60vh; }
   .sfa-inbox-msg { max-width: 92%; }
   .sfa-inbox-reply .row { flex-direction: column; align-items: stretch; }
+}
+
+/* ------------------------------------------------------------------ */
+/* No sideways scrolling on any screen (26.9.2026). Grids never demand  */
+/* more than the column they sit in; wide things scroll inside their    */
+/* own card; long words, URLs and keys break.                           */
+/* ------------------------------------------------------------------ */
+.sfa img, .sfa video, .sfa svg { max-width: 100%; }
+.sfa-kpis { grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr)); }
+.sfa-stats { grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); }
+.sfa-targets { grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); }
+.sfa-plans { grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); }
+.sfb-kpis { grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr)); }
+.sfb-grid { grid-template-columns: repeat(auto-fit, minmax(min(330px, 100%), 1fr)); }
+.sfb-grid > .sfa-card { overflow-x: auto; }
+.sfb-top > div:first-child { min-width: 0; }
+.sfa-mcp-grid > *, .sfa-bill-grid > *, .sfa-dash-grid > *, .sfa-builder > *, .sfa-posts-grid > *, .sfa-inbox > * { min-width: 0; }
+.sfa-keyrow code, .sfa-howto code { overflow-wrap: anywhere; word-break: break-word; }
+.sfa-tools code { flex: none; }
+.sfa-bubble a, .sfa-preview a { overflow-wrap: anywhere; word-break: break-word; max-width: 100%; }
+
+@media (max-width: 900px) {
+  .sfa-mcp-grid, .sfa-bill-grid, .sfa-inbox { grid-template-columns: minmax(0, 1fr); }
+  .sfa-content { overflow-wrap: anywhere; }
+  /* 16px keeps iOS from zooming into a field on focus. */
+  .sfa-input, .sfa-textarea, .sfa-select, .sfa-reply input, .sfa-chip-add input { font-size: 16px; }
+  .sfa .sfa-select { max-width: 100%; min-width: 0; text-overflow: ellipsis; }
+  .sfa-btn { min-height: 44px; }
+  .sfa-btn-sm { min-height: 40px; }
+
+  /* dashboard */
+  .sfa-kpis { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .sfa-kpi { padding: 14px 16px; }
+  .sfa-kpi-i { width: 46px; height: 46px; }
+  .sfa-row-item { flex-wrap: wrap; row-gap: 6px; }
+  .sfa-row-item .sfa-user-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sfa-row-item .sfa-comment { order: 10; flex-basis: 100%; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .sfa-dash-grid svg { height: 180px; }
+  .sfa-axis { font-size: 11px; }
+
+  /* brain: the period tabs were the reason /he/brain scrolled sideways */
+  .sfb-periods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; border-radius: 16px; }
+  .sfb-periods button { white-space: normal; min-height: 44px; padding: 8px 10px; line-height: 1.2; }
+  .sfb-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .sfb-kpi { padding: 14px; }
+  .sfb-history-line { min-width: 0; }
+  .sfb-history > button { width: 100%; }
+
+  /* logs */
+  .sfa-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .sfa-stat { padding: 12px 14px; }
+  .sfa-stat strong { font-size: 26px; }
+  .sfa-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .sfa-filters > div { min-width: 0; }
+  .sfa-filters > div:nth-child(4), .sfa-filters > button { grid-column: 1 / -1; }
+  .sfa-pager { justify-content: center; }
+  .sfa-pager button { width: 40px; height: 40px; }
+
+  /* automations list + inline editor + builder */
+  .sfa-auto { padding: 16px; flex-wrap: wrap; }
+  .sfa-auto .acts { width: 100%; flex-wrap: wrap; }
+  .sfa-auto .acts .sfa-btn { flex: 1; }
+  .sfa-auto .post a { white-space: normal; }
+  .sfa-editor { padding: 12px; }
+  .sfa-editor .row { grid-template-columns: minmax(0, 1fr); }
+  .sfa-editor .foot { position: sticky; bottom: calc(74px + env(safe-area-inset-bottom)); z-index: 5; margin: 0 -12px -12px; padding: 12px; border-radius: 0 0 14px 14px; background: rgba(20, 12, 28, .96); border-top: 1px solid var(--line); }
+  .sfa-editor .foot .sfa-btn { flex: 1; }
+  .sfa-progress { flex-wrap: nowrap; }
+  .sfa-progress > div { flex: 1; min-width: 0; }
+  .sfa-progress > div:last-child { flex: none; }
+  .sfa-progress i { flex: 1; width: auto; min-width: 6px; }
+  .sfa-progress button { width: 32px; height: 32px; font-size: 14px; }
+  .sfa-step { padding: 16px; }
+  .sfa-step-h > div { font-size: 18px; }
+  .sfa-setting { gap: 12px; }
+  .sfa-posts { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 360px; }
+  .sfa-sticky-bar { gap: 10px; }
+  .sfa-sticky-bar .sfa-sub { font-size: 13px; }
+  .sfa-sticky-bar .sfa-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .sfa-sticky-bar .sfa-actions .sfa-btn { white-space: normal; line-height: 1.15; padding: 8px 6px; font-size: 14px; }
+
+  /* posts */
+  .sfa-postcard-h { padding: 12px; gap: 12px; }
+  .sfa-postcard-h img { width: 72px; height: 72px; }
+  .sfa-inline-form { flex-wrap: wrap; }
+  .sfa-inline-form .sfa-input { flex: 1 1 180px; min-width: 0; }
+
+  /* mcp */
+  .sfa-tools li { flex-wrap: wrap; row-gap: 4px; }
+  .sfa-tools code { flex: initial; overflow-wrap: anywhere; }
+  .sfa-keyrow { gap: 8px; }
+  .sfa-keyrow code { max-width: 100%; }
+  .sfa-howto pre { max-width: 100%; }
+
+  /* billing */
+  .sfa-plan-now { font-size: 22px; }
+  .sfa-modal-bg { align-items: end; padding: 0; }
+  .sfa-modal { width: 100%; border-radius: 20px 20px 0 0; max-height: 90vh; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
+
+  /* inbox: list first, then the thread full screen with a back button */
+  .sfa-inbox-tools { width: 100%; }
+  .sfa-inbox-acc { flex: 1; min-width: 0; }
+  .sfa-inbox-list { padding: 4px; }
+  .sfa-inbox-row { min-height: 60px; }
+  .sfa-inbox.has-thread .sfa-inbox-thread { position: fixed; inset: 0; z-index: 45; border-radius: 0; border: 0; max-height: none; min-height: 0; height: 100%; height: 100dvh; background: #140c1c; padding-top: env(safe-area-inset-top); }
+  .sfa-inbox.has-thread .sfa-inbox-thread-h { min-height: 56px; }
+  .sfa-inbox.has-thread .sfa-inbox-msgs { max-height: none; }
+  .sfa-inbox.has-thread .sfa-inbox-reply { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+  .sfa-inbox-reply .row { flex-direction: row; align-items: flex-end; }
+  .sfa-inbox-reply .sfa-textarea { min-height: 48px; max-height: 140px; }
+}
+@media (max-width: 380px) {
+  .sfb-kpis, .sfa-stats { gap: 8px; }
+  .sfb-kpi strong, .sfa-stat strong { font-size: 22px; }
+  .sfa-tab-lbl { font-size: 10.5px; }
 }

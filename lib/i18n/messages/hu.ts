@@ -16,6 +16,7 @@ const hu: Messages = {
     followers: 'követő', posts: 'Bejegyzések', media: 'Média', comments: 'hozzászólás',
   },
   nav: { dashboard: 'Irányítópult', automations: 'Automatizálások', brain: 'Brain', logs: 'Tevékenységnapló', inbox: 'Üzenetek', posts: 'Bejegyzések és hozzászólások', mcp: 'MCP-kapcsolat', billing: 'Csomag és számlázás' },
+  tabs: { dashboard: 'Kezdőlap', automations: 'Automatizálás', inbox: 'Üzenetek', brain: 'Brain', more: 'Több', menuTitle: 'Több', search: 'Keresés', close: 'Bezárás', navLabel: 'Fő navigáció' },
   shell: {
     sideCardTitle: 'Több beszélgetés.\nTöbb ügyfél.',
     sideCardText: 'Csatlakoztass egy másik oldalt vagy fiókot, és növeld az elérésed.',

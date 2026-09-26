@@ -19,6 +19,7 @@ const en = {
     followers: 'followers', posts: 'Posts', media: 'Media', comments: 'comments',
   },
   nav: { dashboard: 'Dashboard', automations: 'Automations', brain: 'Brain', logs: 'Activity log', inbox: 'Messages', posts: 'Posts & comments', mcp: 'MCP connection', billing: 'Plan & billing' },
+  tabs: { dashboard: 'Home', automations: 'Automations', inbox: 'Messages', brain: 'Brain', more: 'More', menuTitle: 'More', search: 'Search', close: 'Close', navLabel: 'Main navigation' },
   shell: {
     sideCardTitle: 'More conversations.\nMore customers.',
     sideCardText: 'Connect another page or account and widen your reach.',

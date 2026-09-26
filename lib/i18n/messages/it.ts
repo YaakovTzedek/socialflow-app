@@ -16,6 +16,7 @@ const it: Messages = {
     followers: 'follower', posts: 'Post', media: 'Media', comments: 'commenti',
   },
   nav: { dashboard: 'Dashboard', automations: 'Automazioni', brain: 'Brain', logs: 'Registro attività', inbox: 'Messaggi', posts: 'Post e commenti', mcp: 'Connessione MCP', billing: 'Piano e fatturazione' },
+  tabs: { dashboard: 'Home', automations: 'Automazioni', inbox: 'Messaggi', brain: 'Brain', more: 'Altro', menuTitle: 'Altro', search: 'Cerca', close: 'Chiudi', navLabel: 'Navigazione principale' },
   shell: {
     sideCardTitle: 'Più conversazioni.\nPiù clienti.',
     sideCardText: "Collega un'altra pagina o un altro account e amplia la tua portata.",

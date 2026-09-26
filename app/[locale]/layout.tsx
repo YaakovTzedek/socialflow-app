@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { notFound } from 'next/navigation';
 import '../globals.css';
 import '../app.css';
@@ -6,6 +6,9 @@ import { I18nProvider } from '@/components/I18nProvider';
 import { LOCALES, DEFAULT_LOCALE, FONT_LINKS, FONT_STACK, dirOf, getMessages, isLocale, prefixOf, type Locale } from '@/lib/i18n';
 
 const BASE = (process.env.NEXT_PUBLIC_BASE_URL || 'https://isocialflow.com').replace(/\/$/, '');
+
+/** viewport-fit=cover so the phone tab bar can pad itself past the home indicator (env(safe-area-inset-bottom)). */
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#0f0a14' };
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));

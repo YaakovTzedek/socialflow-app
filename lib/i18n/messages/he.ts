@@ -16,6 +16,7 @@ const he: Messages = {
     followers: 'עוקבים', posts: 'פוסטים', media: 'מדיה', comments: 'תגובות',
   },
   nav: { dashboard: 'דשבורד', automations: 'אוטומציות', brain: 'Brain', logs: 'יומן פעילות', inbox: 'ניהול הודעות', posts: 'פוסטים ותגובות', mcp: 'חיבור MCP', billing: 'חבילה וחיוב' },
+  tabs: { dashboard: 'דשבורד', automations: 'אוטומציות', inbox: 'הודעות', brain: 'Brain', more: 'עוד', menuTitle: 'עוד', search: 'חיפוש', close: 'סגירה', navLabel: 'ניווט ראשי' },
   shell: {
     sideCardTitle: 'יותר שיחות.\nיותר לקוחות.',
     sideCardText: 'חבר עוד דף או חשבון והרחב את הכיסוי.',
