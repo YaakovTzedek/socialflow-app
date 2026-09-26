@@ -5,7 +5,7 @@ import { useI18n } from './I18nProvider';
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /**
  * App chrome: fixed sidebar (logo, nav, "connect another account" card, status
@@ -39,6 +39,9 @@ export default function AppShell({ userName, title, children }: { userName: stri
   const pathname = usePathname();
   const router = useRouter();
   const [q, setQ] = useState('');
+  const navRef = useRef<HTMLElement>(null);
+  // On phones the nav is one sideways-scrolling row: bring the current screen's chip into view.
+  useEffect(() => { navRef.current?.querySelector('a.active')?.scrollIntoView({ block: 'nearest', inline: 'center' }); }, [pathname]);
   const NAV: { href: string; label: string; icon: string }[] = [
     { href: '/dashboard', label: m.nav.dashboard, icon: '⌂' },
     { href: '/automations', label: m.nav.automations, icon: '⚡' },
@@ -55,7 +58,7 @@ export default function AppShell({ userName, title, children }: { userName: stri
     <div className="sfa">
       <aside className="sfa-side">
         <div className="sfa-logo"><Logo /><span className="sfa-wordmark">Social<b>Flow</b></span></div>
-        <nav className="sfa-nav">
+        <nav className="sfa-nav" ref={navRef}>
           {NAV.map((n) => (
             <Link key={n.href} href={p(n.href)} className={pathname?.includes(n.href) ? 'active' : ''}>
               <span><i>{n.icon}</i>{n.label}</span>
