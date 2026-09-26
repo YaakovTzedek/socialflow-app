@@ -118,6 +118,11 @@ const STORY_MAX_AGE_MS = 23 * 60 * 60 * 1000;
 
 /**
  * Story replies: answer Instagram DMs that reply to a Story.
+ * Inbound DMs (post_scope = 'dm_inbound', Yaakov 26.9.2026): the same pass also
+ * answers any new inbound message, a welcome reply to everyone who writes,
+ * including people who reply to an ad. A story reply prefers a story
+ * automation and falls back to the inbound one; once_per_user keeps it to one
+ * welcome per person.
  *
  * There are no webhooks, so each page with an active story_replies automation
  * has its inbox re-read: only conversations updated since story_poll_state
@@ -197,7 +202,9 @@ async function pollStoryReplies(opts: {
       for (const { msgs } of perConv) {
         // Oldest first, so the log reads in the order people wrote.
         for (const msg of [...msgs].reverse()) {
-          if (!msg?.id || !isStoryReply(msg) || !isInbound(msg, igId, pageId)) continue;
+          if (!msg?.id || !isInbound(msg, igId, pageId)) continue;
+          const story = isStoryReply(msg);
+          // Their own outbound is filtered by isInbound; a message we sent from another tool is too.
           const created = msg.created_time ? Date.parse(msg.created_time) : NaN;
           if (Number.isNaN(created) || created <= lastChecked) continue;
           if (Date.now() - created > STORY_MAX_AGE_MS) continue;
@@ -207,7 +214,12 @@ async function pollStoryReplies(opts: {
 
           let a: any = null;
           let kw: string | null = null;
-          for (const cand of ordered) {
+          // A story reply goes to story automations first, then to the inbound one; a plain DM only to inbound.
+          // The welcome is for a new conversation: someone we already answered (from any tool) is mid-chat, not a new lead.
+          const priorReply = msgs.some((m: any) => m?.id && !isInbound(m, igId, pageId) && m.created_time && Date.parse(m.created_time) < created);
+          const inboundAutos = priorReply ? [] : ordered.filter((c) => c.post_scope === 'dm_inbound');
+          const candidates = story ? [...ordered.filter((c) => c.post_scope === 'story_replies'), ...inboundAutos] : inboundAutos;
+          for (const cand of candidates) {
             if (cand.created_at && created < Date.parse(cand.created_at)) continue;
             if (cand.keywords?.length > 0) {
               const k = keywordMatch(text, cand.keywords, cand.match_type);
@@ -318,8 +330,8 @@ export async function GET(req: NextRequest) {
   const all = await sql!`SELECT * FROM automations WHERE status = 'active' ORDER BY created_at`;
   // Story-reply automations read the DM inbox, not post comments: they get
   // their own pass below and never enter the comment loop.
-  const storyAutos = all.filter((a: any) => a.post_scope === 'story_replies');
-  const commentAutos = all.filter((a: any) => a.post_scope !== 'story_replies');
+  const storyAutos = all.filter((a: any) => a.post_scope === 'story_replies' || a.post_scope === 'dm_inbound');
+  const commentAutos = all.filter((a: any) => a.post_scope !== 'story_replies' && a.post_scope !== 'dm_inbound');
   // Rotate the starting point every run so a slow pass never starves the same
   // automations twice in a row.
   const offset = commentAutos.length ? Math.floor(started / 180_000) % commentAutos.length : 0;

@@ -139,7 +139,7 @@ async function processEvents(body: any) {
 
     for (const a of autos) {
       // Story-reply automations answer DMs, not comments (handled by the poller).
-      if (a.post_scope === 'story_replies') continue;
+      if (a.post_scope === 'story_replies' || a.post_scope === 'dm_inbound') continue;
       // Post scope check
       if (a.post_scope === 'specific_post' && a.post_id && a.post_id !== ev.postId) {
         continue;

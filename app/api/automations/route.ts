@@ -108,9 +108,9 @@ export async function POST(req: NextRequest) {
       status = 'active',
     } = body;
 
-    // Story replies answer DMs on Instagram: there is no post and no public
-    // reply, only the private message.
-    if (post_scope === 'story_replies') {
+    // Story replies and inbound DMs answer messages on Instagram: there is no
+    // post and no public reply, only the private message.
+    if (post_scope === 'story_replies' || post_scope === 'dm_inbound') {
       platform = 'instagram';
       post_id = null;
       public_reply_enabled = false;
