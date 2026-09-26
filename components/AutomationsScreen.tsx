@@ -184,6 +184,10 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [postId, setPostId] = useState('');
   const [keywords, setKeywords] = useState<string[]>([]);
+  // No keywords already means "every comment" in the matcher (webhook and
+  // poller both skip the word check when the list is empty). The mode only
+  // makes that choice visible, so a first-timer does not have to guess.
+  const [kwMode, setKwMode] = useState<'any' | 'words'>('any');
   const [matchType, setMatchType] = useState<'contains' | 'exact'>('contains');
   const [replies, setReplies] = useState<string[]>([A.defaultReply]);
   const [publicOn, setPublicOn] = useState(true);
@@ -221,21 +225,32 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
   // Story replies arrive as DMs: no public reply, and the private message is the whole point.
   const publicActive = publicOn && !story;
   const dmActive = dmOn || story;
-  const step = !target ? 1 : scope === 'specific_post' && !postId ? 2 : keywords.length === 0 ? 3 : !replies.some((r) => r.trim()) && publicActive ? 4 : dmActive && !dmLink && !dmMessage.trim() ? 5 : 6;
-  const canSave = !!target && (scope !== 'specific_post' || !!postId) && (!story || !!dmMessage.trim());
+  const words = kwMode === 'words' ? keywords : [];
+  const hasReply = publicActive && replies.some((r) => r.trim());
+  const hasDm = dmActive && (!!dmMessage.trim() || !!dmLink.trim());
+  const step = !target ? 1 : scope === 'specific_post' && !postId ? 2 : kwMode === 'words' && keywords.length === 0 ? 3 : !replies.some((r) => r.trim()) && publicActive ? 4 : dmActive && !dmLink && !dmMessage.trim() ? 5 : 6;
+  // Everything still missing before Activate can be pressed, in step order,
+  // so the disabled button always says why.
+  const missing: string[] = [];
+  if (!target) missing.push(A.missTarget);
+  if (target && scope === 'specific_post' && !postId) missing.push(A.missPost);
+  if (kwMode === 'words' && keywords.length === 0) missing.push(A.missWords);
+  if (story && !dmMessage.trim()) missing.push(A.missStoryDm);
+  else if (target && !hasReply && !hasDm) missing.push(A.missAction);
+  const canSave = missing.length === 0;
 
   const save = async (status: 'active' | 'paused') => {
     if (!target) return;
     setSaving(true);
     try {
       await fetch(`/api/pages/${target.page_id}/subscribe`, { method: 'POST' }).catch(() => {});
-      const autoName = name.trim() || (keywords.length ? `${keywords[0]} · ${target.name}` : `${story ? A.storyReplies : m.common.anyComment} · ${target.name}`);
+      const autoName = name.trim() || (words.length ? `${words[0]} · ${target.name}` : `${story ? A.storyReplies : m.common.anyComment} · ${target.name}`);
       const res = await fetch('/api/automations', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: autoName, platform: target.platform, page_id: target.page_id, ig_id: target.ig_id,
           post_scope: scope, post_id: scope === 'specific_post' ? postId : null,
-          keywords, match_type: matchType,
+          keywords: words, match_type: matchType,
           public_reply_enabled: publicActive, public_replies: publicActive ? replies.map((r) => r.trim()).filter(Boolean) : [],
           dm_enabled: dmActive, dm_message: dmActive ? dmMessage.trim() || null : null, dm_link: dmActive ? dmLink.trim() || null : null,
           once_per_user: oncePerUser, status,
@@ -249,9 +264,23 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
   };
 
   const selectedPost = posts.find((x) => x.id === postId);
-  const sub = (s: string) => s.replace(A.varName, A.previewName).replace(A.varKeyword, keywords[0] || A.previewDefaultKw).replace(A.varPage, target?.name || '');
+  const sub = (s: string) => s.replace(A.varName, A.previewName).replace(A.varKeyword, words[0] || A.previewDefaultKw).replace(A.varPage, target?.name || '');
   const previewReply = sub(replies.find((r) => r.trim()) || '');
   const previewDm = sub(dmMessage);
+
+  // "What will happen", in plain words, right above Activate.
+  const account = target?.name || '';
+  const wordList = words.map((w) => `"${w}"`).join(', ');
+  const where = allPosts ? t(A.sumWhereAll, { account }) : t(A.sumWherePost, { account });
+  const summary: string[] = !target ? [] : [
+    story
+      ? (words.length ? t(A.sumStoryWords, { account, words: wordList }) : t(A.sumStoryAny, { account }))
+      : (words.length ? t(matchType === 'exact' ? A.sumCommentExact : A.sumCommentWords, { where, words: wordList }) : t(A.sumCommentAny, { where })),
+    ...(hasReply ? [t(A.sumPublic, { text: previewReply })] : []),
+    ...(hasDm ? [dmLink.trim() ? A.sumDmLink : A.sumDm] : []),
+    ...(hasDm && oncePerUser ? [A.sumOnce] : []),
+    ...(!hasReply && !hasDm ? [A.sumNothing] : []),
+  ];
 
   return (
     <>
@@ -272,6 +301,7 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
             <div className="sfa-step-h"><div><span className="sfa-step-n">1</span>{A.step1}</div>
               {target && !picking && <button type="button" className="sfa-pill-btn" onClick={() => setPicking(true)}>{A.changeTarget}</button>}
             </div>
+            <p className="sfa-step-help">{A.step1Help}</p>
             {picking && targets.length > 8 && (
               <input className="sfa-input" style={{ marginBottom: 10 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder={A.searchTargets} />
             )}
@@ -298,6 +328,7 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
                 )}
               </div>
             </div>
+            {!story && <p className="sfa-step-help">{A.step2Help}</p>}
             {!target ? <div className="sfa-sub">{A.chooseTargetFirst}</div> : story ? <div className="sfa-sub">{A.storyRepliesNote}</div> : allPosts ? <div className="sfa-sub">{A.allPostsNote}</div> : loadingPosts ? <div className="sfa-loading"><span className="sfa-spinner" />{A.loadingPosts}</div> : posts.length === 0 ? (
               <input className="sfa-input" dir="ltr" value={postId} onChange={(e) => setPostId(e.target.value)} placeholder={A.pastePostId} />
             ) : (
@@ -314,18 +345,30 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
 
           <section ref={step3Ref} className={`sfa-step${step >= 3 ? ' active' : ''}`}>
             <div className="sfa-step-h"><div><span className="sfa-step-n">3</span>{A.step3}</div>
-              <select className="sfa-select" style={{ width: 'auto' }} value={matchType} onChange={(e) => setMatchType(e.target.value as any)}>
-                <option value="contains">{A.matchContains}</option><option value="exact">{A.matchExact}</option>
-              </select>
+              {kwMode === 'words' && (
+                <select className="sfa-select" style={{ width: 'auto' }} value={matchType} onChange={(e) => setMatchType(e.target.value as any)}>
+                  <option value="contains">{A.matchContains}</option><option value="exact">{A.matchExact}</option>
+                </select>
+              )}
             </div>
-            <div className="sfa-sub">{story ? A.storyKeywordsNote : A.keywordsNote}</div>
-            <KeywordChips keywords={keywords} setKeywords={setKeywords} />
+            <p className="sfa-step-help">{story ? A.step3HelpStory : A.step3Help}</p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }} role="radiogroup" aria-label={A.step3}>
+              <button type="button" role="radio" aria-checked={kwMode === 'any'} className={`sfa-pill-btn${kwMode === 'any' ? ' on' : ''}`} onClick={() => setKwMode('any')}>{story ? A.kwModeAnyStory : A.kwModeAny}</button>
+              <button type="button" role="radio" aria-checked={kwMode === 'words'} className={`sfa-pill-btn${kwMode === 'words' ? ' on' : ''}`} onClick={() => setKwMode('words')}>{A.kwModeWords}</button>
+            </div>
+            {kwMode === 'any' ? <div className="sfa-sub">{story ? A.kwAnyNoteStory : A.kwAnyNote}</div> : (
+              <>
+                <div className="sfa-sub">{A.kwWordsNote}</div>
+                <KeywordChips keywords={keywords} setKeywords={setKeywords} />
+              </>
+            )}
           </section>
 
           <section className={`sfa-step${step >= 4 ? ' active' : ''}`}>
             <div className="sfa-step-h"><div><span className="sfa-step-n">4</span>{A.step4}</div>
               {!story && <button type="button" className={`sfa-toggle${publicOn ? ' on' : ''}`} onClick={() => setPublicOn((v) => !v)} aria-label={A.publicReplyAria}><span /></button>}
             </div>
+            {!story && <p className="sfa-step-help">{A.step4Help}</p>}
             {story ? <div className="sfa-sub">{A.storyNoPublicReply}</div> : publicOn ? (
               <>
                 <div className="sfa-sub">{A.rotateNote}</div>
@@ -343,6 +386,7 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
             <div className="sfa-step-h"><div><span className="sfa-step-n">5</span>{A.step5}</div>
               {!story && <button type="button" className={`sfa-toggle${dmOn ? ' on' : ''}`} onClick={() => setDmOn((v) => !v)} aria-label={A.dmAria}><span /></button>}
             </div>
+            <p className="sfa-step-help">{A.step5Help}</p>
             {dmActive ? (
               <>
                 {story && !dmMessage.trim() && <div className="sfa-sub">{A.storyDmRequired}</div>}
@@ -356,6 +400,7 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
 
           <section className={`sfa-step${step >= 6 ? ' active' : ''}`}>
             <div className="sfa-step-h"><div><span className="sfa-step-n">6</span>{A.step6}</div></div>
+            <p className="sfa-step-help">{A.step6Help}</p>
             <div className="sfa-stack" style={{ gap: 12 }}>
               <div className="sfa-setting"><div><strong>{A.oncePerUser}</strong><small>{A.oncePerUserNote}</small></div><button type="button" className={`sfa-toggle${oncePerUser ? ' on' : ''}`} onClick={() => setOncePerUser((v) => !v)} aria-label={A.oncePerUser}><span /></button></div>
               <div className="sfa-setting"><div><strong>{story ? A.storyNoOld : A.noOldComments}</strong><small>{story ? A.storyNoOldNote : A.noOldCommentsNote}</small></div><button type="button" className="sfa-toggle on" disabled aria-label={A.alwaysOn}><span /></button></div>
@@ -365,21 +410,26 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
 
         <aside className="sfa-preview" aria-label={A.previewTitle}>
           <div className="sfa-eyebrow">{A.previewTitle}</div>
-          <div className="sfa-msg"><span className={`sfa-av ${target?.platform === 'instagram' ? 'sfa-av-ig' : 'sfa-av-fb'}`}>{target?.platform === 'instagram' ? '' : 'f'}</span><div className="sfa-bubble sfa-bubble-user"><small>{story ? A.previewStoryReply : `${A.previewComment}${selectedPost ? `: ${selectedPost.text.slice(0, 30)}` : ''}`}</small>{t(A.previewCommentSample, { kw: keywords[0] || A.previewDefaultKw })}</div></div>
+          <div className="sfa-msg"><span className={`sfa-av ${target?.platform === 'instagram' ? 'sfa-av-ig' : 'sfa-av-fb'}`}>{target?.platform === 'instagram' ? '' : 'f'}</span><div className="sfa-bubble sfa-bubble-user"><small>{story ? A.previewStoryReply : `${A.previewComment}${selectedPost ? `: ${selectedPost.text.slice(0, 30)}` : ''}`}</small>{t(A.previewCommentSample, { kw: words[0] || A.previewDefaultKw })}</div></div>
           {publicActive && <div className="sfa-msg"><span className="sfa-av sfa-av-sf" /><div className="sfa-bubble sfa-bubble-public"><small>{A.publicReply}</small>{previewReply || A.previewReplyEmpty}</div></div>}
           {dmActive && <div className="sfa-msg"><span className="sfa-av sfa-av-ig" /><div className="sfa-bubble sfa-bubble-dm"><small>{A.privateMessage}</small><span style={{ whiteSpace: 'pre-wrap' }}>{previewDm || A.previewDmEmpty}</span>{dmLink && <><br /><a href={dmLink} target="_blank" rel="noreferrer" style={{ direction: 'ltr', display: 'inline-block' }}>{dmLink}</a></>}</div></div>}
           <div className="sfa-lead-in"><i>✓</i><div><strong>{A.previewLead}</strong><small>{A.previewLeadText}</small></div></div>
         </aside>
       </div>
 
+      {summary.length > 0 && (
+        <div className="sfa-summary" aria-live="polite">
+          <div className="sfa-eyebrow">{A.sumTitle}</div>
+          <ol>{summary.map((x, i) => <li key={i}>{x}</li>)}</ol>
+        </div>
+      )}
+
       <div className="sfa-sticky-bar">
-        <div className="sfa-sub"><span className="sfa-dot" />{
-          !target ? A.nextTarget
-            : scope === 'specific_post' && !postId ? A.nextPost
-            : story && !dmMessage.trim() ? A.nextStoryDm
-            : keywords.length === 0 ? A.readyAny
-            : t(A.readyKw, { kw: keywords.length })
-        }</div>
+        {canSave ? (
+          <div className="sfa-sub"><span className="sfa-dot" />{words.length === 0 ? A.readyAny : t(A.readyKw, { kw: words.length })}</div>
+        ) : (
+          <div className="sfa-sub sfa-why" role="status"><span className="sfa-dot" /><span><b>{A.whyDisabled}</b> {missing.join(' · ')}</span></div>
+        )}
         <div className="sfa-spacer" />
         <div className="sfa-actions">
           <button type="button" className="sfa-btn sfa-btn-ghost" onClick={onCancel} disabled={saving}>{m.common.cancel}</button>

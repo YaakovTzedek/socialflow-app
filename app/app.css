@@ -225,6 +225,11 @@
 .sfa-lead-in i { width: 24px; height: 24px; border-radius: 50%; background: var(--ok); color: #04220f; font-weight: 800; font-style: normal; display: flex; align-items: center; justify-content: center; flex: none; }
 .sfa-lead-in strong { display: block; font-weight: 700; color: #fff; font-size: 15px; }
 .sfa-lead-in small { font-size: 13px; color: var(--dim); }
+.sfa-step-help { margin: -6px 0 14px; font-size: 14px; line-height: 1.55; color: var(--dim); max-width: 62ch; }
+.sfa-summary { margin: 18px 0; background: rgba(34, 211, 238, .06); border: 1px solid rgba(34, 211, 238, .28); border-radius: 14px; padding: 14px 18px; }
+.sfa-summary ol { margin: 6px 0 0; padding-inline-start: 20px; display: grid; gap: 6px; color: #fff; font-size: 15px; line-height: 1.5; }
+.sfa-sticky-bar .sfa-why { color: #fbbf24; }
+.sfa-sticky-bar .sfa-why b { color: #fff; }
 .sfa-sticky-bar { position: sticky; bottom: 18px; z-index: 10; background: rgba(9, 15, 52, .94); border: 1px solid rgba(225, 48, 108, .5); border-radius: 16px; padding: 14px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; box-shadow: 0 20px 50px rgba(0, 0, 0, .6); backdrop-filter: blur(10px); }
 .sfa-sticky-bar .sfa-sub { display: flex; align-items: center; gap: 10px; }
 .sfa-sticky-bar .sfa-actions { display: flex; gap: 10px; flex-wrap: wrap; }
