@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from './I18nProvider';
 
@@ -193,6 +193,16 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
   const [oncePerUser, setOncePerUser] = useState(true);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
+  // A user with 98 pages picked one and then had to scroll past all 98 to
+  // find step 2, with "Activate" greyed out and no word why (Tolik, 26.9.2026).
+  // So: once chosen, the list folds to that one card, and each finished step
+  // brings the next one into view.
+  const [picking, setPicking] = useState(true);
+  const [q, setQ] = useState('');
+  const step2Ref = useRef<HTMLElement>(null);
+  const step3Ref = useRef<HTMLElement>(null);
+  const scrollTo = (r: { current: HTMLElement | null }) => setTimeout(() => r.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  const shownTargets = !picking && target ? [target] : targets.filter((x) => !q.trim() || x.name.toLowerCase().includes(q.trim().toLowerCase()));
 
   useEffect(() => {
     if (!target || scope !== 'specific_post') { setPosts([]); return; }
@@ -259,11 +269,16 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
       <div className="sfa-builder">
         <div className="sfa-steps">
           <section className={`sfa-step${step >= 1 ? ' active' : ''}`}>
-            <div className="sfa-step-h"><div><span className="sfa-step-n">1</span>{A.step1}</div></div>
+            <div className="sfa-step-h"><div><span className="sfa-step-n">1</span>{A.step1}</div>
+              {target && !picking && <button type="button" className="sfa-pill-btn" onClick={() => setPicking(true)}>{A.changeTarget}</button>}
+            </div>
+            {picking && targets.length > 8 && (
+              <input className="sfa-input" style={{ marginBottom: 10 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder={A.searchTargets} />
+            )}
             {targets.length === 0 ? <div className="sfa-sub">{A.noTargets}</div> : (
               <div className="sfa-targets">
-                {targets.map((x) => (
-                  <button type="button" key={x.key} className={`sfa-target${target?.key === x.key ? ' sel' : ''}`} onClick={() => { setTarget(x); setPostId(''); if (x.platform !== 'instagram' && scope === 'story_replies') setScope('specific_post'); }}>
+                {shownTargets.map((x) => (
+                  <button type="button" key={x.key} className={`sfa-target${target?.key === x.key ? ' sel' : ''}`} onClick={() => { setTarget(x); setPostId(''); setPicking(false); setQ(''); if (x.platform !== 'instagram' && scope === 'story_replies') setScope('specific_post'); scrollTo(step2Ref); }}>
                     <span className={`sfa-plat sfa-plat-lg ${x.platform === 'instagram' ? 'sfa-plat-ig' : 'sfa-plat-fb'}`}>{x.platform === 'instagram' ? '◎' : 'f'}</span>
                     <div><strong style={x.platform === 'instagram' ? { direction: 'ltr', textAlign: 'start' } : undefined}>{x.name}</strong><small>{x.platform === 'instagram' ? m.common.instagramBusiness : m.common.facebookPage}</small></div>
                     <span className="sfa-check">{target?.key === x.key ? '✓' : ''}</span>
@@ -273,13 +288,13 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
             )}
           </section>
 
-          <section className={`sfa-step${step >= 2 ? ' active' : ''}`}>
+          <section ref={step2Ref} className={`sfa-step${step >= 2 ? ' active' : ''}`}>
             <div className="sfa-step-h">
               <div><span className="sfa-step-n">2</span>{A.step2}</div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button type="button" className={`sfa-pill-btn${allPosts ? ' on' : ''}`} onClick={() => { setScope(allPosts ? 'specific_post' : 'all_posts'); setPostId(''); }} disabled={!target}>{A.allPostsBtn}</button>
+                <button type="button" className={`sfa-pill-btn${allPosts ? ' on' : ''}`} onClick={() => { setScope(allPosts ? 'specific_post' : 'all_posts'); setPostId(''); if (!allPosts) scrollTo(step3Ref); }} disabled={!target}>{A.allPostsBtn}</button>
                 {target?.platform === 'instagram' && (
-                  <button type="button" className={`sfa-pill-btn${story ? ' on' : ''}`} onClick={() => { setScope(story ? 'specific_post' : 'story_replies'); setPostId(''); }}>{A.storyRepliesBtn}</button>
+                  <button type="button" className={`sfa-pill-btn${story ? ' on' : ''}`} onClick={() => { setScope(story ? 'specific_post' : 'story_replies'); setPostId(''); if (!story) scrollTo(step3Ref); }}>{A.storyRepliesBtn}</button>
                 )}
               </div>
             </div>
@@ -288,7 +303,7 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
             ) : (
               <div className="sfa-posts">
                 {posts.map((x) => (
-                  <button type="button" key={x.id} className={`sfa-post${postId === x.id ? ' sel' : ''}`} onClick={() => setPostId(x.id)} title={x.text}>
+                  <button type="button" key={x.id} className={`sfa-post${postId === x.id ? ' sel' : ''}`} onClick={() => { setPostId(x.id); scrollTo(step3Ref); }} title={x.text}>
                     {x.image ? <img src={x.image} alt="" /> : <span className="ph">▦</span>}
                     <div><strong>{x.text}</strong><small>{x.comments != null ? t(A.postComments, { n: x.comments }) : ''}</small></div>
                   </button>
@@ -297,7 +312,7 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
             )}
           </section>
 
-          <section className={`sfa-step${step >= 3 ? ' active' : ''}`}>
+          <section ref={step3Ref} className={`sfa-step${step >= 3 ? ' active' : ''}`}>
             <div className="sfa-step-h"><div><span className="sfa-step-n">3</span>{A.step3}</div>
               <select className="sfa-select" style={{ width: 'auto' }} value={matchType} onChange={(e) => setMatchType(e.target.value as any)}>
                 <option value="contains">{A.matchContains}</option><option value="exact">{A.matchExact}</option>
@@ -358,7 +373,13 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
       </div>
 
       <div className="sfa-sticky-bar">
-        <div className="sfa-sub"><span className="sfa-dot" />{t(A.stickyStatus, { step, kw: keywords.length, replies: replies.filter((r) => r.trim()).length })}</div>
+        <div className="sfa-sub"><span className="sfa-dot" />{
+          !target ? A.nextTarget
+            : scope === 'specific_post' && !postId ? A.nextPost
+            : story && !dmMessage.trim() ? A.nextStoryDm
+            : keywords.length === 0 ? A.readyAny
+            : t(A.readyKw, { kw: keywords.length })
+        }</div>
         <div className="sfa-spacer" />
         <div className="sfa-actions">
           <button type="button" className="sfa-btn sfa-btn-ghost" onClick={onCancel} disabled={saving}>{m.common.cancel}</button>
