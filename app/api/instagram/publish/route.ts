@@ -3,7 +3,7 @@ import { sql, ensureSchema, hasDb } from '@/lib/db';
 
 /**
  * POST /api/instagram/publish?key=...
- * Body: { page_id, video_url, caption, cover_url?, share_to_feed?, trial? }
+ * Body: { page_id, video_url, caption, cover_url?, thumb_offset? (ms), share_to_feed?, trial? }
  *   trial: true            -> publish as a TRIAL reel (non-followers only), Instagram graduates it
  *   trial: 'MANUAL'        -> trial reel you graduate yourself in the app
  *
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   }
   if (!hasDb) return NextResponse.json({ error: 'no_db' }, { status: 503 });
 
-  const { page_id, video_url, caption = '', cover_url, share_to_feed = true, trial } = await req.json();
+  const { page_id, video_url, caption = '', cover_url, thumb_offset, share_to_feed = true, trial } = await req.json();
   if (!page_id || !video_url) return NextResponse.json({ error: 'page_id and video_url are required' }, { status: 400 });
 
   await ensureSchema();
@@ -37,6 +37,8 @@ export async function POST(req: NextRequest) {
     access_token: pt.access_token,
   };
   if (cover_url) body.cover_url = cover_url;
+  // Cover frame in ms. Without it Instagram takes frame 0, which is blank on reels whose visuals fade in.
+  else if (Number.isFinite(Number(thumb_offset)) && Number(thumb_offset) > 0) body.thumb_offset = String(Math.round(Number(thumb_offset)));
   if (trial) {
     // Trial reels go only to non-followers; SS_PERFORMANCE lets Instagram graduate the winner
     // to the full audience automatically after ~72h, MANUAL leaves that call to us.
