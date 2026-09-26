@@ -44,6 +44,30 @@ export async function resolveApiKey(key: string | null | undefined, acceptLangua
 /* Tool definitions (JSON Schema for inputs)                                  */
 /* ------------------------------------------------------------------------ */
 
+/**
+ * Tool annotations the Claude connectors directory requires on every tool: a human title and whether the
+ * tool only reads or can change things (destructive = deletes or publishes something a person sees).
+ */
+const TOOL_META: Record<string, { title: string; readOnlyHint?: true; destructiveHint?: boolean; openWorldHint?: boolean }> = {
+  list_pages: { title: 'List connected pages', readOnlyHint: true },
+  list_posts: { title: 'List recent posts', readOnlyHint: true, openWorldHint: true },
+  list_automations: { title: 'List automations', readOnlyHint: true },
+  get_automation: { title: 'Get an automation', readOnlyHint: true },
+  create_automation: { title: 'Create an automation', destructiveHint: false },
+  update_automation: { title: 'Update an automation', destructiveHint: false },
+  delete_automation: { title: 'Delete an automation', destructiveHint: true },
+  get_activity: { title: 'Get activity log', readOnlyHint: true },
+  get_report: { title: 'Get a report', readOnlyHint: true },
+  get_insights: { title: 'Get insights', readOnlyHint: true, openWorldHint: true },
+  publish_post: { title: 'Publish a post', destructiveHint: true, openWorldHint: true },
+};
+function annotate<T extends { name: string }>(tools: T[]) {
+  return tools.map((t) => {
+    const a = TOOL_META[t.name] || { title: t.name.replace(/_/g, ' '), destructiveHint: true };
+    return { ...t, title: a.title, annotations: a };
+  });
+}
+
 function toolsFor(m: Messages) {
   const T = m.server.tools; const A = m.server.toolArgs;
   return [
@@ -417,7 +441,7 @@ async function handleOne(user: McpUser, msg: unknown): Promise<unknown | null> {
       case 'ping':
         return ok(m.id, {});
       case 'tools/list':
-        return ok(m.id, { tools: toolsFor(L) });
+        return ok(m.id, { tools: annotate(toolsFor(L)) });
       case 'tools/call': {
         const name = String(m.params?.name || '');
         const args = ((m.params?.arguments as Json) || {}) as Json;
