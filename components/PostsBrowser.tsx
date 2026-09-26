@@ -1,10 +1,18 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import PostCard, { NormalizedPost } from './PostCard';
 import { useI18n } from './I18nProvider';
 
-/** Manual replies: pick a page or Instagram account, browse its posts, read and answer comments. */
+/**
+ * Manual replies: pick a page or Instagram account, browse its posts, read and answer comments.
+ *
+ * Speed: the page list is shown at once from this tab's last copy
+ * (sessionStorage) while the server answers, a stale server cache refreshes in
+ * the background, and posts already loaded for a page are shown again
+ * instantly on the next click.
+ */
+const PAGES_KEY = 'sf_pages_v1';
 
 interface Page { id: string; name: string; category?: string; fan_count?: number; picture?: string; instagram?: { id: string; username?: string; picture?: string; followers?: number } | null }
 interface Target { platform: 'facebook' | 'instagram'; pageId: string; id: string; name: string; picture?: string }
@@ -19,30 +27,49 @@ export default function PostsBrowser() {
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const postsCache = useRef(new Map<string, NormalizedPost[]>());
+  const current = useRef('');
 
   useEffect(() => {
+    const keep = (list: Page[]) => { setPages(list); try { sessionStorage.setItem(PAGES_KEY, JSON.stringify(list)); } catch { /* private mode */ } };
+    try {
+      const saved = sessionStorage.getItem(PAGES_KEY);
+      if (saved) { setPages(JSON.parse(saved)); setLoadingPages(false); }
+    } catch { /* ignore */ }
     (async () => {
       try {
         const res = await fetch('/api/pages'); const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'failed');
-        setPages(data.pages || []);
-      } catch (e: any) { setError(e.message); } finally { setLoadingPages(false); }
+        keep(data.pages || []);
+        if (data.stale) fetch('/api/pages?refresh=1').then((r) => r.json()).then((f) => { if (f.pages) keep(f.pages); }).catch(() => {});
+      } catch (e: any) {
+        // Never keep showing a saved list the server no longer vouches for.
+        try { sessionStorage.removeItem(PAGES_KEY); } catch { /* ignore */ }
+        setPages([]); setError(e.message);
+      } finally { setLoadingPages(false); }
     })();
   }, []);
 
   const loadPosts = useCallback(async (t: Target) => {
-    setTarget(t); setLoadingPosts(true); setPosts([]); setError(null);
+    const cacheKey = `${t.platform}:${t.id}`;
+    const cached = postsCache.current.get(cacheKey);
+    current.current = cacheKey;
+    setTarget(t); setError(null);
+    if (cached) { setPosts(cached); setLoadingPosts(false); return; }
+    setLoadingPosts(true); setPosts([]);
     try {
       if (t.platform === 'facebook') {
         const res = await fetch(`/api/pages/${t.pageId}/posts`); const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'failed');
-        setPosts((data.posts || []).map((p: any) => ({ id: p.id, text: p.message || p.story || '', created_time: p.created_time, permalink: p.permalink_url, image: p.full_picture, likes: p.likes?.summary?.total_count ?? null, comments: p.comments?.summary?.total_count ?? null })));
+        const list: NormalizedPost[] = (data.posts || []).map((p: any) => ({ id: p.id, text: p.message || p.story || '', created_time: p.created_time, permalink: p.permalink_url, image: p.full_picture, likes: p.likes?.summary?.total_count ?? null, comments: p.comments?.summary?.total_count ?? null }));
+        postsCache.current.set(cacheKey, list); if (current.current === cacheKey) setPosts(list);
       } else {
         const res = await fetch(`/api/pages/${t.pageId}/instagram/media?igId=${t.id}`); const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'failed');
-        setPosts((data.media || []).map((x: any) => ({ id: x.id, text: x.caption || '', created_time: x.timestamp, permalink: x.permalink, image: x.media_url || x.thumbnail_url, likes: x.like_count ?? null, comments: x.comments_count ?? null })));
+        const list: NormalizedPost[] = (data.media || []).map((x: any) => ({ id: x.id, text: x.caption || '', created_time: x.timestamp, permalink: x.permalink, image: x.media_url || x.thumbnail_url, likes: x.like_count ?? null, comments: x.comments_count ?? null }));
+        postsCache.current.set(cacheKey, list); if (current.current === cacheKey) setPosts(list);
       }
-    } catch (e: any) { setError(e.message); } finally { setLoadingPosts(false); }
+    } catch (e: any) { if (current.current === cacheKey) setError(e.message); } finally { if (current.current === cacheKey) setLoadingPosts(false); }
   }, []);
 
   const filtered = pages.filter((p) => p.name.toLowerCase().includes(search.toLowerCase().trim()));

@@ -10,6 +10,7 @@ import { getBaseUrl, getRedirectUri } from '@/lib/url';
 import { sql, hasDb, ensureSchema } from '@/lib/db';
 import { isLocale, localePath, type Locale } from '@/lib/i18n/config';
 import { AFF_COOKIE, bindReferral } from '@/lib/affiliates';
+import { storePageTokens } from '@/lib/auth-helpers';
 
 export async function GET(req: NextRequest) {
   const baseUrl = getBaseUrl();
@@ -66,16 +67,7 @@ export async function GET(req: NextRequest) {
     // to the first automation, so it is stored here.
     if (hasDb) {
       try {
-        await ensureSchema();
-        for (const page of await listPages(long.access_token)) {
-          if (!page.access_token) continue;
-          await sql!`
-            INSERT INTO page_tokens (page_id, owner_id, page_name, access_token, ig_id)
-            VALUES (${page.id}, ${me.id}, ${page.name ?? null}, ${page.access_token}, ${page.instagram_business_account?.id ?? null})
-            ON CONFLICT (page_id) DO UPDATE SET
-              owner_id = EXCLUDED.owner_id, page_name = EXCLUDED.page_name,
-              access_token = EXCLUDED.access_token, ig_id = EXCLUDED.ig_id, updated_at = now()`;
-        }
+        await storePageTokens(me.id, await listPages(long.access_token));
       } catch { /* a login must never fail because Meta was slow to list pages */ }
     }
 

@@ -63,6 +63,9 @@ function Icon({ name, size = 22 }: { name: string; size?: number }) {
   );
 }
 
+/** Signing out drops this tab's saved copies (the /posts page list), so the next account never sees them. */
+function forget() { try { sessionStorage.clear(); } catch { /* ignore */ } }
+
 export default function AppShell({ userName, title, children }: { userName: string; title: string; children: React.ReactNode }) {
   const { m, p } = useI18n();
   const pathname = usePathname();
@@ -140,7 +143,7 @@ export default function AppShell({ userName, title, children }: { userName: stri
           <button type="button" className="sfa-icon-btn sfa-search-toggle" onClick={() => setSearchOpen(true)} aria-label={m.tabs.search}><Icon name="search" /></button>
           <LanguageSwitcher className="sfa-desk" />
           <div className="sfa-user">
-            <div className="sfa-desk"><strong>{userName}</strong><a href="/api/auth/logout">{m.common.logout}</a></div>
+            <div className="sfa-desk"><strong>{userName}</strong><a href="/api/auth/logout" onClick={forget}>{m.common.logout}</a></div>
             <button type="button" className="sfa-avatar" onClick={() => setMoreOpen(true)} aria-label={userName} title={userName}>{initials(userName)}</button>
           </div>
         </header>
@@ -181,7 +184,7 @@ export default function AppShell({ userName, title, children }: { userName: stri
               <LanguageSwitcher />
             </div>
             <LoginLink className="sfa-btn sfa-btn-dashed sfa-sheet-connect">{m.common.connectAnother}</LoginLink>
-            <a href="/api/auth/logout" className="sfa-sheet-logout"><Icon name="logout" />{m.common.logout}</a>
+            <a href="/api/auth/logout" className="sfa-sheet-logout" onClick={forget}><Icon name="logout" />{m.common.logout}</a>
           </div>
         </div>
       )}

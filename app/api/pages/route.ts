@@ -1,5 +1,5 @@
 import { listPages } from '@/lib/meta';
-import { requireUserToken } from '@/lib/auth-helpers';
+import { requireUserToken, storePageTokens } from '@/lib/auth-helpers';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { sql, hasDb, ensureSchema } from '@/lib/db';
@@ -40,15 +40,9 @@ async function fetchAndStore(token: string, ownerId: string | null) {
       // separately here as well as at login. That heals accounts connected
       // before tokens were kept at connect time: opening the app is enough, and
       // nobody has to sign in again to make the MCP server see their posts.
-      for (const page of pages) {
-        if (!page.access_token) continue;
-        await sql!`
-          INSERT INTO page_tokens (page_id, owner_id, page_name, access_token, ig_id)
-          VALUES (${page.id}, ${ownerId}, ${page.name ?? null}, ${page.access_token}, ${page.instagram_business_account?.id ?? null})
-          ON CONFLICT (page_id) DO UPDATE SET
-            owner_id = EXCLUDED.owner_id, page_name = EXCLUDED.page_name,
-            access_token = EXCLUDED.access_token, ig_id = EXCLUDED.ig_id, updated_at = now()`;
-      }
+      // One multi-row upsert: a row per page, one by one, cost a round trip to
+      // a database in another region each, seconds for an account with 98 pages.
+      await storePageTokens(ownerId, pages);
     } catch { /* cache and token refresh are both best effort */ }
   }
   return safe;

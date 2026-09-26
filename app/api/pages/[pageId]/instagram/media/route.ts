@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listInstagramMedia } from '@/lib/meta';
-import { requireUserToken, getPageToken } from '@/lib/auth-helpers';
+import { requireUserToken, withPageToken } from '@/lib/auth-helpers';
 
 // GET /api/pages/:pageId/instagram/media?igId=xxx → list IG media
 export async function GET(
@@ -16,11 +16,10 @@ export async function GET(
     return NextResponse.json({ error: 'missing_igId' }, { status: 400 });
   }
   try {
-    const pageToken = await getPageToken(token, params.pageId);
-    if (!pageToken) {
+    const media = await withPageToken(token, params.pageId, (pt) => listInstagramMedia(igId, pt));
+    if (!media) {
       return NextResponse.json({ error: 'page_not_found' }, { status: 404 });
     }
-    const media = await listInstagramMedia(igId, pageToken);
     return NextResponse.json({ media });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
