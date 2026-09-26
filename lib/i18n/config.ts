@@ -56,6 +56,27 @@ export function negotiate(acceptLanguage: string | null | undefined): Locale {
   return DEFAULT_LOCALE;
 }
 
+/**
+ * The explicit language choice from the language switcher. Unlike sf_locale
+ * (which only records the last language a page was served in), this cookie is
+ * written only when a person picks a language, so it always wins.
+ */
+export const PICK_COOKIE = 'sf_lang';
+
+/** Signed-in app sections. Only these follow the browser language; marketing pages keep their URLs. */
+export const APP_SECTIONS: ReadonlySet<string> = new Set([
+  'dashboard', 'automations', 'posts', 'mcp', 'inbox', 'messages', 'brain', 'logs', 'billing', 'admin',
+]);
+
+export function isAppPath(rest: string): boolean {
+  return APP_SECTIONS.has(rest.split(/[/?#]/)[1] || '');
+}
+
+/** The explicit pick if there is one, otherwise the browser language. */
+export function preferredLocale(pick: string | undefined | null, acceptLanguage: string | null | undefined): Locale {
+  return isLocale(pick) ? pick : negotiate(acceptLanguage);
+}
+
 /** Google Fonts per script. Karantina (Hebrew display) has no Latin/Arabic/Japanese glyphs. */
 export const FONT_LINKS: Record<Locale, string> = {
   he: 'https://fonts.googleapis.com/css2?family=Karantina:wght@300;400;700&family=Assistant:wght@300;400;600;700;800&display=swap',
