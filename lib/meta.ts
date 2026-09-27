@@ -445,14 +445,21 @@ export async function listInstagramConversations(
   pageToken: string,
   limit = 25
 ): Promise<IgConversation[]> {
-  const data = await graphGet<{ data: IgConversation[] }>(`${pageId}/conversations`, {
+  const ask = (n: number) => graphGet<{ data: IgConversation[] }>(`${pageId}/conversations`, {
     platform: 'instagram',
     // Only the fields verified to answer fast; participants come from the messages.
     fields: 'id,updated_time',
-    limit: String(limit),
+    limit: String(n),
     access_token: pageToken,
   });
-  return data.data || [];
+  // A busy inbox (@yaakovtzedek1, 27.9) answers 25 with "Please reduce the amount of data you're asking for":
+  // step down instead of giving up, the newest conversations are the ones that matter.
+  for (const n of [limit, 10, 5]) {
+    if (n > limit) continue;
+    try { return (await ask(n)).data || []; }
+    catch (e: any) { if (!/reduce the amount of data/i.test(String(e?.message)) || n === 5) throw e; }
+  }
+  return [];
 }
 
 /** The latest messages of one conversation, as Meta returns them (newest first). */
