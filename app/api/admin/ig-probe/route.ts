@@ -15,16 +15,13 @@ export async function GET(req: NextRequest) {
   if (!pt) return NextResponse.json({ error: 'no_token' }, { status: 404 });
   const tok = encodeURIComponent(pt.access_token as string);
   const out: Record<string, unknown> = {};
-  let after = '';
-  const pages: unknown[] = [];
-  for (let i = 0; i < 6; i++) {
+  for (const folder of ['', 'inbox', 'pending', 'other', 'page_done', 'spam']) {
     const t0 = Date.now();
-    const r = await fetch(`${GRAPH}/${page}/conversations?platform=instagram&fields=id,updated_time&limit=1${after ? `&after=${after}` : ''}&access_token=${tok}`)
+    const r = await fetch(`${GRAPH}/${page}/conversations?platform=instagram&fields=id,updated_time&limit=1${folder ? `&folder=${folder}` : ''}&access_token=${tok}`)
       .then((x) => x.json()).catch((e) => ({ error: { message: String(e) } }));
-    pages.push({ ms: Date.now() - t0, updated: r?.data?.[0]?.updated_time || null, error: r?.error?.message || null });
-    after = r?.paging?.next ? r?.paging?.cursors?.after || '' : '';
-    if (!after || Date.now() - t0 > 15000) break;
+    out[folder || 'default'] = { ms: Date.now() - t0, n: r?.data?.length ?? null, updated: r?.data?.[0]?.updated_time || null, error: r?.error?.message || null };
   }
-  out.pages = pages;
+  const me = await fetch(`${GRAPH}/${pt.ig_id}?fields=username,name&access_token=${tok}`).then((x) => x.json()).catch(() => null);
+  out.ig = { id: pt.ig_id, username: me?.username || null, error: me?.error?.message || null };
   return NextResponse.json(out);
 }
