@@ -454,12 +454,20 @@ export async function listInstagramConversations(
   });
   // A busy inbox (@yaakovtzedek1, 27.9) answers 25 with "Please reduce the amount of data you're asking for":
   // step down instead of giving up, the newest conversations are the ones that matter.
-  for (const n of [limit, 10, 5]) {
-    if (n > limit) continue;
-    try { return (await ask(n)).data || []; }
-    catch (e: any) { if (!/reduce the amount of data/i.test(String(e?.message)) || n === 5) throw e; }
+  try { return (await ask(limit)).data || []; }
+  catch (e: any) { if (!/reduce the amount of data/i.test(String(e?.message))) throw e; }
+  // Probe 27.9: that inbox answers limit=1 in milliseconds but limit=5/10/25 time out, so walk it one page of 1 at a time.
+  const out: IgConversation[] = [];
+  let after = '';
+  for (let i = 0; i < Math.min(limit, 10); i++) {
+    const r = await graphGet<{ data: IgConversation[]; paging?: { cursors?: { after?: string }; next?: string } }>(`${pageId}/conversations`, {
+      platform: 'instagram', fields: 'id,updated_time', limit: '1', ...(after ? { after } : {}), access_token: pageToken,
+    });
+    out.push(...(r.data || []));
+    after = r.paging?.next ? r.paging?.cursors?.after || '' : '';
+    if (!after) break;
   }
-  return [];
+  return out;
 }
 
 /** The latest messages of one conversation, as Meta returns them (newest first). */
