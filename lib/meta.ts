@@ -454,9 +454,9 @@ export async function listInstagramConversations(
   });
   // A busy inbox (@yaakovtzedek1, 27.9) answers 25 with "Please reduce the amount of data you're asking for":
   // step down instead of giving up, the newest conversations are the ones that matter.
-  try { return (await ask(limit)).data || []; }
-  catch (e: any) { if (!/reduce the amount of data/i.test(String(e?.message))) throw e; }
-  // Probe 27.9: that inbox answers limit=1 in milliseconds but limit=5/10/25 time out, so walk it one page of 1 at a time.
+  void ask;
+  // Probe 27.9: a busy inbox answers limit=1 in milliseconds, while limit=5/10/25 wait ~20s and then fail with
+  // "reduce the amount of data" (or time out). So always walk the newest conversations one page of 1 at a time.
   const out: IgConversation[] = [];
   let after = '';
   for (let i = 0; i < Math.min(limit, 10); i++) {
