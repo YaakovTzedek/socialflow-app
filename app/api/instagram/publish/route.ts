@@ -4,6 +4,8 @@ import { sql, ensureSchema, hasDb } from '@/lib/db';
 /**
  * POST /api/instagram/publish?key=...
  * Body: { page_id, video_url, caption, cover_url?, thumb_offset? (ms), share_to_feed?, trial? }
+ *   story: true + image_url or video_url -> publish an Instagram STORY instead (27.9.2026, the Reelsi Q&A corner).
+ *   Stories take no caption, and link or poll stickers are not available through the API.
  *   trial: true            -> publish as a TRIAL reel (non-followers only), Instagram graduates it
  *   trial: 'MANUAL'        -> trial reel you graduate yourself in the app
  *
@@ -22,24 +24,26 @@ export async function POST(req: NextRequest) {
   }
   if (!hasDb) return NextResponse.json({ error: 'no_db' }, { status: 503 });
 
-  const { page_id, video_url, caption = '', cover_url, thumb_offset, share_to_feed = true, trial } = await req.json();
-  if (!page_id || !video_url) return NextResponse.json({ error: 'page_id and video_url are required' }, { status: 400 });
+  const { page_id, video_url, image_url, story, caption = '', cover_url, thumb_offset, share_to_feed = true, trial } = await req.json();
+  if (!page_id || (!video_url && !(story && image_url))) return NextResponse.json({ error: 'page_id and video_url (or story + image_url) are required' }, { status: 400 });
 
   await ensureSchema();
   const pt = (await sql!`SELECT access_token, ig_id FROM page_tokens WHERE page_id = ${page_id} LIMIT 1`)[0];
   if (!pt?.ig_id) return NextResponse.json({ error: 'no_page_token_or_ig' }, { status: 404 });
 
-  const body: Record<string, string> = {
+  const body: Record<string, string> = story
+    ? { media_type: 'STORIES', ...(video_url ? { video_url } : { image_url }), access_token: pt.access_token }
+    : {
     media_type: 'REELS',
     video_url,
     caption,
     share_to_feed: String(share_to_feed),
     access_token: pt.access_token,
   };
-  if (cover_url) body.cover_url = cover_url;
+  if (!story && cover_url) body.cover_url = cover_url;
   // Cover frame in ms. Without it Instagram takes frame 0, which is blank on reels whose visuals fade in.
-  else if (Number.isFinite(Number(thumb_offset)) && Number(thumb_offset) > 0) body.thumb_offset = String(Math.round(Number(thumb_offset)));
-  if (trial) {
+  else if (!story && Number.isFinite(Number(thumb_offset)) && Number(thumb_offset) > 0) body.thumb_offset = String(Math.round(Number(thumb_offset)));
+  if (trial && !story) {
     // Trial reels go only to non-followers; SS_PERFORMANCE lets Instagram graduate the winner
     // to the full audience automatically after ~72h, MANUAL leaves that call to us.
     const strategy = trial === 'MANUAL' ? 'MANUAL' : 'SS_PERFORMANCE';
