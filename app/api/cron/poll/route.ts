@@ -584,7 +584,8 @@ export async function GET(req: NextRequest) {
       storySummary = [{ error: e.message }];
     }
   }
-  await mapPool(automations, 4, processAutomation);
+  // ?stories=1 runs only the story/inbox pass (a quick check that does not wait for 100+ comment automations).
+  if (req.nextUrl.searchParams.get('stories') !== '1') await mapPool(automations, 4, processAutomation);
 
 
   // Recover the messages Meta refused for a transient reason on an earlier pass.
