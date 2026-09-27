@@ -574,9 +574,8 @@ export async function GET(req: NextRequest) {
       summary.push({ automation: a.name, error: e.message });
     }
   };
-  await mapPool(automations, 4, processAutomation);
-
-  // Replies to Instagram Stories (DM inbox), inside the same time budget.
+  // Replies to Instagram Stories (DM inbox) go FIRST (27.9): a story reply is a person waiting in the inbox, and with
+  // 100+ comment automations the comment pass used the whole budget, so story replies were never reached.
   let storySummary: any[] = [];
   if (storyAutos.length && Date.now() - started < TIME_BUDGET_MS) {
     try {
@@ -585,6 +584,8 @@ export async function GET(req: NextRequest) {
       storySummary = [{ error: e.message }];
     }
   }
+  await mapPool(automations, 4, processAutomation);
+
 
   // Recover the messages Meta refused for a transient reason on an earlier pass.
   let retry = { retried: 0, recovered: 0 };
