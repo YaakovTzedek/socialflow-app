@@ -15,16 +15,21 @@ export async function GET(req: NextRequest) {
   if (!pt) return NextResponse.json({ error: 'no_token' }, { status: 404 });
   const tok = encodeURIComponent(pt.access_token as string);
   const variants: Record<string, string> = {
-    fb_ig_5_updated: `${page}/conversations?platform=instagram&fields=id,updated_time&limit=5`,
-    fb_ig_2_id: `${page}/conversations?platform=instagram&fields=id&limit=2`,
-    fb_ig_1_nofields: `${page}/conversations?platform=instagram&limit=1`,
-    ig_user_conversations: `${pt.ig_id}/conversations?platform=instagram&fields=id,updated_time&limit=5`,
+    nofields_1: `${page}/conversations?platform=instagram&limit=1`,
+    nofields_10: `${page}/conversations?platform=instagram&limit=10`,
+    nofields_25: `${page}/conversations?platform=instagram&limit=25`,
+    updated_1: `${page}/conversations?platform=instagram&fields=updated_time&limit=1`,
   };
   const out: Record<string, unknown> = {};
   for (const [k, path] of Object.entries(variants)) {
     const t0 = Date.now();
     const r = await fetch(`${GRAPH}/${path}&access_token=${tok}`).then((x) => x.json()).catch((e) => ({ error: String(e) }));
-    out[k] = { ms: Date.now() - t0, n: r?.data?.length ?? null, error: r?.error?.message || null };
+    out[k] = { ms: Date.now() - t0, n: r?.data?.length ?? null, error: r?.error?.message || null, first: r?.data?.[0] || null };
+    if (k === 'nofields_1' && r?.data?.[0]?.id) {
+      const t1 = Date.now();
+      const m = await fetch(`${GRAPH}/${r.data[0].id}?fields=messages.limit(10){id,created_time,from,to,message,story,attachments}&access_token=${tok}`).then((x) => x.json()).catch((e) => ({ error: String(e) }));
+      out.messages_10 = { ms: Date.now() - t1, n: m?.messages?.data?.length ?? null, error: m?.error?.message || null };
+    }
   }
   return NextResponse.json(out);
 }
