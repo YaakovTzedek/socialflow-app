@@ -334,8 +334,15 @@ export async function GET(req: NextRequest) {
   const commentAutos = all.filter((a: any) => a.post_scope !== 'story_replies' && a.post_scope !== 'dm_inbound');
   // Rotate the starting point every run so a slow pass never starves the same
   // automations twice in a row.
-  const offset = commentAutos.length ? Math.floor(started / 180_000) % commentAutos.length : 0;
-  const automations = [...commentAutos.slice(offset), ...commentAutos.slice(0, offset)];
+  // Fresh automations go first on every run (30.9.2026): a new reel gets nearly all its comments in its
+  // first days, and with 240+ automations a 45s budget left a brand new one waiting for several runs
+  // (the DevDay reel's first DOTS comments sat unanswered). Older ones keep rotating behind them.
+  const FRESH_MS = 7 * 24 * 3600_000;
+  const isFresh = (a: any) => !!a.created_at && started - Date.parse(a.created_at) < FRESH_MS;
+  const fresh = commentAutos.filter(isFresh).sort((x: any, y: any) => Date.parse(y.created_at) - Date.parse(x.created_at));
+  const rest = commentAutos.filter((a: any) => !isFresh(a));
+  const offset = rest.length ? Math.floor(started / 180_000) % rest.length : 0;
+  const automations = [...fresh, ...rest.slice(offset), ...rest.slice(0, offset)];
   const summary: any[] = [];
   const debugComments: any[] = [];
   // Plan metering: an owner past this month's DM quota is skipped entirely
