@@ -2,11 +2,14 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { sql, hasDb, ensureSchema } from '@/lib/db';
 import { cancelRecurring, billingConfigured } from '@/lib/sumit';
+import { blockIfImpersonating } from '@/lib/impersonation';
 
 export const dynamic = 'force-dynamic';
 
 // POST /api/billing/cancel → cancel the live subscription; access stays until the paid period ends.
 export async function POST() {
+  const blocked = await blockIfImpersonating('billing_cancel');
+  if (blocked) return blocked;
   const session = await getSession();
   if (!session.userId) return NextResponse.json({ error: 'not_authenticated' }, { status: 401 });
   if (!hasDb) return NextResponse.json({ error: 'db_not_configured' }, { status: 503 });

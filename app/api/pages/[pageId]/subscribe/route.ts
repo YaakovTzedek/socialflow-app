@@ -3,6 +3,7 @@ import { subscribePageWebhook, listPages } from '@/lib/meta';
 import { requireUserToken } from '@/lib/auth-helpers';
 import { getSession } from '@/lib/session';
 import { sql, ensureSchema, hasDb } from '@/lib/db';
+import { blockIfImpersonating } from '@/lib/impersonation';
 
 // POST /api/pages/:pageId/subscribe → subscribe this page to feed webhooks,
 // and refresh the stored page token (with a freshly-granted permission set).
@@ -10,6 +11,8 @@ export async function POST(
   _req: NextRequest,
   { params }: { params: { pageId: string } }
 ) {
+  const blocked = await blockIfImpersonating('webhook_subscribe');
+  if (blocked) return blocked;
   const token = await requireUserToken();
   const session = await getSession();
   if (!token || !session.userId) {

@@ -58,6 +58,27 @@ export async function GET(req: NextRequest) {
   }
   const session = await getSession();
   const ownerId = session.userId || null;
+  // Viewing as a customer: their last cached listing, whatever its age, or
+  // their stored pages. Meta is never asked (no customer token is held, and
+  // the owner's token must not list pages under the customer's id).
+  if (session.impersonating) {
+    if (!hasDb || !ownerId) return NextResponse.json({ pages: [], cached: true });
+    try {
+      await ensureSchema();
+      const [row] = await sql!`SELECT payload, updated_at FROM pages_cache WHERE owner_id = ${ownerId}`;
+      if (row) {
+        const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
+        return NextResponse.json({ pages: payload, cached: true, age_ms: Date.now() - new Date(row.updated_at).getTime() });
+      }
+      const stored = await sql!`SELECT page_id, page_name, ig_id FROM page_tokens WHERE owner_id = ${ownerId} ORDER BY page_name`;
+      return NextResponse.json({
+        cached: true,
+        pages: stored.map((r: any) => ({ id: r.page_id, name: r.page_name, instagram: r.ig_id ? { id: r.ig_id, username: null } : null })),
+      });
+    } catch (e: any) {
+      return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+  }
   const force = req.nextUrl.searchParams.get('refresh') === '1';
   try {
     if (hasDb && ownerId && !force) {

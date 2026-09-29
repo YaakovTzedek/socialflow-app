@@ -3,6 +3,7 @@ import { randomBytes } from 'crypto';
 import { getSession } from '@/lib/session';
 import { sql, hasDb, ensureSchema } from '@/lib/db';
 import { isLocale } from '@/lib/i18n/config';
+import { blockIfImpersonating } from '@/lib/impersonation';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const blocked = await blockIfImpersonating('mcp_key_create');
+  if (blocked) return blocked;
   if (!hasDb) return NextResponse.json({ error: 'db_not_configured' }, { status: 503 });
   const session = await getSession();
   if (!session.userId) return NextResponse.json({ error: 'not_authenticated' }, { status: 401 });
@@ -30,6 +33,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const blocked = await blockIfImpersonating('mcp_key_revoke');
+  if (blocked) return blocked;
   if (!hasDb) return NextResponse.json({ error: 'db_not_configured' }, { status: 503 });
   const session = await getSession();
   if (!session.userId) return NextResponse.json({ error: 'not_authenticated' }, { status: 401 });

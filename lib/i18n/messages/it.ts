@@ -23,6 +23,13 @@ const it: Messages = {
     searchPlaceholder: 'Cerca nel registro per commento, commentatore o parola chiave',
     searchAria: 'Cerca nel registro',
   },
+  owner: {
+    switchToAdmin: "Passa all'amministrazione",
+    viewingAs: "Stai visualizzando come {name}",
+    exit: "Esci",
+    readOnly: "Sola lettura: le azioni su questo account sono disattivate.",
+    readOnlyTip: "Non disponibile mentre visualizzi come cliente",
+  },
   landing: {
     navHow: 'Come funziona', navMcp: 'MCP', navLog: 'Registro live', navFaq: 'FAQ',
     pill: 'Automazione dei commenti per Facebook e Instagram',

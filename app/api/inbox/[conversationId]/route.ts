@@ -3,6 +3,7 @@ import { hasDb } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { getConversationMessages, sendInstagramMessage } from '@/lib/meta';
 import { resolveOwnedPage, isInbound, isStoryReply, storyIdOf, otherParticipant, lastInboundAt, windowOpen, attachmentTypeOf } from '@/lib/inbox';
+import { blockIfImpersonating } from '@/lib/impersonation';
 
 export const maxDuration = 30;
 
@@ -54,6 +55,8 @@ export async function GET(req: NextRequest, { params }: { params: { conversation
 // POST /api/inbox/:conversationId?page_id=...  { text } → send a DM to the other participant.
 // 409 { error: 'window_closed' } when their last message is older than 24 hours.
 export async function POST(req: NextRequest, { params }: { params: { conversationId: string } }) {
+  const blocked = await blockIfImpersonating('instagram_dm_send');
+  if (blocked) return blocked;
   try {
     const body = await req.json().catch(() => ({}));
     const text = String(body?.text || '').trim();

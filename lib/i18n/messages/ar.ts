@@ -23,6 +23,13 @@ const ar: Messages = {
     searchPlaceholder: 'ابحث في السجل حسب التعليق أو المعلّق أو الكلمة المفتاحية',
     searchAria: 'البحث في السجل',
   },
+  owner: {
+    switchToAdmin: "الانتقال إلى الإدارة",
+    viewingAs: "أنت تشاهد بصفتك {name}",
+    exit: "خروج",
+    readOnly: "عرض فقط: الإجراءات في هذا الحساب معطلة.",
+    readOnlyTip: "غير متاح أثناء المشاهدة كعميل",
+  },
   landing: {
     navHow: 'كيف يعمل', navMcp: 'MCP', navLog: 'السجل المباشر', navFaq: 'الأسئلة الشائعة',
     pill: 'أتمتة التعليقات على Facebook و Instagram',

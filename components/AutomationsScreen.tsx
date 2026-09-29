@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from './I18nProvider';
+import { useReadOnly } from './ReadOnlyContext';
 
 /** Automations list + the six-step builder + inline editor. API: /api/automations, /api/pages, posts and media endpoints. */
 
@@ -15,6 +16,8 @@ interface PostItem { id: string; text: string; image?: string; likes?: number | 
 
 export default function AutomationsScreen() {
   const { m, t, p, dateTime } = useI18n();
+  const ro = useReadOnly();
+  const roTip = ro ? m.owner.readOnlyTip : undefined;
   const A = m.automations;
   const router = useRouter();
   const params = useSearchParams();
@@ -41,7 +44,7 @@ export default function AutomationsScreen() {
       setAutos(list);
       setLoading(false);
       await pagesReq;
-      Array.from(new Set(list.map((x) => x.page_id))).forEach((pid) => { fetch(`/api/pages/${pid}/subscribe`, { method: 'POST' }).catch(() => {}); });
+      if (!ro) Array.from(new Set(list.map((x) => x.page_id))).forEach((pid) => { fetch(`/api/pages/${pid}/subscribe`, { method: 'POST' }).catch(() => {}); });
     } finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
@@ -86,7 +89,7 @@ export default function AutomationsScreen() {
               <div className="sfa-h">{A.title}</div>
               <p>{loading ? m.common.loading : t(A.summary, { active, total: autos.length })}</p>
             </div>
-            <button type="button" className="sfa-btn sfa-btn-primary sfa-btn-lg" onClick={() => setBuilding(true)}>{A.newAutomation}</button>
+            <button type="button" className="sfa-btn sfa-btn-primary sfa-btn-lg" onClick={() => setBuilding(true)} disabled={ro} title={roTip}>{A.newAutomation}</button>
           </div>
 
           {loading ? <div className="sfa-loading"><span className="sfa-spinner" />{m.common.loading}</div> : autos.length === 0 ? (
@@ -137,8 +140,8 @@ export default function AutomationsScreen() {
                   </div>
                   <div className="acts">
                     <button type="button" className="sfa-btn sfa-btn-cyan sfa-btn-sm" onClick={() => setEditing(editing === a.id ? null : a.id)}>{editing === a.id ? m.common.close : m.common.edit}</button>
-                    <button type="button" className="sfa-btn sfa-btn-ghost sfa-btn-sm" onClick={() => toggle(a)}>{a.status === 'active' ? m.common.pause : m.common.resume}</button>
-                    <button type="button" className="sfa-btn sfa-btn-danger sfa-btn-sm" onClick={() => remove(a)}>{m.common.delete}</button>
+                    <button type="button" className="sfa-btn sfa-btn-ghost sfa-btn-sm" onClick={() => toggle(a)} disabled={ro} title={roTip}>{a.status === 'active' ? m.common.pause : m.common.resume}</button>
+                    <button type="button" className="sfa-btn sfa-btn-danger sfa-btn-sm" onClick={() => remove(a)} disabled={ro} title={roTip}>{m.common.delete}</button>
                   </div>
                 </div>
                 );
@@ -175,6 +178,7 @@ function KeywordChips({ keywords, setKeywords }: { keywords: string[]; setKeywor
 
 function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; onCancel: () => void; onSaved: () => void; onError: (x: string) => void }) {
   const { m, t } = useI18n(); const A = m.automations;
+  const ro = useReadOnly();
   const VARS = [A.varName, A.varKeyword, A.varPage];
   const [target, setTarget] = useState<Target | null>(null);
   const [scope, setScope] = useState<'specific_post' | 'all_posts' | 'story_replies' | 'dm_inbound'>('specific_post');
@@ -441,8 +445,8 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
         <div className="sfa-spacer" />
         <div className="sfa-actions">
           <button type="button" className="sfa-btn sfa-btn-ghost" onClick={onCancel} disabled={saving}>{m.common.cancel}</button>
-          <button type="button" className="sfa-btn sfa-btn-vi" onClick={() => save('paused')} disabled={!canSave || saving}>{A.saveAsPaused}</button>
-          <button type="button" className="sfa-btn sfa-btn-primary" onClick={() => save('active')} disabled={!canSave || saving}>{saving ? A.saving : A.activate}</button>
+          <button type="button" className="sfa-btn sfa-btn-vi" onClick={() => save('paused')} disabled={ro || !canSave || saving} title={ro ? m.owner.readOnlyTip : undefined}>{A.saveAsPaused}</button>
+          <button type="button" className="sfa-btn sfa-btn-primary" onClick={() => save('active')} disabled={ro || !canSave || saving} title={ro ? m.owner.readOnlyTip : undefined}>{saving ? A.saving : A.activate}</button>
         </div>
       </div>
     </>
@@ -452,6 +456,7 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
 /** Inline editor for an existing automation (everything except the target post). */
 function Editor({ a, onCancel, onSaved, onError }: { a: Automation; onCancel: () => void; onSaved: (u: Partial<Automation>) => void; onError: (x: string) => void }) {
   const { m } = useI18n(); const A = m.automations;
+  const ro = useReadOnly();
   const VARS = [A.varName, A.varKeyword, A.varPage];
   const [name, setName] = useState(a.name);
   const [keywords, setKeywords] = useState<string[]>(a.keywords || []);
@@ -519,7 +524,7 @@ function Editor({ a, onCancel, onSaved, onError }: { a: Automation; onCancel: ()
       </div>
       <div className="sfa-setting"><div><strong>{A.oncePerUser}</strong><small>{A.oncePerUserNote}</small></div><button type="button" className={`sfa-toggle${oncePerUser ? ' on' : ''}`} onClick={() => setOncePerUser((v) => !v)} aria-label={A.oncePerUser}><span /></button></div>
       <div className="foot">
-        <button type="button" className="sfa-btn sfa-btn-primary" onClick={save} disabled={saving}>{saving ? A.saving : A.saveChanges}</button>
+        <button type="button" className="sfa-btn sfa-btn-primary" onClick={save} disabled={ro || saving} title={ro ? m.owner.readOnlyTip : undefined}>{saving ? A.saving : A.saveChanges}</button>
         <button type="button" className="sfa-btn sfa-btn-ghost" onClick={onCancel} disabled={saving}>{m.common.cancel}</button>
       </div>
     </div>

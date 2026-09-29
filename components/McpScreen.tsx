@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useI18n } from './I18nProvider';
+import { useReadOnly } from './ReadOnlyContext';
 
 /**
  * /mcp: a plain-language explanation first (what it gives you, three steps,
@@ -16,6 +17,7 @@ const TOOL_NAMES = ['list_pages', 'list_posts', 'list_automations', 'create_auto
 
 export default function McpScreen() {
   const { m, t, dateTime, locale } = useI18n();
+  const ro = useReadOnly();
   const M = m.mcp;
   const [keys, setKeys] = useState<KeyRow[]>([]);
   const [fresh, setFresh] = useState<string | null>(null);
@@ -124,7 +126,7 @@ export default function McpScreen() {
         <div className="sfa-card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
             <div className="sfa-eyebrow">{M.yourKeys}</div>
-            <button type="button" className="sfa-btn sfa-btn-primary sfa-btn-sm" onClick={mint} disabled={busy}>{busy ? M.creating : M.newKey}</button>
+            <button type="button" className="sfa-btn sfa-btn-primary sfa-btn-sm" onClick={mint} disabled={ro || busy} title={ro ? m.owner.readOnlyTip : undefined}>{busy ? M.creating : M.newKey}</button>
           </div>
           {fresh && (
             <div className="sfa-keybox">
@@ -141,7 +143,7 @@ export default function McpScreen() {
                   <code dir="ltr">{k.masked}</code>
                   <span className="sfa-sub">{k.last_used_at ? t(M.lastUsed, { when: dateTime(k.last_used_at) }) : M.neverUsed}</span>
                   {k.label && <span className="sfa-tag sfa-tag-unsent">{k.label}</span>}
-                  <button type="button" className="sfa-btn sfa-btn-danger sfa-btn-sm" onClick={() => revoke(k.key)}>{M.revoke}</button>
+                  <button type="button" className="sfa-btn sfa-btn-danger sfa-btn-sm" onClick={() => revoke(k.key)} disabled={ro} title={ro ? m.owner.readOnlyTip : undefined}>{M.revoke}</button>
                 </div>
               ))}
             </div>

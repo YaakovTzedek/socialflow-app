@@ -4,11 +4,14 @@ import { sql, hasDb, ensureSchema } from '@/lib/db';
 import { PLAN_CATALOG, TRIAL, priceFor, type Interval, type PlanId } from '@/lib/plans';
 import { createSubscription, billingConfigured, cancelRecurring } from '@/lib/sumit';
 import { recordCommission } from '@/lib/affiliates';
+import { blockIfImpersonating } from '@/lib/impersonation';
 
 export const dynamic = 'force-dynamic';
 
 // POST /api/billing/subscribe { plan_id, interval, currency, trial, singleUseToken, payerName, payerEmail, payerPhone }
 export async function POST(req: NextRequest) {
+  const blocked = await blockIfImpersonating('billing_subscribe');
+  if (blocked) return blocked;
   const session = await getSession();
   if (!session.userId) return NextResponse.json({ error: 'not_authenticated' }, { status: 401 });
   if (!hasDb) return NextResponse.json({ error: 'db_not_configured' }, { status: 503 });

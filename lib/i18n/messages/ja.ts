@@ -23,6 +23,13 @@ const ja: Messages = {
     searchPlaceholder: 'コメント、投稿者、キーワードでログを検索',
     searchAria: 'ログを検索',
   },
+  owner: {
+    switchToAdmin: "管理画面へ",
+    viewingAs: "{name} として表示中",
+    exit: "終了",
+    readOnly: "閲覧のみ：このアカウントでの操作は無効です。",
+    readOnlyTip: "顧客として表示中は利用できません",
+  },
   landing: {
     navHow: '仕組み', navMcp: 'MCP', navLog: 'ライブログ', navFaq: 'よくある質問',
     pill: 'Facebook と Instagram のコメント自動化',

@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sql, ensureSchema, hasDb } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { automationActivationBlock } from '@/lib/entitlements';
+import { blockIfImpersonating } from '@/lib/impersonation';
+import { recordEvent } from '@/lib/audit';
 
 // PATCH /api/automations/:id → update status (active/paused) or fields
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const blocked = await blockIfImpersonating('automation_update');
+  if (blocked) return blocked;
   if (!hasDb) return NextResponse.json({ error: 'db_not_configured' }, { status: 503 });
   const session = await getSession();
   if (!session.userId) {
@@ -43,6 +47,9 @@ export async function PATCH(
       `;
     }
     const [row] = await sql!`SELECT * FROM automations WHERE id = ${params.id} AND owner_id = ${session.userId}`;
+    if (row && Object.keys(patch).length) {
+      await recordEvent(session.userId, 'automation_updated', { id: params.id, name: row.name, fields: Object.keys(patch), status: patch.status ?? null });
+    }
     return NextResponse.json({ success: true, automation: row || null });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
@@ -54,6 +61,8 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const blocked = await blockIfImpersonating('automation_delete');
+  if (blocked) return blocked;
   if (!hasDb) return NextResponse.json({ error: 'db_not_configured' }, { status: 503 });
   const session = await getSession();
   if (!session.userId) {
@@ -61,10 +70,12 @@ export async function DELETE(
   }
   try {
     await ensureSchema();
-    await sql!`
+    const gone = await sql!`
       DELETE FROM automations
       WHERE id = ${params.id} AND owner_id = ${session.userId}
+      RETURNING name, page_name
     `;
+    if (gone.length) await recordEvent(session.userId, 'automation_deleted', { id: params.id, name: gone[0].name, page: gone[0].page_name });
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

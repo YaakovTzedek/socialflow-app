@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { getClient, issueCode, base } from '@/lib/oauth';
+import { blockIfImpersonating } from '@/lib/impersonation';
 
 export const dynamic = 'force-dynamic';
 
 // The consent form on /oauth/authorize posts here; we mint the code and bounce back to the client.
 export async function POST(req: NextRequest) {
+  const blocked = await blockIfImpersonating('oauth_approve');
+  if (blocked) return blocked;
   const session = await getSession();
   const form = await req.formData();
   const clientId = String(form.get('client_id') || '');

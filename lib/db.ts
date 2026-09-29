@@ -277,6 +277,28 @@ export async function ensureSchema() {
       page_id      TEXT PRIMARY KEY,
       last_checked TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    -- The owner's admin area (29.9.2026). app_users keeps the Facebook name and
+    -- login times, which were never stored before (the name only lived in the
+    -- session cookie). audit_events is the timeline: logins, impersonation
+    -- start/stop/blocked, and automation, billing and MCP key changes.
+    CREATE TABLE IF NOT EXISTS app_users (
+      owner_id       TEXT PRIMARY KEY,
+      name           TEXT,
+      first_login_at TIMESTAMPTZ,
+      last_login_at  TIMESTAMPTZ,
+      last_seen_at   TIMESTAMPTZ,
+      login_count    INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS audit_events (
+      id         BIGSERIAL PRIMARY KEY,
+      owner_id   TEXT NOT NULL,
+      actor_id   TEXT,
+      kind       TEXT NOT NULL,
+      detail     JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS audit_events_owner_idx ON audit_events (owner_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS audit_events_kind_idx ON audit_events (kind, created_at DESC);
     ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS locale TEXT;
     ALTER TABLE owner_prefs ADD COLUMN IF NOT EXISTS segment TEXT;
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS trial_reminded_at TIMESTAMPTZ;

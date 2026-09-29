@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, hasDb, ensureSchema } from '@/lib/db';
-import { isAdmin } from '@/lib/admin';
+import { isAdminRequest } from '@/lib/admin';
 import { generateCode, isValidCode } from '@/lib/affiliates';
 
 export const dynamic = 'force-dynamic';
 
 /** Everything the owner's panel shows, in one round trip. */
 export async function GET(req: NextRequest) {
-  if (!isAdmin()) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  if (!(await isAdminRequest())) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   if (!hasDb) return NextResponse.json({ error: 'db_not_configured' }, { status: 503 });
   await ensureSchema();
 
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
 
 /** Remove one waiting-list row, for a test entry or a removal request. */
 export async function DELETE(req: NextRequest) {
-  if (!isAdmin()) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  if (!(await isAdminRequest())) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   if (!hasDb) return NextResponse.json({ error: 'db_not_configured' }, { status: 503 });
   const id = Number(req.nextUrl.searchParams.get('signup'));
   if (!Number.isInteger(id) || id <= 0) return NextResponse.json({ error: 'bad_id' }, { status: 400 });
@@ -75,7 +75,7 @@ export async function DELETE(req: NextRequest) {
 
 /** Admin actions: add a partner, mark commissions paid, grant a plan for a while. */
 export async function POST(req: NextRequest) {
-  if (!isAdmin()) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  if (!(await isAdminRequest())) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   if (!hasDb) return NextResponse.json({ error: 'db_not_configured' }, { status: 503 });
   await ensureSchema();
   const body = await req.json().catch(() => ({}));

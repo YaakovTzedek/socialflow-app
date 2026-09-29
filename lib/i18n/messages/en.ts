@@ -26,6 +26,13 @@ const en = {
     searchPlaceholder: 'Search the log by comment, commenter or keyword',
     searchAria: 'Search the log',
   },
+  owner: {
+    switchToAdmin: "Switch to admin",
+    viewingAs: "You are viewing as {name}",
+    exit: "Exit",
+    readOnly: "View only: actions on this account are disabled.",
+    readOnlyTip: "Disabled while viewing as a customer",
+  },
   landing: {
     navHow: 'How it works', navMcp: 'MCP', navLog: 'Live log', navFaq: 'FAQ',
     pill: 'Comment automation for Facebook and Instagram',

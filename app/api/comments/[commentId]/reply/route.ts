@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { replyToComment } from '@/lib/meta';
 import { requireUserToken, getPageToken } from '@/lib/auth-helpers';
+import { blockIfImpersonating } from '@/lib/impersonation';
 
 // POST /api/comments/:commentId/reply  { pageId, message }  → reply to a comment
 export async function POST(
   req: NextRequest,
   { params }: { params: { commentId: string } }
 ) {
+  const blocked = await blockIfImpersonating('facebook_comment_reply');
+  if (blocked) return blocked;
   const token = await requireUserToken();
   if (!token) {
     return NextResponse.json({ error: 'not_authenticated' }, { status: 401 });

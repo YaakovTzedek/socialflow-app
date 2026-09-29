@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 import { cookies } from 'next/headers';
+import { getRawSession } from './session';
+import { isOwnerId } from './owner';
 
 /**
  * Admin gate for the owner's private panel.
@@ -41,8 +43,26 @@ export function verifyAdminCookie(raw: string | undefined): boolean {
   try { return sameSignature(sig, sign(exp)); } catch { return false; }
 }
 
-export function isAdmin(): boolean {
+/** The code cookie alone. Prefer isAdminRequest(), which also admits the signed-in owner. */
+export function hasAdminCookie(): boolean {
   return verifyAdminCookie(cookies().get(COOKIE)?.value);
+}
+
+/**
+ * The signed-in Facebook user is the SaaS owner (lib/owner.ts). Reads the raw
+ * session, never the impersonated view, so it answers for the real person.
+ */
+export async function isOwnerRequest(): Promise<boolean> {
+  try {
+    const raw = await getRawSession();
+    return !!raw.userAccessToken && isOwnerId(raw.userId);
+  } catch { return false; }
+}
+
+/** Admin area access: the owner's own Facebook session, or the code cookie. */
+export async function isAdminRequest(): Promise<boolean> {
+  if (hasAdminCookie()) return true;
+  return isOwnerRequest();
 }
 
 /** The code typed on the gate. Same one the claim and diagnostics links use. */

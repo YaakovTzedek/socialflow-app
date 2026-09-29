@@ -23,6 +23,13 @@ const de: Messages = {
     searchPlaceholder: 'Protokoll nach Kommentar, Kommentator oder Schlüsselwort durchsuchen',
     searchAria: 'Protokoll durchsuchen',
   },
+  owner: {
+    switchToAdmin: "Zur Verwaltung",
+    viewingAs: "Du siehst die App als {name}",
+    exit: "Beenden",
+    readOnly: "Nur ansehen: Aktionen in diesem Konto sind gesperrt.",
+    readOnlyTip: "Gesperrt, während du als Kunde ansiehst",
+  },
   landing: {
     navHow: 'So funktioniert es', navMcp: 'MCP', navLog: 'Live-Protokoll', navFaq: 'FAQ',
     pill: 'Kommentar-Automatisierung für Facebook und Instagram',

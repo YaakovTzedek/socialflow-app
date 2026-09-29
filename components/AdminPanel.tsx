@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import AdminCustomers from './AdminCustomers';
+import AdminTopBar from './AdminTopBar';
 
 /**
  * The owner's panel. Reads across every account, so it lives behind its own
@@ -30,6 +32,8 @@ interface Data {
 }
 
 const TABS = [
+  { id: 'customers', label: 'לקוחות' },
+  { id: 'impersonation', label: 'יומן צפייה כלקוח' },
   { id: 'beta', label: 'רשימת הבטא' },
   { id: 'delivery', label: 'מסירה ותקלות' },
   { id: 'automations', label: 'אוטומציות' },
@@ -41,10 +45,10 @@ type TabId = typeof TABS[number]['id'];
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
-export default function AdminPanel() {
+export default function AdminPanel({ impersonatingName = null, appHref = '/he/dashboard' }: { impersonatingName?: string | null; appHref?: string }) {
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<TabId>('beta');
+  const [tab, setTab] = useState<TabId>('customers');
   const [q, setQ] = useState('');
 
   async function load() {
@@ -125,12 +129,10 @@ export default function AdminPanel() {
 
   return (
     <div className="sf sfad" dir="rtl">
-      <div className="sfad-bar">
-        <div className="sfad-brand" dir="ltr">Social<span className="sf-grad-text">Flow</span></div>
-        <span className="sfad-badge">אזור ניהול</span>
+      <AdminTopBar impersonatingName={impersonatingName} appHref={appHref}>
         <button type="button" className="sfad-link" onClick={load}>רענון</button>
         <button type="button" className="sfad-link" onClick={signOut}>יציאה</button>
-      </div>
+      </AdminTopBar>
 
       <div className="sfad-kpis">
         <Kpi value={d.signupStats.total} label="נרשמו לבטא" sub={`${d.signupStats.day} ביממה, ${d.signupStats.week} בשבוע`} />
@@ -144,6 +146,9 @@ export default function AdminPanel() {
           <button key={t.id} type="button" className={t.id === tab ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>
         ))}
       </div>
+
+      {tab === 'customers' && <AdminCustomers view="list" />}
+      {tab === 'impersonation' && <AdminCustomers view="log" />}
 
       {tab === 'beta' && (
         <section className="sfad-card">

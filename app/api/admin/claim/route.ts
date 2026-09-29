@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { sql, hasDb, ensureSchema } from '@/lib/db';
 import { PLAN_CATALOG, type PlanId } from '@/lib/plans';
+import { blockIfImpersonating } from '@/lib/impersonation';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,8 @@ export const dynamic = 'force-dynamic';
  * override by hand. Unset ADMIN_CLAIM_CODE to close the door.
  */
 export async function GET(req: NextRequest) {
+  const blocked = await blockIfImpersonating('owner_claim');
+  if (blocked) return blocked;
   const expected = process.env.ADMIN_CLAIM_CODE;
   const code = req.nextUrl.searchParams.get('code') || '';
   if (!expected || code.length !== expected.length || code !== expected) {

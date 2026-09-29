@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { PLAN_ORDER, TRIAL, fmtIls, type PlanId } from '@/lib/plans';
 import { useI18n } from './I18nProvider';
+import { useReadOnly } from './ReadOnlyContext';
 
 /**
  * /billing: current plan + usage, the plan cards, and the checkout (card is
@@ -20,6 +21,7 @@ interface Status {
 
 export default function BillingScreen({ userName }: { userName: string }) {
   const { m, t, date, num, p } = useI18n();
+  const ro = useReadOnly();
   const B = m.billing;
   const [st, setSt] = useState<Status | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -71,7 +73,7 @@ export default function BillingScreen({ userName }: { userName: string }) {
                 : `${sub.interval === 'year' ? B.yearly : B.monthly} ${t(B.invoiceTo, { amount: `${sub.currency === 'USD' ? '$' : '₪'}${num(sub.amount_agorot / 100)}`, email: sub.payer_email || '' })}`}
             </p>
           )}
-          {sub && sub.status !== 'canceled' && st.source !== 'override' && <button type="button" className="sfa-btn sfa-btn-ghost sfa-btn-sm" style={{ marginTop: 10 }} onClick={cancel}>{B.cancelBtn}</button>}
+          {sub && sub.status !== 'canceled' && st.source !== 'override' && <button type="button" className="sfa-btn sfa-btn-ghost sfa-btn-sm" style={{ marginTop: 10 }} onClick={cancel} disabled={ro} title={ro ? m.owner.readOnlyTip : undefined}>{B.cancelBtn}</button>}
         </div>
 
         <div className="sfa-card">
@@ -118,9 +120,9 @@ export default function BillingScreen({ userName }: { userName: string }) {
                   : (
                     <div className="sfa-stack" style={{ gap: 8 }}>
                       {id === TRIAL.plan && interval === 'month' && !trialUsed && (
-                        <button type="button" className="sfa-btn sfa-btn-primary" onClick={() => setCheckout({ plan: id, trial: true })}>{t(B.trialBtn, { trial: trialPrice, price: fmtIls(pl.priceIls) })}</button>
+                        <button type="button" className="sfa-btn sfa-btn-primary" onClick={() => setCheckout({ plan: id, trial: true })} disabled={ro} title={ro ? m.owner.readOnlyTip : undefined}>{t(B.trialBtn, { trial: trialPrice, price: fmtIls(pl.priceIls) })}</button>
                       )}
-                      <button type="button" className={`sfa-btn ${id === TRIAL.plan && interval === 'month' && !trialUsed ? 'sfa-btn-cyan' : 'sfa-btn-primary'}`} onClick={() => setCheckout({ plan: id, trial: false })}>
+                      <button type="button" className={`sfa-btn ${id === TRIAL.plan && interval === 'month' && !trialUsed ? 'sfa-btn-cyan' : 'sfa-btn-primary'}`} onClick={() => setCheckout({ plan: id, trial: false })} disabled={ro} title={ro ? m.owner.readOnlyTip : undefined}>
                         {st.plan_id !== 'free' && PLAN_ORDER.indexOf(id) < PLAN_ORDER.indexOf(st.plan_id) ? B.switchBtn : B.upgradeBtn}
                       </button>
                     </div>

@@ -23,6 +23,13 @@ const hu: Messages = {
     searchPlaceholder: 'Keresés a naplóban hozzászólás, hozzászóló vagy kulcsszó szerint',
     searchAria: 'Keresés a naplóban',
   },
+  owner: {
+    switchToAdmin: "Váltás az adminra",
+    viewingAs: "{name} nézetében vagy",
+    exit: "Kilépés",
+    readOnly: "Csak megtekintés: a fiókban a műveletek le vannak tiltva.",
+    readOnlyTip: "Ügyfélnézetben nem elérhető",
+  },
   landing: {
     navHow: 'Hogyan működik', navMcp: 'MCP', navLog: 'Élő napló', navFaq: 'GYIK',
     pill: 'Hozzászólás-automatizálás Facebookra és Instagramra',

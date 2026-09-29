@@ -1,4 +1,4 @@
-import { getSession } from '@/lib/session';
+import { getSession, isImpersonationToken } from '@/lib/session';
 import { listPages, type FacebookPage } from '@/lib/meta';
 import { sql, hasDb, ensureSchema } from '@/lib/db';
 
@@ -17,6 +17,9 @@ const LIVE_TTL_MS = 5 * 60 * 1000;
 const liveCache = new Map<string, { at: number; pages: Promise<FacebookPage[]> }>();
 
 function listPagesCached(userToken: string, fresh = false): Promise<FacebookPage[]> {
+  // Never list pages from Meta while the owner views a customer: there is no
+  // customer user token, and the owner's own listing must not stand in for it.
+  if (isImpersonationToken(userToken)) return Promise.resolve([]);
   const hit = liveCache.get(userToken);
   if (!fresh && hit && Date.now() - hit.at < LIVE_TTL_MS) return hit.pages;
   const pages = listPages(userToken);
@@ -51,6 +54,9 @@ export async function getPageToken(
       }
     } catch { /* fall through to the live listing */ }
   }
+  // While impersonating, the stored page token (owned by the customer) is the
+  // only source; there is no live fallback.
+  if (isImpersonationToken(userToken)) return null;
   const pages = await listPagesCached(userToken, !!opts.live);
   const page = pages.find((p) => p.id === pageId);
   return page?.access_token ?? null;

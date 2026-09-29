@@ -23,6 +23,13 @@ const fr: Messages = {
     searchPlaceholder: 'Rechercher dans le journal par commentaire, commentateur ou mot-clé',
     searchAria: 'Rechercher dans le journal',
   },
+  owner: {
+    switchToAdmin: "Passer à l'administration",
+    viewingAs: "Vous consultez en tant que {name}",
+    exit: "Quitter",
+    readOnly: "Lecture seule : les actions sur ce compte sont désactivées.",
+    readOnlyTip: "Indisponible en consultation en tant que client",
+  },
   landing: {
     navHow: 'Comment ça marche', navMcp: 'MCP', navLog: 'Journal en direct', navFaq: 'FAQ',
     pill: 'Automatisation des commentaires pour Facebook et Instagram',

@@ -701,3 +701,37 @@ html:not([lang="he"]) .sfa-side-card .sfa-h { font-size: 22px; }
   .sfb-kpi strong, .sfa-stat strong { font-size: 22px; }
   .sfa-tab-lbl { font-size: 10.5px; }
 }
+
+/* ------------------------------------------------------------------ */
+/* Owner tools (29.9.2026): "Switch to admin" and the impersonation    */
+/* banner. The banner sits above everything while the owner views a    */
+/* customer's account, and the shell is pushed down by its height.    */
+/* ------------------------------------------------------------------ */
+.sfa-admin-btn { font-size: 13px; font-weight: 800; color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 999px; background: linear-gradient(90deg, #833AB4, #E1306C); white-space: nowrap; }
+.sfa-admin-btn:hover { filter: brightness(1.1); }
+.sfa-disabled-link { display: inline-block; opacity: .45; cursor: not-allowed; font-weight: 700; }
+.sfb-segments button:disabled, .sf-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.sfa-imp-banner {
+  position: fixed; inset-inline: 0; top: 0; z-index: 70; min-height: 46px;
+  display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;
+  padding: 7px 14px; padding-top: calc(7px + env(safe-area-inset-top));
+  background: repeating-linear-gradient(135deg, #b45309 0 14px, #c2410c 14px 28px);
+  color: #fff; font-size: 14px; box-shadow: 0 6px 20px rgba(0, 0, 0, .45); text-align: center;
+}
+.sfa-imp-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.sfa-imp-text b { font-weight: 800; overflow-wrap: anywhere; }
+.sfa-imp-text small { font-size: 12px; opacity: .92; }
+.sfa-imp-sep { opacity: .8; }
+.sfa-imp-banner button { font-family: inherit; font-size: 14px; font-weight: 800; color: #7c2d12; background: #fff; border: 0; border-radius: 999px; padding: 6px 16px; cursor: pointer; }
+.sfa-imp-banner button:disabled { opacity: .6; cursor: default; }
+.sfa-imp { padding-top: calc(62px + env(safe-area-inset-top)); }
+.sfa-imp .sfa-side { top: calc(62px + env(safe-area-inset-top)); height: calc(100vh - 62px - env(safe-area-inset-top)); }
+.sfa-imp .sfa-top { top: calc(62px + env(safe-area-inset-top)); }
+@media (max-width: 900px) {
+  .sfa-imp-text small { display: none; }
+  .sfa-imp-banner { min-height: 40px; padding-block: 5px; padding-top: calc(5px + env(safe-area-inset-top)); font-size: 13px; }
+  .sfa-imp { padding-top: calc(44px + env(safe-area-inset-top)); }
+  .sfa-imp .sfa-top { top: calc(44px + env(safe-area-inset-top)); }
+  .sfa-imp .sfa-inbox.has-thread .sfa-inbox-thread { top: calc(44px + env(safe-area-inset-top)); height: calc(100dvh - 44px - env(safe-area-inset-top)); padding-top: 0; }
+}

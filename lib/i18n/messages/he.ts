@@ -23,6 +23,13 @@ const he: Messages = {
     searchPlaceholder: 'חיפוש תגובה, מגיב או מילת מפתח ביומן',
     searchAria: 'חיפוש ביומן',
   },
+  owner: {
+    switchToAdmin: "מעבר לניהול",
+    viewingAs: "אתה צופה כ-{name}",
+    exit: "יציאה",
+    readOnly: "צפייה בלבד: פעולות בחשבון הזה חסומות.",
+    readOnlyTip: "לא זמין במצב צפייה כלקוח",
+  },
   landing: {
     navHow: 'איך זה עובד', navMcp: 'MCP', navLog: 'יומן חי', navFaq: 'שאלות נפוצות',
     pill: 'אוטומציה לתגובות בפייסבוק ובאינסטגרם',

@@ -4,6 +4,7 @@ import { hasDb } from '@/lib/db';
 import { getBrain, getSegment, setSegment, getSegmentBenchmark, isSegment } from '@/lib/brain';
 import { getRecommendations, getHistorySummary } from '@/lib/recommend';
 import { ingestOwnerPosts } from '@/lib/ingest';
+import { blockIfImpersonating } from '@/lib/impersonation';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,6 +33,8 @@ export async function GET(req: NextRequest) {
  * and the hourly job keeps it fresh afterwards.
  */
 export async function POST(req: NextRequest) {
+  const blocked = await blockIfImpersonating('brain_update');
+  if (blocked) return blocked;
   const session = await getSession();
   if (!session.userId) return NextResponse.json({ error: 'not_authenticated' }, { status: 401 });
   if (!hasDb) return NextResponse.json({ error: 'db_not_configured' }, { status: 503 });

@@ -2,6 +2,7 @@
 import { LoginLink } from './LoginLink';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useI18n } from './I18nProvider';
+import { ReadOnlyProvider } from './ReadOnlyContext';
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -66,8 +67,21 @@ function Icon({ name, size = 22 }: { name: string; size?: number }) {
 /** Signing out drops this tab's saved copies (the /posts page list), so the next account never sees them. */
 function forget() { try { sessionStorage.clear(); } catch { /* ignore */ } }
 
-export default function AppShell({ userName, title, children }: { userName: string; title: string; children: React.ReactNode }) {
-  const { m, p } = useI18n();
+/** Server-decided owner state (lib/session.ts shellState); never derived on the client. */
+export interface OwnerShellState { isOwner: boolean; impersonatingName: string | null }
+
+export default function AppShell({ userName, title, children, owner }: { userName: string; title: string; children: React.ReactNode; owner?: OwnerShellState }) {
+  const { m, p, t } = useI18n();
+  const isOwner = !!owner?.isOwner;
+  const impersonating = owner?.impersonatingName ?? null;
+  const [exiting, setExiting] = useState(false);
+  async function exitImpersonation() {
+    setExiting(true);
+    try {
+      const d = await fetch('/api/admin/impersonate', { method: 'DELETE' }).then((r) => r.json());
+      location.href = d.redirect || '/he/admin';
+    } catch { setExiting(false); }
+  }
   const pathname = usePathname();
   const router = useRouter();
   const [q, setQ] = useState('');
@@ -110,7 +124,15 @@ export default function AppShell({ userName, title, children }: { userName: stri
   };
 
   return (
-    <div className={`sfa${searchOpen ? ' sfa-searching' : ''}`}>
+    <ReadOnlyProvider value={!!impersonating}>
+    {impersonating && (
+      <div className="sfa-imp-banner" role="alert">
+        <span className="sfa-imp-text"><b>{t(m.owner.viewingAs, { name: impersonating })}</b><small>{m.owner.readOnly}</small></span>
+        <span className="sfa-imp-sep" aria-hidden="true">·</span>
+        <button type="button" onClick={exitImpersonation} disabled={exiting}>{m.owner.exit}</button>
+      </div>
+    )}
+    <div className={`sfa${searchOpen ? ' sfa-searching' : ''}${impersonating ? ' sfa-imp' : ''}`}>
       <aside className="sfa-side">
         <div className="sfa-logo"><Logo /><span className="sfa-wordmark">Social<b>Flow</b></span></div>
         <nav className="sfa-nav">
@@ -124,7 +146,7 @@ export default function AppShell({ userName, title, children }: { userName: stri
           <div className="sfa-side-card">
             <div className="sfa-h">{l1}<br />{l2}</div>
             <p>{m.shell.sideCardText}</p>
-            <LoginLink>{m.common.connectAccount}</LoginLink>
+            {impersonating ? <span className="sfa-disabled-link" title={m.owner.readOnlyTip}>{m.common.connectAccount}</span> : <LoginLink>{m.common.connectAccount}</LoginLink>}
           </div>
           <div className="sfa-status"><span className="sfa-dot" />{m.common.connectedToMeta}</div>
         </div>
@@ -141,6 +163,7 @@ export default function AppShell({ userName, title, children }: { userName: stri
           </form>
           <div className="sfa-spacer" />
           <button type="button" className="sfa-icon-btn sfa-search-toggle" onClick={() => setSearchOpen(true)} aria-label={m.tabs.search}><Icon name="search" /></button>
+          {isOwner && <a href="/he/admin" className="sfa-admin-btn sfa-desk">{m.owner.switchToAdmin}</a>}
           <LanguageSwitcher className="sfa-desk" />
           <div className="sfa-user">
             <div className="sfa-desk"><strong>{userName}</strong><a href="/api/auth/logout" onClick={forget}>{m.common.logout}</a></div>
@@ -183,11 +206,13 @@ export default function AppShell({ userName, title, children }: { userName: stri
               <span>{m.common.language}</span>
               <LanguageSwitcher />
             </div>
-            <LoginLink className="sfa-btn sfa-btn-dashed sfa-sheet-connect">{m.common.connectAnother}</LoginLink>
+            {isOwner && <a href="/he/admin" className="sfa-btn sfa-btn-dashed sfa-sheet-connect">{m.owner.switchToAdmin}</a>}
+            {!impersonating && <LoginLink className="sfa-btn sfa-btn-dashed sfa-sheet-connect">{m.common.connectAnother}</LoginLink>}
             <a href="/api/auth/logout" className="sfa-sheet-logout" onClick={forget}><Icon name="logout" />{m.common.logout}</a>
           </div>
         </div>
       )}
     </div>
+    </ReadOnlyProvider>
   );
 }

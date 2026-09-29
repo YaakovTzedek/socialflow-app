@@ -563,3 +563,50 @@ html:not([lang="he"]) .sfp-title { font-size: clamp(30px, 4.2vw, 48px); line-hei
 .sfa-shot { margin: 18px 0 22px; }
 .sfa-shot img { display: block; width: 100%; height: auto; border-radius: 14px; border: 1px solid var(--line); background: #140c1c; }
 .sfa-shot figcaption { font-size: 14px; line-height: 1.6; color: var(--faint); margin-block-start: 8px; }
+
+/* Admin: customers, customer detail, timeline (29.9.2026) */
+.sfad-status.warn { background: rgba(252, 175, 69, .14); border: 1px solid rgba(252, 175, 69, .5); color: #FFC97A; }
+.sfad-imp-note { margin-block-start: 12px; padding: 10px 14px; border-radius: 12px; background: rgba(194, 65, 12, .18); border: 1px solid rgba(234, 88, 12, .55); color: #FFD2B3; font-size: 14px; }
+.sfad-imp-note a { color: #fff; font-weight: 700; }
+.sfad-back { margin: 14px 0 6px; font-size: 14px; }
+.sfad-back a { color: #FF8FB0; font-weight: 700; }
+.sfad-filters { display: flex; gap: 10px; flex-wrap: wrap; margin-block-end: 14px; }
+.sfad-filters label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--dim); font-weight: 700; }
+.sfad-filters select { font-family: inherit; font-size: 14px; color: var(--text); background: rgba(10, 6, 16, .6); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; max-width: 100%; }
+.sfad-cust-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 14px; }
+.sfad-cust { min-width: 0; background: rgba(10, 6, 16, .4); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.sfad-cust.on { border-color: rgba(234, 88, 12, .8); }
+.sfad-cust header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.sfad-cust-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.sfad-cust-name a { color: #fff; text-decoration: none; font-size: 16px; overflow-wrap: anywhere; }
+.sfad-cust-name a:hover { color: #FF8FB0; }
+.sfad-cust-sub { display: flex; flex-direction: column; gap: 2px; }
+.sfad-cust-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.sfad-cust-stats div { display: flex; flex-direction: column; align-items: center; background: rgba(255, 255, 255, .04); border-radius: 10px; padding: 7px 4px; text-align: center; }
+.sfad-cust-stats b { color: #fff; font-size: 17px; font-variant-numeric: tabular-nums; }
+.sfad-cust-stats small { font-size: 11px; color: var(--faint); line-height: 1.25; }
+.sfad-cust-act { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sfad-cust-act th { font-size: 11px; color: var(--faint); font-weight: 700; text-align: center; padding-block-end: 4px; }
+.sfad-cust-act td { color: var(--muted); padding-block: 3px; border-block-start: 1px solid var(--line); }
+.sfad-cust-act td + td { text-align: center; color: #fff; font-variant-numeric: tabular-nums; width: 64px; }
+.sfad-cust .sfad-chips { margin: 0; }
+.sfad-cust footer { display: flex; gap: 8px; flex-wrap: wrap; margin-block-start: auto; }
+.sfad-cust footer .sf-btn { flex: 1; justify-content: center; }
+.sfad-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.sfad-timeline li { display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 12px; padding: 10px 0 10px 0; padding-inline-start: 14px; border-block-start: 1px solid var(--line); border-inline-start: 3px solid rgba(255, 255, 255, .12); }
+.sfad-timeline li.good { border-inline-start-color: rgba(34, 197, 94, .7); }
+.sfad-timeline li.warn { border-inline-start-color: rgba(252, 175, 69, .8); }
+.sfad-timeline li.bad { border-inline-start-color: rgba(239, 68, 68, .85); }
+.sfad-timeline time { font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.sfad-timeline b { display: block; color: #fff; font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+.sfad-timeline small { display: block; color: var(--dim); font-size: 13px; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .sfad-timeline li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .sfad-mini { gap: 8px 14px; font-size: 14px; }
+  .sfad-mini span { overflow-wrap: anywhere; }
+  .sfad-cust-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sfad-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .sfad-kpi { padding: 12px 14px; }
+  .sfad-kpi strong { font-size: 24px; }
+  .sfad-search { min-width: 0; max-width: none; flex-basis: 100%; }
+}

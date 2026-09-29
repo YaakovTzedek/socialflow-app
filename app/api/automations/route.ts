@@ -5,6 +5,8 @@ import { getSession } from '@/lib/session';
 import { requireUserToken, getPageToken } from '@/lib/auth-helpers';
 import { listPages, getPostsInfoCached, type PostInfo } from '@/lib/meta';
 import { automationActivationBlock, accountConnectBlock } from '@/lib/entitlements';
+import { blockIfImpersonating } from '@/lib/impersonation';
+import { recordEvent } from '@/lib/audit';
 
 // GET /api/automations → list the current user's automations
 export async function GET() {
@@ -77,6 +79,8 @@ export async function GET() {
 
 // POST /api/automations → create an automation
 export async function POST(req: NextRequest) {
+  const blocked = await blockIfImpersonating('automation_create');
+  if (blocked) return blocked;
   if (!hasDb) {
     return NextResponse.json({ error: 'db_not_configured' }, { status: 503 });
   }
@@ -168,6 +172,7 @@ export async function POST(req: NextRequest) {
       )
     `;
 
+    await recordEvent(session.userId, 'automation_created', { id, name, page: page.name ?? null, platform, status });
     return NextResponse.json({ success: true, id });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

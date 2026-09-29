@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useI18n } from './I18nProvider';
+import { useReadOnly } from './ReadOnlyContext';
 
 export interface NormalizedPost {
   id: string;
@@ -26,6 +27,7 @@ type Platform = 'facebook' | 'instagram';
 
 export default function PostCard({ post, pageId, platform }: { post: NormalizedPost; pageId: string; platform: Platform }) {
   const { m, t, dateTime } = useI18n();
+  const ro = useReadOnly();
   const P = m.posts;
   const formatDate = (iso?: string) => dateTime(iso, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   const [expanded, setExpanded] = useState(false);
@@ -110,7 +112,7 @@ export default function PostCard({ post, pageId, platform }: { post: NormalizedP
           </div>
           <div className="sfa-inline-form" style={{ marginTop: 12 }}>
             <input className="sfa-input" value={newComment} onChange={(e) => setNewComment(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submitComment()} placeholder={P.newComment} />
-            <button type="button" className="sfa-btn sfa-btn-primary sfa-btn-sm" onClick={submitComment} disabled={posting || !newComment.trim()}>{posting ? '…' : P.publish}</button>
+            <button type="button" className="sfa-btn sfa-btn-primary sfa-btn-sm" onClick={submitComment} disabled={ro || posting || !newComment.trim()} title={ro ? m.owner.readOnlyTip : undefined}>{posting ? '…' : P.publish}</button>
           </div>
         </div>
       </div>
@@ -130,7 +132,7 @@ export default function PostCard({ post, pageId, platform }: { post: NormalizedP
                 {replyingTo === c.id && (
                   <div className="sfa-inline-form" style={{ marginTop: 8 }}>
                     <input className="sfa-input" value={replyText} onChange={(e) => setReplyText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submitReply(c.id)} placeholder={P.replyPlaceholder} autoFocus />
-                    <button type="button" className="sfa-btn sfa-btn-primary sfa-btn-sm" onClick={() => submitReply(c.id)} disabled={posting || !replyText.trim()}>{P.send}</button>
+                    <button type="button" className="sfa-btn sfa-btn-primary sfa-btn-sm" onClick={() => submitReply(c.id)} disabled={ro || posting || !replyText.trim()} title={ro ? m.owner.readOnlyTip : undefined}>{P.send}</button>
                   </div>
                 )}
               </div>

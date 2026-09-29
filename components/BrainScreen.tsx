@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useI18n } from './I18nProvider';
+import { useReadOnly } from './ReadOnlyContext';
 
 /**
  * Brain: what this account has learned from its own history, plus what the
@@ -48,6 +49,7 @@ function localise(vars: Record<string, string | number>, B: any): Record<string,
 
 export default function BrainScreen() {
   const { m, t, num } = useI18n();
+  const ro = useReadOnly();
   const B = m.brain;
   const [days, setDays] = useState(30);
   const [data, setData] = useState<Data | null>(null);
@@ -156,7 +158,7 @@ export default function BrainScreen() {
           ) : (
             <div className="sfb-history-line">{B.historyNone}</div>
           )}
-          <button type="button" className="sf-btn sf-btn-ghost sf-btn-sm" onClick={pullHistory} disabled={pulling}>
+          <button type="button" className="sf-btn sf-btn-ghost sf-btn-sm" onClick={pullHistory} disabled={ro || pulling} title={ro ? m.owner.readOnlyTip : undefined}>
             {pulling ? B.historyPulling : B.historyPull}
           </button>
         </div>
@@ -182,7 +184,7 @@ export default function BrainScreen() {
         <div className="sfa-sub" style={{ marginBlockEnd: 12 }}>{B.segmentHint}</div>
         <div className="sfb-segments">
           {(Object.keys(B.segments) as string[]).map((key) => (
-            <button key={key} type="button" className={data.segment === key ? 'on' : ''} onClick={() => pickSegment(key)}>
+            <button key={key} type="button" className={data.segment === key ? 'on' : ''} onClick={() => pickSegment(key)} disabled={ro} title={ro ? m.owner.readOnlyTip : undefined}>
               {(B.segments as Record<string, string>)[key]}
             </button>
           ))}

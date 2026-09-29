@@ -5,7 +5,8 @@ import {
   getMe,
   listPages,
 } from '@/lib/meta';
-import { getSession } from '@/lib/session';
+import { getRawSession } from '@/lib/session';
+import { recordLogin, recordEvent } from '@/lib/audit';
 import { getBaseUrl, getRedirectUri } from '@/lib/url';
 import { sql, hasDb, ensureSchema } from '@/lib/db';
 import { isLocale, localePath, type Locale } from '@/lib/i18n/config';
@@ -50,12 +51,17 @@ export async function GET(req: NextRequest) {
     const me = await getMe(long.access_token);
 
     // 4. Persist in the encrypted session cookie
-    const session = await getSession();
+    const session = await getRawSession();
+    // A fresh Facebook login always ends any "view as customer" mode.
+    const endedImpersonation = session.impersonate;
+    delete session.impersonate;
     session.userAccessToken = long.access_token;
     session.userId = me.id;
     session.userName = me.name;
     session.tokenExpiresAt = Date.now() + (long.expires_in ?? 5184000) * 1000;
     await session.save();
+    if (endedImpersonation?.id) await recordEvent(endedImpersonation.id, 'impersonation_stop', { reason: 'login', seconds: Math.round((Date.now() - endedImpersonation.startedAt) / 1000) }, me.id);
+    await recordLogin(me.id, me.name || null);
 
     // Store a page token for every page the user just approved.
     //

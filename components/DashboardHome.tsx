@@ -1,6 +1,7 @@
 'use client';
 import { LoginLink } from './LoginLink';
 import { useI18n } from './I18nProvider';
+import { useReadOnly } from './ReadOnlyContext';
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -21,6 +22,7 @@ function pathFor(vals: number[], w: number, h: number, max: number) {
 
 export default function DashboardHome({ userName }: { userName: string }) {
   const { m, t, p, dateTime } = useI18n();
+  const ro = useReadOnly();
   const D = m.dashboard;
   const [pages, setPages] = useState<Page[]>([]);
   const [autos, setAutos] = useState<Automation[]>([]);
@@ -166,7 +168,7 @@ export default function DashboardHome({ userName }: { userName: string }) {
                   )}
                 </div>
               ))}
-              <LoginLink className="sfa-btn sfa-btn-dashed sfa-btn-sm">{m.common.connectAnother}</LoginLink>
+              {!ro && <LoginLink className="sfa-btn sfa-btn-dashed sfa-btn-sm">{m.common.connectAnother}</LoginLink>}
             </div>
           </div>
         </div>

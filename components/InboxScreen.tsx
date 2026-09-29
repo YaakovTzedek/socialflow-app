@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { initialsOf } from './DashboardHome';
 import { useI18n } from './I18nProvider';
+import { useReadOnly } from './ReadOnlyContext';
 
 /**
  * Instagram DM inbox: account picker, conversation list and thread view with a
@@ -21,6 +22,7 @@ const WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export default function InboxScreen() {
   const { m, t, dateTime } = useI18n();
+  const ro = useReadOnly();
   const I = m.inbox;
   const [pages, setPages] = useState<Page[]>([]);
   const [pagesLoading, setPagesLoading] = useState(true);
@@ -193,7 +195,7 @@ export default function InboxScreen() {
                   <div className="row">
                     <textarea className="sfa-textarea" value={text} maxLength={1000} onChange={(e) => setText(e.target.value)} placeholder={I.placeholder} disabled={!canReply || sending || threadLoading}
                       onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); } }} />
-                    <button type="button" className="sfa-btn sfa-btn-primary" onClick={send} disabled={!canReply || sending || !text.trim()}>{sending ? I.sending : I.send}</button>
+                    <button type="button" className="sfa-btn sfa-btn-primary" onClick={send} disabled={ro || !canReply || sending || !text.trim()} title={ro ? m.owner.readOnlyTip : undefined}>{sending ? I.sending : I.send}</button>
                   </div>
                 </div>
               </>

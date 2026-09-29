@@ -5,6 +5,7 @@
 import { sql, ensureSchema } from './db';
 import { listPages, type IgMessage } from './meta';
 import { requireUserToken } from './auth-helpers';
+import { isImpersonationToken } from './session';
 
 /** Meta only accepts a reply within 24 hours of the user's last message. */
 export const REPLY_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -23,7 +24,8 @@ export async function resolveOwnedPage(ownerId: string, pageId: string): Promise
     WHERE page_id = ${pageId} AND owner_id = ${ownerId} LIMIT 1`;
   if (row) return row as unknown as OwnedPage;
   const userToken = await requireUserToken();
-  if (!userToken) return null;
+  // Viewing as a customer: stored pages only, never heal from the owner's token.
+  if (!userToken || isImpersonationToken(userToken)) return null;
   const page = (await listPages(userToken)).find((p) => p.id === pageId);
   if (!page?.access_token) return null;
   const igId = page.instagram_business_account?.id ?? null;
