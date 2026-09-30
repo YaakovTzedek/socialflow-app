@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   if (!hasDb) return NextResponse.json({ error: 'no_db' });
   await ensureSchema();
   const rows = await sql!`
-    SELECT id, name, platform, post_id, keywords, public_replies,
+    SELECT id, name, platform, page_id, ig_id, owner_id, post_id, keywords, public_replies, dm_link,
            dm_enabled, dm_message, status, trigger_count, created_at
     FROM automations ORDER BY created_at DESC`;
   return NextResponse.json({ automations: rows });
