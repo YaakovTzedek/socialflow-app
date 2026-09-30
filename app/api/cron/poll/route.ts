@@ -348,6 +348,7 @@ export async function GET(req: NextRequest) {
   try { const [row] = await sql!`SELECT value FROM poll_state WHERE key = 'rest_cursor'`; cursor = Number(row?.value) || 0; } catch { /* first run */ }
   const offset = rest.length ? cursor % rest.length : 0;
   const reached = new Set<string>();
+  let cursorInfo: any = { from: offset };
   const automations = [...fresh, ...rest.slice(offset), ...rest.slice(0, offset)];
   const summary: any[] = [];
   const debugComments: any[] = [];
@@ -607,7 +608,9 @@ export async function GET(req: NextRequest) {
       let done = 0;
       while (done < order.length && reached.has(String(order[done].id))) done++;
       const next = (offset + Math.max(done, 1)) % rest.length;
-      try { await sql!`INSERT INTO poll_state (key, value, updated_at) VALUES ('rest_cursor', ${next}, now()) ON CONFLICT (key) DO UPDATE SET value = ${next}, updated_at = now()`; } catch { /* next run starts over */ }
+      cursorInfo = { from: offset, reached: done, next, of: rest.length };
+      try { await sql!`INSERT INTO poll_state (key, value, updated_at) VALUES ('rest_cursor', ${next}, now()) ON CONFLICT (key) DO UPDATE SET value = ${next}, updated_at = now()`; }
+      catch (e: any) { cursorInfo.error = e.message; }
     }
   }
 
@@ -622,6 +625,7 @@ export async function GET(req: NextRequest) {
     ran_at: new Date().toISOString(),
     took_ms: Date.now() - started,
     dm_retry: retry,
+    cursor: cursorInfo,
     summary,
     ...(storySummary.length ? { story_replies: storySummary } : {}),
     ...(debug ? { debug_comments: debugComments } : {}),
