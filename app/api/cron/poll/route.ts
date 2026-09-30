@@ -341,7 +341,11 @@ export async function GET(req: NextRequest) {
   const isFresh = (a: any) => !!a.created_at && started - Date.parse(a.created_at) < FRESH_MS;
   const fresh = commentAutos.filter(isFresh).sort((x: any, y: any) => Date.parse(y.created_at) - Date.parse(x.created_at));
   const rest = commentAutos.filter((a: any) => !isFresh(a));
-  const offset = rest.length ? Math.floor(started / 180_000) % rest.length : 0;
+  // 30.9.2026: the start used to move by ONE automation every 3 minutes, so with ~100 skipped per run an older
+  // reel waited hours for its turn (a "סוכן" comment on an older reel sat unanswered). Now each run starts
+  // about as far along as a run gets through (~90 automations), so every automation is read every few runs.
+  const STEP = 90;
+  const offset = rest.length ? (Math.floor(started / 150_000) * STEP) % rest.length : 0;
   const automations = [...fresh, ...rest.slice(offset), ...rest.slice(0, offset)];
   const summary: any[] = [];
   const debugComments: any[] = [];
