@@ -602,6 +602,10 @@ export async function GET(req: NextRequest) {
     }
   }
   // ?stories=1 runs only the story/inbox pass (a quick check that does not wait for 100+ comment automations).
+  // Recover the messages Meta refused for a transient reason on an earlier pass. Runs FIRST (30.9.2026): at the end
+  // it never ran, because the comment pass always uses the whole budget, so a failed DM was never retried.
+  let retry = { retried: 0, recovered: 0 };
+  try { retry = await retryFailedDms(brandingLine); } catch { /* never fail the poll over the retry pass */ }
   if (req.nextUrl.searchParams.get('stories') !== '1') {
     await mapPool(automations, 4, processAutomation);
     // Move the cursor past the older automations this run reached (in rotation order, stopping at the first miss).
@@ -617,11 +621,6 @@ export async function GET(req: NextRequest) {
   }
 
 
-  // Recover the messages Meta refused for a transient reason on an earlier pass.
-  let retry = { retried: 0, recovered: 0 };
-  if (Date.now() - started < TIME_BUDGET_MS) {
-    try { retry = await retryFailedDms(brandingLine); } catch { /* never fail the poll over the retry pass */ }
-  }
 
   return NextResponse.json({
     ran_at: new Date().toISOString(),
