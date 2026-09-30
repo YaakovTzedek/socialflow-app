@@ -341,11 +341,13 @@ export async function GET(req: NextRequest) {
   const isFresh = (a: any) => !!a.created_at && started - Date.parse(a.created_at) < FRESH_MS;
   const fresh = commentAutos.filter(isFresh).sort((x: any, y: any) => Date.parse(y.created_at) - Date.parse(x.created_at));
   const rest = commentAutos.filter((a: any) => !isFresh(a));
-  // 30.9.2026: the start used to move by ONE automation every 3 minutes, so with ~100 skipped per run an older
-  // reel waited hours for its turn (a "סוכן" comment on an older reel sat unanswered). Now each run starts
-  // about as far along as a run gets through (~90 automations), so every automation is read every few runs.
-  const STEP = 90;
-  const offset = rest.length ? (Math.floor(started / 150_000) * STEP) % rest.length : 0;
+  // 30.9.2026: the start used to move by ONE automation every 3 minutes, so with 100+ skipped per run an older
+  // reel waited hours for its turn (a "סוכן" comment on an older reel sat unanswered). Now a stored cursor
+  // continues exactly where the previous run stopped, so every automation is read in turn, whatever the pace.
+  let cursor = 0;
+  try { const [row] = await sql!`SELECT value FROM poll_state WHERE key = 'rest_cursor'`; cursor = Number(row?.value) || 0; } catch { /* first run */ }
+  const offset = rest.length ? cursor % rest.length : 0;
+  const reached = new Set<string>();
   const automations = [...fresh, ...rest.slice(offset), ...rest.slice(0, offset)];
   const summary: any[] = [];
   const debugComments: any[] = [];
@@ -376,6 +378,7 @@ export async function GET(req: NextRequest) {
       summary.push({ automation: a.name, skipped: 'time_budget' });
       return;
     }
+    reached.add(String(a.id));
     if (exhausted.has(a.owner_id)) {
       summary.push({ automation: a.name, skipped: 'dm_quota' });
       return;
@@ -596,7 +599,17 @@ export async function GET(req: NextRequest) {
     }
   }
   // ?stories=1 runs only the story/inbox pass (a quick check that does not wait for 100+ comment automations).
-  if (req.nextUrl.searchParams.get('stories') !== '1') await mapPool(automations, 4, processAutomation);
+  if (req.nextUrl.searchParams.get('stories') !== '1') {
+    await mapPool(automations, 4, processAutomation);
+    // Move the cursor past the older automations this run reached (in rotation order, stopping at the first miss).
+    if (rest.length) {
+      const order = [...rest.slice(offset), ...rest.slice(0, offset)];
+      let done = 0;
+      while (done < order.length && reached.has(String(order[done].id))) done++;
+      const next = (offset + Math.max(done, 1)) % rest.length;
+      try { await sql!`INSERT INTO poll_state (key, value, updated_at) VALUES ('rest_cursor', ${next}, now()) ON CONFLICT (key) DO UPDATE SET value = ${next}, updated_at = now()`; } catch { /* next run starts over */ }
+    }
+  }
 
 
   // Recover the messages Meta refused for a transient reason on an earlier pass.

@@ -263,6 +263,11 @@ export async function ensureSchema() {
       source     TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS poll_state (
+      key        TEXT PRIMARY KEY,
+      value      INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
     CREATE TABLE IF NOT EXISTS owner_prefs (
       owner_id   TEXT PRIMARY KEY,
       locale     TEXT NOT NULL DEFAULT 'en',
