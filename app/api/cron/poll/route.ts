@@ -337,7 +337,9 @@ export async function GET(req: NextRequest) {
   // Fresh automations go first on every run (30.9.2026): a new reel gets nearly all its comments in its
   // first days, and with 240+ automations a 45s budget left a brand new one waiting for several runs
   // (the DevDay reel's first DOTS comments sat unanswered). Older ones keep rotating behind them.
-  const FRESH_MS = 7 * 24 * 3600_000;
+  // 30.9.2026: 7 days made ~210 of ~250 automations "fresh", so the older part of that list never fit the
+  // budget and was never read. Only the last 48 hours jump the queue; everything else rotates on the cursor.
+  const FRESH_MS = 48 * 3600_000;
   const isFresh = (a: any) => !!a.created_at && started - Date.parse(a.created_at) < FRESH_MS;
   const fresh = commentAutos.filter(isFresh).sort((x: any, y: any) => Date.parse(y.created_at) - Date.parse(x.created_at));
   const rest = commentAutos.filter((a: any) => !isFresh(a));
