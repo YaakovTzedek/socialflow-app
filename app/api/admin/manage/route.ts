@@ -22,7 +22,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   if (!hasDb) return NextResponse.json({ error: 'no_db' });
   await ensureSchema();
-  const { action, id, dm_message, public_replies } = await req.json();
+  const { action, id, dm_message, public_replies, page_id, from_page, to_page } = await req.json();
+  // 30.9.2026: automations created with the old Reelsi page id failed every DM (token of another page). Move them.
+  if (action === 'move_page' && from_page && to_page) {
+    const rows = await sql!`UPDATE automations SET page_id = ${String(to_page)} WHERE page_id = ${String(from_page)} RETURNING id, name`;
+    return NextResponse.json({ ok: true, moved: rows });
+  }
   if (action === 'delete') {
     await sql!`DELETE FROM automations WHERE id = ${id}`;
     await sql!`DELETE FROM processed_comments WHERE automation_id = ${id}`;
