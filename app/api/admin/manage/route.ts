@@ -22,11 +22,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   if (!hasDb) return NextResponse.json({ error: 'no_db' });
   await ensureSchema();
-  const { action, id, dm_message, public_replies, page_id, from_page, to_page } = await req.json();
+  const { action, id, dm_message, public_replies, page_id, from_page, to_page, automation_id, commenters } = await req.json();
   // 30.9.2026: automations created with the old Reelsi page id failed every DM (token of another page). Move them.
   if (action === 'move_page' && from_page && to_page) {
     const rows = await sql!`UPDATE automations SET page_id = ${String(to_page)} WHERE page_id = ${String(from_page)} RETURNING id, name`;
     return NextResponse.json({ ok: true, moved: rows });
+  }
+  // Queue failed DMs of given commenters for one more retry on the next poll (after fixing their automation).
+  if (action === 'retry_dm' && automation_id && Array.isArray(commenters) && commenters.length) {
+    const rows = await sql!`UPDATE trigger_logs SET dm_attempts = 0, dm_retryable = true, created_at = now()
+      WHERE automation_id = ${String(automation_id)} AND dm_status = 'failed' AND commenter_name = ANY(${commenters.map(String)})
+      RETURNING id, commenter_name`;
+    return NextResponse.json({ ok: true, queued: rows });
   }
   if (action === 'delete') {
     await sql!`DELETE FROM automations WHERE id = ${id}`;
