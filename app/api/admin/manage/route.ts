@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   if (!hasDb) return NextResponse.json({ error: 'no_db' });
   await ensureSchema();
-  const { action, id, dm_message, public_replies, page_id, from_page, to_page, automation_id, commenters } = await req.json();
+  const { action, id, dm_message, public_replies, page_id, from_page, to_page, automation_id, commenters, comment_id, comment_time } = await req.json();
   // 30.9.2026: automations created with the old Reelsi page id failed every DM (token of another page). Move them.
   if (action === 'move_page' && from_page && to_page) {
     const rows = await sql!`UPDATE automations SET page_id = ${String(to_page)} WHERE page_id = ${String(from_page)} RETURNING id, name`;
@@ -34,6 +34,14 @@ export async function POST(req: NextRequest) {
       WHERE automation_id = ${String(automation_id)} AND dm_status = 'failed' AND commenter_name = ANY(${commenters.map(String)})
       RETURNING id, commenter_name`;
     return NextResponse.json({ ok: true, queued: rows });
+  }
+  // 1.10.2026: an automation added AFTER comments already came in (an ad post) baselines them on purpose.
+  // Re-open exactly one comment: move the automation's start to just before it and forget the baseline row.
+  if (action === 'reopen_comment' && automation_id && comment_id && comment_time) {
+    const t = new Date(Date.parse(String(comment_time)) - 60_000).toISOString();
+    const a = await sql!`UPDATE automations SET created_at = ${t} WHERE id = ${String(automation_id)} RETURNING id, name, created_at`;
+    const d = await sql!`DELETE FROM processed_comments WHERE automation_id = ${String(automation_id)} AND comment_id = ${String(comment_id)} RETURNING comment_id`;
+    return NextResponse.json({ ok: true, automation: a, unbaselined: d });
   }
   if (action === 'delete') {
     await sql!`DELETE FROM automations WHERE id = ${id}`;
