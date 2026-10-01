@@ -148,7 +148,14 @@ export function getOAuthUrl(redirectUri: string, state: string): string {
   const url = new URL(`https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth`);
   url.searchParams.set('client_id', META_APP_ID);
   url.searchParams.set('redirect_uri', redirectUri);
-  url.searchParams.set('scope', SCOPES);
+  // Business-type apps can drive the dialog from a Facebook Login for Business
+  // configuration (its permission list lives in the Meta dashboard). Only the
+  // App Review deployment sets META_LOGIN_CONFIG_ID; production keeps `scope`.
+  if (process.env.META_LOGIN_CONFIG_ID) {
+    url.searchParams.set('config_id', process.env.META_LOGIN_CONFIG_ID);
+  } else {
+    url.searchParams.set('scope', SCOPES);
+  }
   url.searchParams.set('state', state);
   url.searchParams.set('response_type', 'code');
   return url.toString();
