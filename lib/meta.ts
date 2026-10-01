@@ -35,13 +35,19 @@ const REQUIRED_SCOPES = [
   'instagram_manage_insights', // reel metrics (views/reach/watch time) for ranking hooks
   'business_management',
 ];
-// Merge any env-provided scopes with the required set (env can't drop required ones).
+// Merge any env-provided scopes with the required set.
+// META_SCOPES_EXCLUDE drops scopes from the login dialog. Only for the App Review
+// deployment (app 1258230962812630), so the consent screen in the screencast lists
+// exactly the permissions under review. Unset in production: nothing changes there.
+const SCOPES_EXCLUDE = new Set(
+  (process.env.META_SCOPES_EXCLUDE || '').split(',').map((s) => s.trim()).filter(Boolean)
+);
 export const SCOPES = Array.from(
   new Set([
     ...(process.env.META_SCOPES ? process.env.META_SCOPES.split(',') : []),
     ...REQUIRED_SCOPES,
   ])
-).join(',');
+).filter((s) => !SCOPES_EXCLUDE.has(s)).join(',');
 
 export interface InstagramAccount {
   id: string;
