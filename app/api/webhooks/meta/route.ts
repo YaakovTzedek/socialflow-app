@@ -1,3 +1,4 @@
+import { fillVars } from '@/lib/template';
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, ensureSchema, hasDb } from '@/lib/db';
 import {
@@ -174,10 +175,10 @@ async function processEvents(body: any) {
       // Public reply
       if (a.public_reply_enabled && a.public_replies?.length > 0) {
         try {
-          const reply =
-            a.public_replies[
-              Math.floor(Math.random() * a.public_replies.length)
-            ];
+          const reply = fillVars(
+            a.public_replies[Math.floor(Math.random() * a.public_replies.length)] || '',
+            { name: ev.fromName, keyword: matched }
+          );
           if (reply?.trim()) {
             if (ev.platform === 'facebook') {
               await commentOnPost(ev.commentId, reply, pageToken);
@@ -195,9 +196,10 @@ async function processEvents(body: any) {
       // DM (private reply) — Facebook only via comment_id
       if (a.dm_enabled && a.dm_message && ev.platform === 'facebook') {
         try {
-          const msg = a.dm_link
-            ? `${a.dm_message}\n\n${a.dm_link}`
-            : a.dm_message;
+          const msg = fillVars(
+            a.dm_link ? `${a.dm_message}\n\n${a.dm_link}` : a.dm_message,
+            { name: ev.fromName, keyword: matched }
+          );
           await sendPrivateReply(ev.commentId, msg, pageToken);
           dmStatus = 'sent';
         } catch (e: any) {

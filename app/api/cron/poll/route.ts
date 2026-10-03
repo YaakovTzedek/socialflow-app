@@ -1,3 +1,4 @@
+import { fillVars, type TemplateVars } from '@/lib/template';
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, ensureSchema, hasDb } from '@/lib/db';
 import { quotaExhaustedOwners, getEntitlement } from '@/lib/entitlements';
@@ -37,8 +38,8 @@ const MAX_DM_ATTEMPTS = 4;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** The message body, identical on the first attempt and on every retry. */
-function dmTextFor(a: any, branding: string | null): string {
-  let msg = a.dm_link ? `${a.dm_message}\n\n${a.dm_link}` : a.dm_message;
+function dmTextFor(a: any, branding: string | null, vars: TemplateVars = {}): string {
+  let msg = fillVars(a.dm_link ? `${a.dm_message}\n\n${a.dm_link}` : a.dm_message, vars);
   if (branding) msg += '\n\n' + branding;
   return msg;
 }
@@ -57,7 +58,7 @@ async function retryFailedDms(brandingLine: (owner: string) => Promise<string | 
   const rows = await sql!`
     SELECT l.id, l.comment_id, l.platform, a.id AS automation_id, a.owner_id, a.page_id,
            a.dm_message, a.dm_link, a.once_per_user, a.post_scope, l.commenter_id, l.dm_attempts,
-           t.access_token, t.ig_id
+           l.commenter_name, l.matched_keyword, t.access_token, t.ig_id, t.page_name
     FROM trigger_logs l
     JOIN automations a ON a.id = l.automation_id
     JOIN page_tokens t ON t.page_id = a.page_id AND t.owner_id = a.owner_id
@@ -69,7 +70,7 @@ async function retryFailedDms(brandingLine: (owner: string) => Promise<string | 
 
   let recovered = 0;
   for (const r of rows as any[]) {
-    const msg = dmTextFor(r, await brandingLine(r.owner_id));
+    const msg = dmTextFor(r, await brandingLine(r.owner_id), { name: r.commenter_name, keyword: r.matched_keyword, page: r.page_name });
     try {
       // A story reply is answered as a plain DM to the sender (comment_id holds
       // the message id there, which private replies cannot target).
@@ -163,13 +164,14 @@ async function pollStoryReplies(opts: {
       return;
     }
     try {
-      const [tokenRow] = await sql!`SELECT access_token, ig_id FROM page_tokens WHERE page_id = ${pageId} LIMIT 1`;
+      const [tokenRow] = await sql!`SELECT access_token, ig_id, page_name FROM page_tokens WHERE page_id = ${pageId} LIMIT 1`;
       if (!tokenRow) {
         summary.push({ story_page: pageId, skipped: 'no_page_token' });
         return;
       }
       const pageToken = tokenRow.access_token as string;
       const igId = (tokenRow.ig_id as string | null) || null;
+      const pageName = (tokenRow.page_name as string | null) || null;
       // Without our IG id we cannot tell their messages from ours.
       if (!igId) {
         summary.push({ story_page: pageId, skipped: 'no_instagram' });
@@ -250,7 +252,7 @@ async function pollStoryReplies(opts: {
             if (already.length > 0) {
               dmStatus = 'skipped_duplicate';
             } else {
-              const out = dmTextFor(a, await brandingLine(a.owner_id));
+              const out = dmTextFor(a, await brandingLine(a.owner_id), { name: msg.from?.username || msg.from?.name, keyword: kw, page: pageName });
               try {
                 const sent = await sendInstagramMessage(senderId, out, pageToken);
                 dmStatus = 'sent';
@@ -372,7 +374,7 @@ export async function GET(req: NextRequest) {
 
   // Per-run caches: page tokens and our own IG username (to spot threads we
   // already answered, e.g. before a database migration wiped the dedupe table).
-  const tokenCache = new Map<string, { access_token: string; ig_id: string | null }>();
+  const tokenCache = new Map<string, { access_token: string; ig_id: string | null; page_name: string | null }>();
   // Owners whose Facebook session was invalidated this run (error 190): alerted once after the pass.
   const brokenOwners = new Map<string, string>();
   const usernameCache = new Map<string, string>();
@@ -392,8 +394,8 @@ export async function GET(req: NextRequest) {
     let tokenRow = tokenCache.get(a.page_id);
     if (!tokenRow) {
       const row = (
-        await sql!`SELECT access_token, ig_id FROM page_tokens WHERE page_id = ${a.page_id} LIMIT 1`
-      )[0] as { access_token: string; ig_id: string | null } | undefined;
+        await sql!`SELECT access_token, ig_id, page_name FROM page_tokens WHERE page_id = ${a.page_id} LIMIT 1`
+      )[0] as { access_token: string; ig_id: string | null; page_name: string | null } | undefined;
       if (row) {
         tokenRow = row;
         tokenCache.set(a.page_id, row);
@@ -525,7 +527,7 @@ export async function GET(req: NextRequest) {
 
           if (a.public_reply_enabled && a.public_replies?.length > 0) {
             try {
-              const reply = a.public_replies[Math.floor(Math.random() * a.public_replies.length)];
+              const reply = fillVars(a.public_replies[Math.floor(Math.random() * a.public_replies.length)] || '', { name: fromName, keyword: kw, page: tokenRow.page_name });
               if (reply?.trim()) {
                 if (isIG) await replyToInstagramComment(commentId, reply, pageToken);
                 else await replyToComment(commentId, reply, pageToken);
@@ -548,7 +550,7 @@ export async function GET(req: NextRequest) {
             if (already.length > 0) {
               dmStatus = 'skipped_duplicate';
             } else {
-              const msg = dmTextFor(a, await brandingLine(a.owner_id));
+              const msg = dmTextFor(a, await brandingLine(a.owner_id), { name: fromName, keyword: kw, page: tokenRow.page_name });
               try {
                 const sent = isIG
                   ? await sendInstagramPrivateReply(tokenRow.ig_id || '', commentId, msg, pageToken)
