@@ -439,6 +439,33 @@ export interface IgMessage {
   attachments?: { data?: { mime_type?: string; image_data?: any; video_data?: any; file_url?: string; type?: string }[] };
 }
 
+/**
+ * The conversations with the people SocialFlow messaged lately, looked up one by one.
+ * A busy inbox times out on /conversations (3.10, @yaakovtzedek1), but a lookup by
+ * user_id answers in about a second. The IGSID comes from our own sent message.
+ */
+export async function instagramConversationsForMessages(
+  pageId: string,
+  pageToken: string,
+  sentMessageIds: string[]
+): Promise<IgConversation[]> {
+  const out: IgConversation[] = [];
+  const seen = new Set<string>();
+  await Promise.all(sentMessageIds.map(async (mid) => {
+    try {
+      const m = await graphGet<{ to?: { data?: { id: string }[] } }>(mid, { fields: 'to', access_token: pageToken });
+      const igsid = m.to?.data?.[0]?.id;
+      if (!igsid || seen.has(igsid)) return;
+      seen.add(igsid);
+      const r = await graphGet<{ data: IgConversation[] }>(`${pageId}/conversations`, {
+        platform: 'instagram', user_id: igsid, fields: 'id,updated_time', access_token: pageToken,
+      });
+      out.push(...(r.data || []));
+    } catch { /* one lookup failing must not hide the others */ }
+  }));
+  return out;
+}
+
 /** The Instagram conversations of a page, newest first. */
 export async function listInstagramConversations(
   pageId: string,
@@ -463,9 +490,15 @@ export async function listInstagramConversations(
   const started = Date.now();
   for (let i = 0; i < Math.min(limit, 10); i++) {
     if (i > 0 && Date.now() - started > 15_000) break;
-    const r = await graphGet<{ data: IgConversation[]; paging?: { cursors?: { after?: string }; next?: string } }>(`${pageId}/conversations`, {
-      platform: 'instagram', fields: 'id,updated_time', limit: '1', ...(after ? { after } : {}), access_token: pageToken,
-    });
+    let r: { data: IgConversation[]; paging?: { cursors?: { after?: string }; next?: string } };
+    try {
+      r = await graphGet(`${pageId}/conversations`, {
+        platform: 'instagram', fields: 'id,updated_time', limit: '1', ...(after ? { after } : {}), access_token: pageToken,
+      });
+    } catch (e) {
+      if (out.length > 0) break;
+      throw e;
+    }
     out.push(...(r.data || []));
     after = r.paging?.next ? r.paging?.cursors?.after || '' : '';
     if (!after) break;

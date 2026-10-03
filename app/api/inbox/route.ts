@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasDb } from '@/lib/db';
 import { getSession } from '@/lib/session';
-import { listInstagramConversations, getConversationMessages } from '@/lib/meta';
+import { listInstagramConversations, instagramConversationsForMessages, getConversationMessages, type IgConversation } from '@/lib/meta';
+import { sql } from '@/lib/db';
 import { resolveOwnedPage, isInbound, isStoryReply, otherParticipant, lastInboundAt, windowOpen, attachmentTypeOf } from '@/lib/inbox';
 
 export const maxDuration = 60;
@@ -38,7 +39,23 @@ export async function GET(req: NextRequest) {
     if (!page) return NextResponse.json({ error: 'page_not_found' }, { status: 404 });
     if (!page.ig_id) return NextResponse.json({ error: 'no_instagram' }, { status: 400 });
 
-    const convs = await listInstagramConversations(page.page_id, page.access_token, CONVERSATIONS_LIMIT);
+    // People SocialFlow messaged in the last 7 days come first and by direct lookup,
+    // so a busy inbox whose listing times out still shows its leads.
+    const sent = (await sql!`
+      SELECT DISTINCT ON (l.commenter_id) l.dm_message_id
+      FROM trigger_logs l JOIN automations a ON a.id = l.automation_id
+      WHERE a.page_id = ${page.page_id} AND l.platform = 'instagram' AND l.dm_message_id IS NOT NULL
+        AND l.created_at > now() - interval '7 days'
+      ORDER BY l.commenter_id, l.created_at DESC
+      LIMIT 8`).map((r: any) => String(r.dm_message_id));
+    const [leadConvs, listed] = await Promise.all([
+      instagramConversationsForMessages(page.page_id, page.access_token, sent),
+      listInstagramConversations(page.page_id, page.access_token, CONVERSATIONS_LIMIT).catch((e) => ({ error: e as Error })),
+    ]);
+    if ('error' in listed && leadConvs.length === 0) throw listed.error;
+    const byId = new Map<string, IgConversation>();
+    for (const c of [...leadConvs, ...('error' in listed ? [] : listed)]) if (!byId.has(c.id)) byId.set(c.id, c);
+    const convs = [...byId.values()].sort((x, y) => Date.parse(y.updated_time || '0') - Date.parse(x.updated_time || '0'));
     const conversations = await mapPool(convs, META_CONCURRENCY, async (c) => {
       try {
         const msgs = await getConversationMessages(c.id, page.access_token, PREVIEW_MESSAGES);
