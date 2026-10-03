@@ -105,8 +105,8 @@
 .sfa-toggle { width: 54px; height: 30px; border-radius: 999px; border: 0; cursor: pointer; position: relative; flex: none; transition: .2s; background: rgba(179, 154, 198, .25); padding: 0; }
 .sfa-toggle.on { background: linear-gradient(90deg, #833AB4, #E1306C); box-shadow: 0 0 18px rgba(225, 48, 108, .5); }
 .sfa-toggle:disabled { cursor: default; opacity: .7; }
-.sfa-toggle span { position: absolute; top: 3px; inset-inline-end: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; display: block; transition: .2s; }
-.sfa-toggle.on span { right: auto; inset-inline-start: 3px; }
+.sfa-toggle span { position: absolute; top: 3px; inset-inline-start: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; display: block; transition: .2s; }
+.sfa-toggle.on span { inset-inline-start: auto; inset-inline-end: 3px; }
 .sfa-input, .sfa-textarea, .sfa-select { width: 100%; background: #140c1c; border: 1px solid rgba(255, 255, 255, .1); border-radius: 11px; padding: 11px 14px; font-size: 15px; color: var(--text); outline: none; }
 .sfa-input:focus, .sfa-textarea:focus, .sfa-select:focus { border-color: var(--cy); }
 .sfa-input::placeholder, .sfa-textarea::placeholder { color: var(--faint); }
