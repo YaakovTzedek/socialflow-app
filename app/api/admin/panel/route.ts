@@ -124,5 +124,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, expires_at: expires });
   }
 
+  // Extra connected profiles for one account on top of its plan (3.10.2026). extra = the total extra, not a delta.
+  if (body.action === 'grant_accounts') {
+    const owner = String(body.owner_id || '').trim();
+    const extra = Math.round(Number(body.extra));
+    if (!owner || !Number.isFinite(extra) || extra < 0 || extra > 1000) return NextResponse.json({ error: 'missing' }, { status: 400 });
+    await sql!`
+      INSERT INTO account_grants (owner_id, extra_accounts, note)
+      VALUES (${owner}, ${extra}, ${String(body.note || 'granted from the panel').slice(0, 200)})
+      ON CONFLICT (owner_id) DO UPDATE SET extra_accounts = EXCLUDED.extra_accounts, note = EXCLUDED.note, updated_at = now()`;
+    return NextResponse.json({ ok: true, owner_id: owner, extra_accounts: extra });
+  }
+
   return NextResponse.json({ error: 'unknown_action' }, { status: 400 });
 }

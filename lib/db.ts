@@ -308,6 +308,13 @@ export async function ensureSchema() {
     ALTER TABLE owner_prefs ADD COLUMN IF NOT EXISTS segment TEXT;
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS trial_reminded_at TIMESTAMPTZ;
     ALTER TABLE plan_overrides ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+    CREATE TABLE IF NOT EXISTS account_grants (
+      owner_id       TEXT PRIMARY KEY,
+      extra_accounts INTEGER NOT NULL DEFAULT 0 CHECK (extra_accounts >= 0 AND extra_accounts <= 1000),
+      note           TEXT,
+      created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
     ALTER TABLE segment_stats ADD COLUMN IF NOT EXISTS best_format TEXT;
     ALTER TABLE segment_stats ADD COLUMN IF NOT EXISTS best_format_avg REAL;
     ALTER TABLE segment_stats ADD COLUMN IF NOT EXISTS median_comments REAL;

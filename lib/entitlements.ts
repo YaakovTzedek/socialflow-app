@@ -49,7 +49,22 @@ export function monthStart(): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
 }
 
+/**
+ * Extra connected profiles granted by hand to one owner (account_grants, 3.10.2026), added on top of
+ * whatever plan resolves. It never replaces the plan: billing, DMs and automations stay the plan's.
+ */
+async function withAccountGrant(ownerId: string, ent: Entitlement): Promise<Entitlement> {
+  const [g] = await sql!`SELECT extra_accounts FROM account_grants WHERE owner_id = ${ownerId}`;
+  const extra = Number(g?.extra_accounts || 0);
+  if (!extra) return ent;
+  return { ...ent, plan: { ...ent.plan, limits: { ...ent.plan.limits, accounts: ent.plan.limits.accounts + extra } } };
+}
+
 export async function getEntitlement(ownerId: string): Promise<Entitlement> {
+  return withAccountGrant(ownerId, await resolveEntitlement(ownerId));
+}
+
+async function resolveEntitlement(ownerId: string): Promise<Entitlement> {
   await ensureSchema();
   const [ov] = await sql!`
     SELECT plan_id FROM plan_overrides
