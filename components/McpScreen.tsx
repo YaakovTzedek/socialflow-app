@@ -24,7 +24,7 @@ export default function McpScreen() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [tab, setTab] = useState<'claude-code' | 'claude-ai' | 'chatgpt' | 'cursor'>('claude-ai');
+  const [tab, setTab] = useState<'claude-code' | 'claude-ai' | 'chatgpt' | 'grok-bot' | 'cursor'>('claude-ai');
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://isocialflow.com';
 
   const showToast = (x: string) => { setToast(x); setTimeout(() => setToast(null), 2600); };
@@ -74,7 +74,7 @@ export default function McpScreen() {
       <div className="sfa-card" style={{ marginTop: 16 }}>
         <div className="sfa-eyebrow">{M.howTitle}</div>
         <div className="sfa-tabs">
-          {([['claude-ai', 'Claude.ai'], ['chatgpt', 'ChatGPT'], ['claude-code', 'Claude Code'], ['cursor', M.tabOther]] as const).map(([id, label]) => (
+          {([['claude-ai', 'Claude.ai'], ['chatgpt', 'ChatGPT'], ['grok-bot', 'Grok Bot'], ['claude-code', 'Claude Code'], ['cursor', M.tabOther]] as const).map(([id, label]) => (
             <button type="button" key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>{label}</button>
           ))}
         </div>
@@ -100,6 +100,18 @@ export default function McpScreen() {
             <pre dir="ltr"><code>{url}</code></pre>
             <button type="button" className="sfa-btn sfa-btn-cyan sfa-btn-sm" onClick={() => copy(url, M.urlCopied)}>{M.copyUrl}</button>
             <ol start={3}><li>{M.gpt3}</li><li>{M.gpt4} <code dir="ltr">{urlWithKey}</code></li></ol>
+          </div>
+        )}
+        {tab === 'grok-bot' && (
+          <div className="sfa-howto">
+            {key === '<KEY>' && <p className="sfa-sub">{M.gbNoKey}</p>}
+            <ol><li>{M.gb1}</li></ol>
+            <pre dir="ltr"><code>{url}</code></pre>
+            <button type="button" className="sfa-btn sfa-btn-cyan sfa-btn-sm" onClick={() => copy(url, M.urlCopied)}>{M.copyUrl}</button>
+            <ol start={2}><li>{M.gb2}</li></ol>
+            <pre dir="ltr"><code>{`Bearer ${key}`}</code></pre>
+            <button type="button" className="sfa-btn sfa-btn-cyan sfa-btn-sm" onClick={() => copy(`Bearer ${key}`, M.keyCopied)}>{M.gbCopyHeader}</button>
+            <ol start={3}><li>{M.gb3}</li></ol>
           </div>
         )}
         {tab === 'cursor' && (
