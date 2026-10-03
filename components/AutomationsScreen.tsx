@@ -223,7 +223,7 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
         const url = target.platform === 'instagram' ? `/api/pages/${target.page_id}/instagram/media?igId=${target.ig_id}` : `/api/pages/${target.page_id}/posts`;
         const data = await fetch(url).then((r) => r.json());
         setPosts(target.platform === 'instagram'
-          ? (data.media || []).map((x: any) => ({ id: x.id, text: x.caption || A.noCaption, image: x.media_url || x.thumbnail_url, likes: x.like_count, comments: x.comments_count }))
+          ? (data.media || []).map((x: any) => ({ id: x.id, text: x.caption || A.noCaption, image: x.thumbnail_url || (x.media_type === 'VIDEO' ? undefined : x.media_url), likes: x.like_count, comments: x.comments_count }))
           : (data.posts || []).map((x: any) => ({ id: x.id, text: x.message || x.story || m.posts.noText, image: x.full_picture, likes: x.likes?.summary?.total_count, comments: x.comments?.summary?.total_count })));
       } finally { setLoadingPosts(false); }
     })();

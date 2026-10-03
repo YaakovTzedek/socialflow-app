@@ -66,7 +66,7 @@ export default function PostsBrowser() {
       } else {
         const res = await fetch(`/api/pages/${t.pageId}/instagram/media?igId=${t.id}`); const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'failed');
-        const list: NormalizedPost[] = (data.media || []).map((x: any) => ({ id: x.id, text: x.caption || '', created_time: x.timestamp, permalink: x.permalink, image: x.media_url || x.thumbnail_url, likes: x.like_count ?? null, comments: x.comments_count ?? null }));
+        const list: NormalizedPost[] = (data.media || []).map((x: any) => ({ id: x.id, text: x.caption || '', created_time: x.timestamp, permalink: x.permalink, image: x.thumbnail_url || (x.media_type === 'VIDEO' ? undefined : x.media_url), likes: x.like_count ?? null, comments: x.comments_count ?? null }));
         postsCache.current.set(cacheKey, list); if (current.current === cacheKey) setPosts(list);
       }
     } catch (e: any) { if (current.current === cacheKey) setError(e.message); } finally { if (current.current === cacheKey) setLoadingPosts(false); }
