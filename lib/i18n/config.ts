@@ -65,7 +65,7 @@ export const PICK_COOKIE = 'sf_lang';
 
 /** Signed-in app sections. Only these follow the browser language; marketing pages keep their URLs. */
 export const APP_SECTIONS: ReadonlySet<string> = new Set([
-  'dashboard', 'automations', 'posts', 'mcp', 'inbox', 'messages', 'brain', 'logs', 'billing', 'admin',
+  'dashboard', 'automations', 'posts', 'mcp', 'inbox', 'messages', 'brain', 'logs', 'billing', 'affiliate', 'admin',
 ]);
 
 export function isAppPath(rest: string): boolean {

@@ -96,6 +96,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, code: row.code });
   }
 
+  // Tie an existing partner code to the partner's own SocialFlow account, so it shows in their /affiliate screen.
+  if (body.action === 'link_affiliate_owner') {
+    if (!isValidCode(body.code) || !body.owner_id) return NextResponse.json({ error: 'bad_input' }, { status: 400 });
+    const [row] = await sql!`UPDATE affiliates SET owner_id = ${String(body.owner_id).slice(0, 40)} WHERE code = ${body.code} RETURNING code, owner_id`;
+    if (!row) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    return NextResponse.json({ ok: true, ...row });
+  }
+
   if (body.action === 'pay_affiliate') {
     if (!isValidCode(body.code)) return NextResponse.json({ error: 'bad_code' }, { status: 400 });
     const rows = await sql!`UPDATE affiliate_commissions SET paid_at = now() WHERE code = ${body.code} AND paid_at IS NULL RETURNING id`;

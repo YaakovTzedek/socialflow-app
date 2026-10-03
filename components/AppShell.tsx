@@ -52,6 +52,7 @@ const ICONS: Record<string, React.ReactNode> = {
   logs: <><path d="M5 6.5h14M5 12h14M5 17.5h9" /></>,
   posts: <><rect x="3.5" y="3.5" width="17" height="17" rx="4" /><circle cx="12" cy="12" r="4" /><circle cx="17" cy="7" r=".9" /></>,
   mcp: <><path d="M4 8h12l-3-3M20 16H8l3 3" /></>,
+  affiliate: <><circle cx="7" cy="7" r="2.5" /><circle cx="17" cy="17" r="2.5" /><path d="M18 6 6 18" /></>,
   billing: <><rect x="3" y="5.5" width="18" height="13" rx="2.5" /><path d="M3 10h18M7 15h4" /></>,
   search: <><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4-4" /></>,
   logout: <><path d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14" /><path d="M10 8l-4 4 4 4M6 12h10" /></>,
@@ -99,6 +100,7 @@ export default function AppShell({ userName, title, children, owner }: { userNam
     { key: 'posts', href: '/posts', label: m.nav.posts, icon: '◎' },
     { key: 'mcp', href: '/mcp', label: m.nav.mcp, icon: '⇄' },
     { key: 'billing', href: '/billing', label: m.nav.billing, icon: '◈' },
+    { key: 'affiliate', href: '/affiliate', label: m.nav.affiliate, icon: '%' },
   ];
   const isActive = (href: string) => !!pathname?.includes(href);
   const TABS = NAV.slice(0, 4);

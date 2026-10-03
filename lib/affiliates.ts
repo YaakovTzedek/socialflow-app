@@ -155,3 +155,24 @@ export async function partnerStats(code: string, range: StatsRange = {}) {
     })),
   };
 }
+
+/** The affiliate row that belongs to a signed-in owner (3.10.2026: the in-app partner screen). */
+export async function affiliateForOwner(ownerId: string): Promise<Affiliate | null> {
+  await ensureSchema();
+  const [row] = await sql!`SELECT * FROM affiliates WHERE owner_id = ${ownerId} ORDER BY created_at LIMIT 1`;
+  return (row as Affiliate) || null;
+}
+
+/** Self-serve join: any signed-in owner gets a personal link on the standard terms (50% for 12 months). Idempotent. */
+export async function joinAsAffiliate(ownerId: string, name: string): Promise<Affiliate> {
+  const existing = await affiliateForOwner(ownerId);
+  if (existing) return existing;
+  for (let i = 0; i < 5; i++) {
+    const code = generateCode(name);
+    const [row] = await sql!`
+      INSERT INTO affiliates (code, name, owner_id, note) VALUES (${code}, ${name.slice(0, 120) || 'partner'}, ${ownerId}, 'self-serve from the app')
+      ON CONFLICT (code) DO NOTHING RETURNING *`;
+    if (row) return row as Affiliate;
+  }
+  throw new Error('code_generation_failed');
+}

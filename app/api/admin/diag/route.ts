@@ -91,6 +91,7 @@ export async function GET(req: NextRequest) {
     lastErrors: await sql!`
       SELECT l.created_at, l.dm_status, left(l.error_message, 200) AS error FROM trigger_logs l JOIN automations a ON a.id = l.automation_id
       WHERE a.owner_id = ${ownerQ} AND l.error_message IS NOT NULL ORDER BY l.created_at DESC LIMIT 5`,
+    affiliates: await sql!`SELECT code, name, owner_id, status, clicks, rate_percent, months, created_at FROM affiliates WHERE owner_id = ${ownerQ} OR name ILIKE ${'%' + (req.nextUrl.searchParams.get('name') || '~no-name~') + '%'} ORDER BY created_at`,
   } : undefined;
 
   return NextResponse.json({ ...(owner ? { owner } : {}), database: { host, projectRef, user: poolUser, name: ver?.db, schema: ver?.schema, version: String(ver?.v || '').slice(0, 60) }, billing, summary, errors, automations, dmSentRows: dm?.n ?? 0, recent });
