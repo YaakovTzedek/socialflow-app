@@ -459,7 +459,10 @@ export async function listInstagramConversations(
   // "reduce the amount of data" (or time out). So always walk the newest conversations one page of 1 at a time.
   const out: IgConversation[] = [];
   let after = '';
+  // Each page of 1 costs ~4s on a busy inbox (3.10), so stop on a time budget and keep what we have.
+  const started = Date.now();
   for (let i = 0; i < Math.min(limit, 10); i++) {
+    if (i > 0 && Date.now() - started > 15_000) break;
     const r = await graphGet<{ data: IgConversation[]; paging?: { cursors?: { after?: string }; next?: string } }>(`${pageId}/conversations`, {
       platform: 'instagram', fields: 'id,updated_time', limit: '1', ...(after ? { after } : {}), access_token: pageToken,
     });

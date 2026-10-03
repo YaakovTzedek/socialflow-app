@@ -4,7 +4,7 @@ import { getSession } from '@/lib/session';
 import { listInstagramConversations, getConversationMessages } from '@/lib/meta';
 import { resolveOwnedPage, isInbound, isStoryReply, otherParticipant, lastInboundAt, windowOpen, attachmentTypeOf } from '@/lib/inbox';
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 const CONVERSATIONS_LIMIT = 25;
 // Enough to find the person's last message behind a few of ours, and still light.
