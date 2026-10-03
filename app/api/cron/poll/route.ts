@@ -448,6 +448,10 @@ export async function GET(req: NextRequest) {
           return { postId, comments: [], error: e.message as string };
         }
       });
+      // A specific-post automation makes no listing call, and per-post errors are swallowed above, so an
+      // invalidated session showed up only here (Tolik, 3.10.2026): record it for the reconnect alert.
+      const tokenFail = perPost.find((p) => p.error && isTokenError(p.error));
+      if (tokenFail) brokenOwners.set(a.owner_id, tokenFail.error!);
       const allIds = perPost.flatMap((p) => p.comments.map((c) => c.id).filter(Boolean));
       const seen = new Set<string>();
       if (allIds.length) {
