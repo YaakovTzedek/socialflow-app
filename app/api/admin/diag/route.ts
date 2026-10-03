@@ -80,5 +80,18 @@ export async function GET(req: NextRequest) {
     hasBrowserCompanyId: !!process.env.NEXT_PUBLIC_SUMIT_COMPANY_ID,
   };
 
-  return NextResponse.json({ database: { host, projectRef, user: poolUser, name: ver?.db, schema: ver?.schema, version: String(ver?.v || '').slice(0, 60) }, billing, summary, errors, automations, dmSentRows: dm?.n ?? 0, recent });
+  // ?owner=<id>: one owner's connection state (3.10.2026, the reconnect alert).
+  const ownerQ = req.nextUrl.searchParams.get('owner');
+  const owner = ownerQ ? {
+    alert: (await sql!`SELECT * FROM connection_alerts WHERE owner_id = ${ownerQ}`)[0] || null,
+    prefs: (await sql!`SELECT locale, notify_email IS NOT NULL AS has_email, notify_phone IS NOT NULL AS has_phone FROM owner_prefs WHERE owner_id = ${ownerQ}`)[0] || null,
+    automations: await sql!`
+      SELECT a.id, a.name, a.status, a.platform, a.post_scope, a.page_id, (t.page_id IS NOT NULL) AS has_token, t.updated_at AS token_updated
+      FROM automations a LEFT JOIN page_tokens t ON t.page_id = a.page_id WHERE a.owner_id = ${ownerQ} ORDER BY a.created_at DESC`,
+    lastErrors: await sql!`
+      SELECT l.created_at, l.dm_status, left(l.error_message, 200) AS error FROM trigger_logs l JOIN automations a ON a.id = l.automation_id
+      WHERE a.owner_id = ${ownerQ} AND l.error_message IS NOT NULL ORDER BY l.created_at DESC LIMIT 5`,
+  } : undefined;
+
+  return NextResponse.json({ ...(owner ? { owner } : {}), database: { host, projectRef, user: poolUser, name: ver?.db, schema: ver?.schema, version: String(ver?.v || '').slice(0, 60) }, billing, summary, errors, automations, dmSentRows: dm?.n ?? 0, recent });
 }
