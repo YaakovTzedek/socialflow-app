@@ -12,6 +12,7 @@ import { sql, hasDb, ensureSchema } from '@/lib/db';
 import { isLocale, localePath, type Locale } from '@/lib/i18n/config';
 import { AFF_COOKIE, bindReferral } from '@/lib/affiliates';
 import { storePageTokens } from '@/lib/auth-helpers';
+import { markResolved } from '@/lib/connection';
 
 export async function GET(req: NextRequest) {
   const baseUrl = getBaseUrl();
@@ -74,6 +75,8 @@ export async function GET(req: NextRequest) {
     if (hasDb) {
       try {
         await storePageTokens(me.id, await listPages(long.access_token));
+        // Fresh tokens are stored: the connection works again, so the banner and the alerts stop.
+        await markResolved(me.id);
       } catch { /* a login must never fail because Meta was slow to list pages */ }
     }
 

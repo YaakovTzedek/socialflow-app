@@ -17,6 +17,7 @@ import {
   sendInstagramMessage,
 } from '@/lib/meta';
 import { isInbound, isStoryReply, storyIdOf } from '@/lib/inbox';
+import { isTokenError, markBroken } from '@/lib/connection';
 
 export const maxDuration = 60;
 
@@ -286,7 +287,7 @@ async function pollStoryReplies(opts: {
         ...(fetchErrors ? { fetch_errors: fetchErrors } : {}),
       });
     } catch (e: any) {
-      summary.push({ story_page: pageId, error: e.message });
+      summary.push({ story_page: pageId, owner_id: autos[0]?.owner_id, error: e.message });
     }
   });
   return summary;
@@ -372,6 +373,8 @@ export async function GET(req: NextRequest) {
   // Per-run caches: page tokens and our own IG username (to spot threads we
   // already answered, e.g. before a database migration wiped the dedupe table).
   const tokenCache = new Map<string, { access_token: string; ig_id: string | null }>();
+  // Owners whose Facebook session was invalidated this run (error 190): alerted once after the pass.
+  const brokenOwners = new Map<string, string>();
   const usernameCache = new Map<string, string>();
 
   // Automations run 4 at a time: each one is mostly waiting on Meta, and the
@@ -589,6 +592,7 @@ export async function GET(req: NextRequest) {
       });
     } catch (e: any) {
       summary.push({ automation: a.name, error: e.message });
+      if (isTokenError(e.message)) brokenOwners.set(a.owner_id, e.message);
     }
   };
   // Replies to Instagram Stories (DM inbox) go FIRST (27.9): a story reply is a person waiting in the inbox, and with
@@ -622,11 +626,16 @@ export async function GET(req: NextRequest) {
 
 
 
+  for (const r of storySummary) if (r?.owner_id && isTokenError(r.error)) brokenOwners.set(r.owner_id, r.error);
+  // One alert per owner, deduplicated in connection_alerts (first detection + one reminder a day later).
+  for (const [owner, err] of brokenOwners) await markBroken(owner, err, 'poll');
+
   return NextResponse.json({
     ran_at: new Date().toISOString(),
     took_ms: Date.now() - started,
     dm_retry: retry,
     cursor: cursorInfo,
+    ...(brokenOwners.size ? { broken_connections: [...brokenOwners.keys()] } : {}),
     summary,
     ...(storySummary.length ? { story_replies: storySummary } : {}),
     ...(debug ? { debug_comments: debugComments } : {}),

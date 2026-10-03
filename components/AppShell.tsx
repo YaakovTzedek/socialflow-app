@@ -1,4 +1,5 @@
 'use client';
+import { ReconnectBanner } from './ReconnectBanner';
 import { LoginLink } from './LoginLink';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useI18n } from './I18nProvider';
@@ -170,7 +171,7 @@ export default function AppShell({ userName, title, children, owner }: { userNam
             <button type="button" className="sfa-avatar" onClick={() => setMoreOpen(true)} aria-label={userName} title={userName}>{initials(userName)}</button>
           </div>
         </header>
-        <main className="sfa-content">{children}</main>
+        <main className="sfa-content"><ReconnectBanner />{children}</main>
       </div>
 
       <nav className="sfa-tabbar" aria-label={m.tabs.navLabel}>

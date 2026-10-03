@@ -1,5 +1,6 @@
 'use client';
 import { LoginLink } from './LoginLink';
+import { CONNECTION_BROKEN_EVENT, isTokenErrorText } from './ReconnectBanner';
 import { useI18n } from './I18nProvider';
 import { useReadOnly } from './ReadOnlyContext';
 
@@ -45,7 +46,10 @@ export default function DashboardHome({ userName }: { userName: string }) {
         setLogs(l.logs || []);
         setLoading(false);
         await pagesReq.catch((e) => { setPagesLoading(false); throw e; });
-      } catch (e: any) { setError(e.message); } finally { setLoading(false); }
+      } catch (e: any) {
+        if (isTokenErrorText(e.message)) window.dispatchEvent(new Event(CONNECTION_BROKEN_EVENT));
+        else setError(e.message);
+      } finally { setLoading(false); }
     })();
   }, []);
 

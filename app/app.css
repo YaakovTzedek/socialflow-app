@@ -735,3 +735,18 @@ html:not([lang="he"]) .sfa-side-card .sfa-h { font-size: 22px; }
   .sfa-imp .sfa-top { top: calc(44px + env(safe-area-inset-top)); }
   .sfa-imp .sfa-inbox.has-thread .sfa-inbox-thread { top: calc(44px + env(safe-area-inset-top)); height: calc(100dvh - 44px - env(safe-area-inset-top)); padding-top: 0; }
 }
+
+/* Facebook connection broken (3.10.2026): reconnect + where to alert */
+.sfa-reconnect { background: linear-gradient(135deg, rgba(239,68,68,.16), rgba(247,119,55,.12)); border: 1px solid rgba(239,68,68,.55); border-radius: 16px; padding: 16px 18px; margin-bottom: 18px; display: flex; flex-direction: column; gap: 14px; }
+.sfa-reconnect-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: space-between; }
+.sfa-reconnect-head > div { flex: 1 1 260px; }
+.sfa-reconnect-title { font-weight: 800; font-size: 18px; color: #fff; }
+.sfa-reconnect p { margin: 4px 0 0; color: #ffd0d0; font-size: 14.5px; line-height: 1.55; }
+.sfa-reconnect-btn { white-space: nowrap; }
+.sfa-reconnect-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; border-top: 1px solid rgba(255,255,255,.12); padding-top: 12px; }
+.sfa-reconnect-q { flex-basis: 100%; font-size: 14px; font-weight: 700; color: #f3e8ff; }
+.sfa-reconnect-form label { display: flex; flex-direction: column; gap: 4px; flex: 1 1 180px; min-width: 0; font-size: 12.5px; color: #c9bbd3; }
+.sfa-reconnect-form input { background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.18); border-radius: 10px; padding: 9px 11px; color: #fff; font: inherit; font-size: 15px; min-width: 0; }
+.sfa-reconnect-form small { flex-basis: 100%; font-size: 13px; }
+.sfa-reconnect-form small.ok { color: #86efac; }
+.sfa-reconnect-form small.bad { color: #fca5a5; }

@@ -323,6 +323,21 @@ export async function ensureSchema() {
     ALTER TABLE trigger_logs ADD COLUMN IF NOT EXISTS dm_retryable BOOLEAN NOT NULL DEFAULT false;
     CREATE INDEX IF NOT EXISTS trigger_logs_dm_retry_idx ON trigger_logs (dm_status, dm_retryable, created_at);
     CREATE INDEX IF NOT EXISTS trigger_logs_automation_idx ON trigger_logs (automation_id, created_at DESC);
+    -- 3.10.2026: the Facebook session of an owner was invalidated (password change, security check) and every
+    -- automation stopped silently. One row per owner tracks the break, so the alert goes out once (plus one
+    -- reminder a day later) and is reset by the next login. notify_email / notify_phone are where to send it.
+    CREATE TABLE IF NOT EXISTS connection_alerts (
+      owner_id     TEXT PRIMARY KEY,
+      broken_at    TIMESTAMPTZ,
+      last_error   TEXT,
+      source       TEXT,
+      notified_at  TIMESTAMPTZ,
+      notify_count INTEGER NOT NULL DEFAULT 0,
+      resolved_at  TIMESTAMPTZ,
+      updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    ALTER TABLE owner_prefs ADD COLUMN IF NOT EXISTS notify_email TEXT;
+    ALTER TABLE owner_prefs ADD COLUMN IF NOT EXISTS notify_phone TEXT;
   `);
   initialized = true;
 }
