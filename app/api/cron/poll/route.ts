@@ -18,7 +18,9 @@ import {
   sendInstagramMessage,
 } from '@/lib/meta';
 import { isInbound, isStoryReply, storyIdOf } from '@/lib/inbox';
-import { isTokenError, markBroken } from '@/lib/connection';
+import { isTokenError, isConnectionError, classifyGraphError, markBroken, markHealthy } from '@/lib/connection';
+import { adSurfacesFor, type AdRunCache } from '@/lib/ad-media';
+import { collectComments } from '@/lib/ad-comments';
 
 export const maxDuration = 60;
 
@@ -377,6 +379,22 @@ export async function GET(req: NextRequest) {
   const tokenCache = new Map<string, { access_token: string; ig_id: string | null; page_name: string | null }>();
   // Owners whose Facebook session was invalidated this run (error 190): alerted once after the pass.
   const brokenOwners = new Map<string, string>();
+  // 5.10.2026: which pages each owner's comment automations run on, and which of them this run read
+  // without a connection error. An owner whose every page was read cleanly gets an open disconnect
+  // event closed (markHealthy), so the next real break alerts again instead of hiding behind a stale flag.
+  const ownerPages = new Map<string, Set<string>>();
+  for (const a of commentAutos as any[]) {
+    const set = ownerPages.get(a.owner_id) || new Set<string>();
+    set.add(String(a.page_id));
+    ownerPages.set(a.owner_id, set);
+  }
+  const touchedPages = new Map<string, Set<string>>();
+  const connFailedPages = new Set<string>();
+  const touch = (owner: string, page: string) => { const s = touchedPages.get(owner) || new Set<string>(); s.add(page); touchedPages.set(owner, s); };
+  // Comments on the sponsored copies of a post (lib/ad-comments.ts). Ad media that have their own
+  // automation (the manual workaround) are left to it, so nobody gets answered twice.
+  const adRunCache: AdRunCache = new Map();
+  const ownMedia = new Set<string>((commentAutos as any[]).filter((a) => a.post_scope === 'specific_post' && a.post_id).map((a) => String(a.post_id)));
   const usernameCache = new Map<string, string>();
 
   // Automations run 4 at a time: each one is mostly waiting on Meta, and the
@@ -439,21 +457,33 @@ export async function GET(req: NextRequest) {
         }
       }
 
+      // Instagram: also read the ad copies of each post (comments on a boosted/sponsored reel live there).
+      const adInfo = isIG ? await adSurfacesFor(postIds, pageToken, { cache: adRunCache, exclude: ownMedia }) : null;
+
       // Fetch every post's comments in parallel, then dedupe in ONE query.
       const perPost = await mapPool(postIds, META_CONCURRENCY, async (postId) => {
         try {
-          const comments = isIG
+          const links = adInfo?.get(postId)?.links || [];
+          if (isIG && links.length) {
+            const r = await collectComments(postId, links, (id) => listInstagramComments(id, pageToken));
+            return { postId, comments: r.comments as any[], adErrors: r.ad_errors.length };
+          }
+          const comments: any[] = isIG
             ? await listInstagramComments(postId, pageToken)
             : await listComments(postId, pageToken);
           return { postId, comments };
         } catch (e: any) {
-          return { postId, comments: [], error: e.message as string };
+          return { postId, comments: [] as any[], error: e.message as string };
         }
       });
       // A specific-post automation makes no listing call, and per-post errors are swallowed above, so an
       // invalidated session showed up only here (Tolik, 3.10.2026): record it for the reconnect alert.
-      const tokenFail = perPost.find((p) => p.error && isTokenError(p.error));
-      if (tokenFail) brokenOwners.set(a.owner_id, tokenFail.error!);
+      // 5.10.2026: a revoked permission (code 10 / 200-299) stops the automation just like a dead token.
+      const tokenFail = perPost.find((p) => p.error && isConnectionError(p.error));
+      if (tokenFail) { brokenOwners.set(a.owner_id, tokenFail.error!); connFailedPages.add(String(a.page_id)); }
+      // The page counts as read when Meta answered for real: a post's comments came back, or it said the post is
+      // gone (an old automation on a deleted post). Rate limits and outages prove nothing either way.
+      if (!postIds.length || perPost.some((p) => !p.error || classifyGraphError(p.error) === 'missing_object')) touch(a.owner_id, String(a.page_id));
       const allIds = perPost.flatMap((p) => p.comments.map((c) => c.id).filter(Boolean));
       const seen = new Set<string>();
       if (allIds.length) {
@@ -469,6 +499,8 @@ export async function GET(req: NextRequest) {
         for (const c of comments) {
           const commentId = c.id;
           const text = isIG ? (c as any).text : (c as any).message;
+          // Comments on an ad copy of the post: logged with the media they live on.
+          const sourceMedia: string | null = (c as any).sponsored ? String((c as any).source_media_id || '') || null : null;
           const fromId = isIG ? (c as any).username : (c as any).from?.id;
           const fromName = isIG ? (c as any).username : (c as any).from?.name;
           const cTime = isIG ? (c as any).timestamp : (c as any).created_time;
@@ -577,10 +609,10 @@ export async function GET(req: NextRequest) {
           await sql!`
             INSERT INTO trigger_logs (automation_id, platform, post_id, comment_id,
               commenter_id, commenter_name, comment_text, matched_keyword,
-              public_reply_status, dm_status, error_message, dm_message_id, dm_attempts, dm_retryable)
+              public_reply_status, dm_status, error_message, dm_message_id, dm_attempts, dm_retryable, source_media_id)
             VALUES (${a.id}, ${a.platform}, ${postId}, ${commentId}, ${String(fromId || '')},
               ${fromName || ''}, ${text}, ${kw}, ${publicStatus}, ${dmStatus}, ${err},
-              ${dmMessageId}, ${dmStatus === 'skipped_duplicate' ? 0 : 1}, ${dmRetryable})`;
+              ${dmMessageId}, ${dmStatus === 'skipped_duplicate' ? 0 : 1}, ${dmRetryable}, ${sourceMedia})`;
           matched++;
         }
       }
@@ -592,13 +624,18 @@ export async function GET(req: NextRequest) {
           ON CONFLICT DO NOTHING`;
       }
       const fetchErrors = perPost.filter((p) => p.error).length;
+      const sponsored = perPost.reduce((n, p) => n + p.comments.filter((c: any) => c?.sponsored).length, 0);
+      const adErrors = perPost.reduce((n, p) => n + ((p as any).adErrors || 0), 0);
       summary.push({
         automation: a.name, platform: a.platform, posts_scanned: postIds.length, new_matches: matched,
         ...(fetchErrors ? { fetch_errors: fetchErrors } : {}),
+        ...(sponsored ? { sponsored_comments_seen: sponsored } : {}),
+        ...(adErrors ? { ad_fetch_errors: adErrors } : {}),
       });
     } catch (e: any) {
       summary.push({ automation: a.name, error: e.message });
-      if (isTokenError(e.message)) brokenOwners.set(a.owner_id, e.message);
+      // The listing call is on the page / IG account itself, so "object missing" there means our access is gone.
+      if (isConnectionError(e.message, true)) { brokenOwners.set(a.owner_id, e.message); connFailedPages.add(String(a.page_id)); }
     }
   };
   // Replies to Instagram Stories (DM inbox) go FIRST (27.9): a story reply is a person waiting in the inbox, and with
@@ -635,6 +672,14 @@ export async function GET(req: NextRequest) {
   for (const r of storySummary) if (r?.owner_id && isTokenError(r.error)) brokenOwners.set(r.owner_id, r.error);
   // One alert per owner, deduplicated in connection_alerts (first detection + one reminder a day later).
   for (const [owner, err] of brokenOwners) await markBroken(owner, err, 'poll');
+  // Owners whose every page was read this run without a connection error: close any open disconnect event.
+  const healthy: string[] = [];
+  for (const [owner, pages] of ownerPages) {
+    if (brokenOwners.has(owner)) continue;
+    const seen = touchedPages.get(owner);
+    if (seen && [...pages].every((p) => seen.has(p) && !connFailedPages.has(p))) healthy.push(owner);
+  }
+  await markHealthy(healthy);
 
   return NextResponse.json({
     ran_at: new Date().toISOString(),

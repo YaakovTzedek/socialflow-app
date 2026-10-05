@@ -102,7 +102,7 @@ export interface FacebookComment {
   from?: { id: string; name?: string };
 }
 
-async function graphGet<T>(
+export async function graphGet<T>(
   path: string,
   params: Record<string, string>
 ): Promise<T> {
@@ -111,10 +111,23 @@ async function graphGet<T>(
 
   const res = await fetch(url.toString(), { cache: 'no-store' });
   const data = await res.json();
-  if (!res.ok || data.error) {
-    throw new Error(data.error?.message || `Graph API error (${res.status})`);
-  }
+  if (!res.ok || data.error) throw graphError(data, res.status);
   return data as T;
+}
+
+/**
+ * Meta's error as an Error whose message keeps the code: "<message> (code 190/460)".
+ * The code is what tells a dead session (190) or a revoked permission (10, 200-299)
+ * apart from a deleted post or a hiccup (lib/connection-logic.ts reads it).
+ */
+export function graphError(data: any, status: number): Error & { metaCode?: number; metaSubcode?: number; status?: number } {
+  const e = data?.error;
+  const code = e?.code != null ? ` (code ${e.code}${e.error_subcode ? `/${e.error_subcode}` : ''})` : '';
+  const err: any = new Error(`${e?.message || `Graph API error (${status})`}${code}`);
+  err.metaCode = e?.code;
+  err.metaSubcode = e?.error_subcode;
+  err.status = status;
+  return err;
 }
 
 async function graphPost<T>(
@@ -131,9 +144,7 @@ async function graphPost<T>(
     cache: 'no-store',
   });
   const data = await res.json();
-  if (!res.ok || data.error) {
-    throw new Error(data.error?.message || `Graph API error (${res.status})`);
-  }
+  if (!res.ok || data.error) throw graphError(data, res.status);
   return data as T;
 }
 
@@ -176,8 +187,9 @@ export async function getLongLivedToken(
 /** Get the logged-in user's basic profile. */
 export async function getMe(
   userToken: string
-): Promise<{ id: string; name: string }> {
-  return graphGet('me', { fields: 'id,name', access_token: userToken });
+): Promise<{ id: string; name: string; email?: string }> {
+  // email only comes back when the login granted the `email` permission (add it to META_SCOPES).
+  return graphGet('me', { fields: 'id,name,email', access_token: userToken });
 }
 
 const PAGE_FIELDS =
@@ -191,9 +203,7 @@ async function fetchAllPages(startUrl: URL): Promise<FacebookPage[]> {
     const res = await fetch(url.toString(), { cache: 'no-store' });
     const data: { data?: FacebookPage[]; paging?: { next?: string } } =
       await res.json();
-    if ((data as any).error) {
-      throw new Error((data as any).error.message || 'Graph API error');
-    }
+    if ((data as any).error) throw graphError(data, res.status);
     if (data.data) all.push(...data.data);
     url = data.paging?.next ? new URL(data.paging.next) : null;
   }

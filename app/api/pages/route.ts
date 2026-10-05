@@ -3,7 +3,7 @@ import { requireUserToken, storePageTokens } from '@/lib/auth-helpers';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { sql, hasDb, ensureSchema } from '@/lib/db';
-import { isTokenError, markBroken } from '@/lib/connection';
+import { isTokenError, markBroken, storedTokensWork } from '@/lib/connection';
 
 const FRESH_MS = 15 * 60 * 1000;   // serve from cache without touching Meta
 const STALE_MS = 24 * 60 * 60 * 1000; // older than this: block on a live fetch
@@ -100,8 +100,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ pages, cached: false });
   } catch (e: any) {
     // Facebook ended the session: record it (banner + email/WhatsApp alert) and tell the client to reconnect.
+    // Only when the stored page tokens are dead too: a browser whose own session token expired while the
+    // automations keep working must sign in again, but the owner should not get a "stopped" alert.
     if (ownerId && isTokenError(e.message)) {
-      await markBroken(ownerId, e.message, 'pages');
+      if (!(await storedTokensWork(ownerId))) await markBroken(ownerId, e.message, 'pages');
       return NextResponse.json({ error: e.message, reconnect: true }, { status: 401 });
     }
     return NextResponse.json({ error: e.message }, { status: 500 });

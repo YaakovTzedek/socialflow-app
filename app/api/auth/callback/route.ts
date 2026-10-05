@@ -63,6 +63,8 @@ export async function GET(req: NextRequest) {
     await session.save();
     if (endedImpersonation?.id) await recordEvent(endedImpersonation.id, 'impersonation_stop', { reason: 'login', seconds: Math.round((Date.now() - endedImpersonation.startedAt) / 1000) }, me.id);
     await recordLogin(me.id, me.name || null);
+    // The Facebook account email (only when the login granted `email`): the fallback address for the disconnect alert.
+    if (hasDb && me.email) { try { await sql!`UPDATE app_users SET email = ${me.email} WHERE owner_id = ${me.id}`; } catch { /* best effort */ } }
 
     // Store a page token for every page the user just approved.
     //

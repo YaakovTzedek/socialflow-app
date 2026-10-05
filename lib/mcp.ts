@@ -14,8 +14,10 @@
  */
 import { randomUUID } from 'crypto';
 import { sql, ensureSchema } from './db';
-import { listInstagramMedia, listPagePosts, getPostsInfoCached, createInstagramContainer, waitForContainer, publishInstagramContainer, getMediaPermalink, publishFacebookPost, type IgPublishKind } from './meta';
+import { listInstagramMedia, listInstagramComments, listPagePosts, getPostsInfoCached, createInstagramContainer, waitForContainer, publishInstagramContainer, getMediaPermalink, publishFacebookPost, type IgPublishKind } from './meta';
 import { getEntitlement } from './entitlements';
+import { adSurfacesFor } from './ad-media';
+import { collectComments, sponsoredCommentCount } from './ad-comments';
 import { getBrain, getSegment, getSegmentBenchmark } from './brain';
 import { getRecommendations, getHistorySummary } from './recommend';
 import { getMessages, negotiate, isLocale, fmt, type Locale, type Messages } from './i18n';
@@ -51,6 +53,7 @@ export async function resolveApiKey(key: string | null | undefined, acceptLangua
 const TOOL_META: Record<string, { title: string; readOnlyHint?: true; destructiveHint?: boolean; openWorldHint?: boolean }> = {
   list_pages: { title: 'List connected pages', readOnlyHint: true },
   list_posts: { title: 'List recent posts', readOnlyHint: true, openWorldHint: true },
+  get_post_comments: { title: 'Get the comments of a post', readOnlyHint: true, openWorldHint: true },
   list_automations: { title: 'List automations', readOnlyHint: true },
   get_automation: { title: 'Get an automation', readOnlyHint: true },
   create_automation: { title: 'Create an automation', destructiveHint: false },
@@ -73,6 +76,7 @@ function toolsFor(m: Messages) {
   return [
     { name: 'list_pages', description: T.list_pages, inputSchema: { type: 'object', properties: {}, additionalProperties: false } },
     { name: 'list_posts', description: T.list_posts, inputSchema: { type: 'object', properties: { page_id: { type: 'string', description: A.page_id }, platform: { type: 'string', enum: ['instagram', 'facebook'], description: A.platform }, limit: { type: 'integer', minimum: 1, maximum: 25, default: 10 } }, required: ['page_id', 'platform'], additionalProperties: false } },
+    { name: 'get_post_comments', description: T.get_post_comments, inputSchema: { type: 'object', properties: { page_id: { type: 'string', description: A.page_id }, post_id: { type: 'string', description: A.post_id }, limit: { type: 'integer', minimum: 1, maximum: 200, default: 50 } }, required: ['page_id', 'post_id'], additionalProperties: false } },
     { name: 'list_automations', description: T.list_automations, inputSchema: { type: 'object', properties: { status: { type: 'string', enum: ['active', 'paused', 'all'], default: 'all' } }, additionalProperties: false } },
     { name: 'get_automation', description: T.get_automation, inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'], additionalProperties: false } },
     { name: 'create_automation', description: T.create_automation, inputSchema: { type: 'object', properties: {
@@ -131,11 +135,58 @@ async function toolListPosts(owner: string, a: Json, m: Messages) {
   const limit = Math.min(25, Math.max(1, Number(a.limit) || 10));
   if (a.platform === 'instagram') {
     if (!t.ig_id) throw new Error(m.server.mcpNoIg);
-    const media = await listInstagramMedia(t.ig_id, t.access_token);
-    return { posts: media.slice(0, limit).map((m) => ({ post_id: m.id, type: m.media_type, permalink: m.permalink, caption: (m.caption || '').slice(0, 200), comments: m.comments_count ?? null, likes: m.like_count ?? null, published_at: m.timestamp })) };
+    const media = (await listInstagramMedia(t.ig_id, t.access_token)).slice(0, limit);
+    // comments_count counts the post only; comments on its sponsored copies are separate (lib/ad-comments.ts).
+    const ads = await adSurfacesFor(media.map((x) => x.id), t.access_token);
+    return { posts: media.map((x) => {
+      const c = ads.get(x.id)?.check || null;
+      const sponsored = sponsoredCommentCount(c);
+      return {
+        post_id: x.id, type: x.media_type, permalink: x.permalink, caption: (x.caption || '').slice(0, 200),
+        comments: x.comments_count ?? null,
+        ...(sponsored != null ? { comments_total_incl_ads: c!.total_comments, sponsored_comments: sponsored } : {}),
+        ...(c?.ad_ids.length ? { active_ads: c.ad_ids.length } : {}),
+        likes: x.like_count ?? null, published_at: x.timestamp,
+      };
+    }), note: SPONSORED_NOTE };
   }
   const posts = await listPagePosts(String(a.page_id), t.access_token);
   return { posts: posts.slice(0, limit).map((p) => ({ post_id: p.id, permalink: p.permalink_url, text: (p.message || p.story || '').slice(0, 200), comments: p.comments?.summary?.total_count ?? null, likes: p.likes?.summary?.total_count ?? null, published_at: p.created_time })) };
+}
+
+const SPONSORED_NOTE = 'comments = comments on the post itself. On Instagram, comments people leave on a sponsored (ad) copy of the post are stored by Meta separately: comments_total_incl_ads and sponsored_comments count them when Meta reports it. Use get_post_comments to read them.';
+
+async function toolGetPostComments(owner: string, a: Json, m: Messages) {
+  const t = await pageToken(owner, String(a.page_id));
+  if (!t) throw new Error(m.server.mcpPageNotReady);
+  const postId = String(a.post_id || '').trim();
+  if (!postId) throw new Error('post_id is required');
+  const limit = Math.min(200, Math.max(1, Number(a.limit) || 50));
+  const info = (await adSurfacesFor([postId], t.access_token)).get(postId);
+  const r = await collectComments(postId, info?.links || [], (id) => listInstagramComments(id, t.access_token));
+  const read = r.comments.length;
+  const readSponsored = r.comments.filter((c) => c.sponsored).length;
+  const c = info?.check || null;
+  const metaSponsored = sponsoredCommentCount(c);
+  const unreadSponsored = metaSponsored != null ? Math.max(0, metaSponsored - readSponsored) : null;
+  let note: string | null = null;
+  if (unreadSponsored && unreadSponsored > 0) {
+    note = `Meta reports ${metaSponsored} comment(s) on sponsored (ad) copies of this post; ${readSponsored} could be read. `
+      + (c?.ads_read_missing
+        ? 'The rest live on the ad\'s own media, which SocialFlow can only find with the ads_read permission (not granted yet). Tell the user they exist and are visible in Instagram, and that SocialFlow support can link the ad to this post so automations answer them.'
+        : 'The ad copy is not linked to this post yet. Tell the user they exist and are visible in Instagram, and that SocialFlow support can link the ad to this post so automations answer them.');
+  }
+  return {
+    post_id: postId,
+    counts: {
+      on_post: c?.organic_comments ?? r.comments.filter((x) => !x.sponsored).length,
+      total_incl_ads: c?.total_comments ?? null,
+      sponsored_reported_by_meta: metaSponsored,
+      read: read, read_sponsored: readSponsored,
+    },
+    comments: r.comments.slice(0, limit).map((x) => ({ id: x.id, username: x.username || null, text: x.text || '', time: x.timestamp || null, sponsored: x.sponsored, ...(x.sponsored ? { ad_media_id: x.source_media_id } : {}) })),
+    ...(note ? { note } : {}),
+  };
 }
 
 async function statsFor(ids: string[]) {
@@ -395,6 +446,7 @@ async function callTool(owner: string, name: string, args: Json, m: Messages) {
   switch (name) {
     case 'list_pages': return toolListPages(owner, m);
     case 'list_posts': return toolListPosts(owner, args, m);
+    case 'get_post_comments': return toolGetPostComments(owner, args, m);
     case 'list_automations': return toolListAutomations(owner, args);
     case 'get_automation': return toolGetAutomation(owner, args);
     case 'create_automation': return toolCreateAutomation(owner, args, m);

@@ -1,6 +1,7 @@
 import { fillVars } from '@/lib/template';
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, ensureSchema, hasDb } from '@/lib/db';
+import { linkAdMedia } from '@/lib/ad-media';
 import {
   commentOnPost,
   sendPrivateReply,
@@ -26,6 +27,9 @@ interface CommentEvent {
   pageOrIgId: string;
   commentId: string;
   postId: string;
+  /** Instagram comment on an ad copy: the organic post it promotes (Meta sends media.original_media_id). */
+  originalPostId?: string;
+  adId?: string;
   text: string;
   fromId: string;
   fromName: string;
@@ -88,6 +92,8 @@ function extractEvents(body: any): CommentEvent[] {
           pageOrIgId: entry.id,
           commentId: v.id,
           postId: v.media?.id || '',
+          originalPostId: v.media?.original_media_id ? String(v.media.original_media_id) : undefined,
+          adId: v.media?.ad_id ? String(v.media.ad_id) : undefined,
           text: v.text || '',
           fromId: v.from?.id || '',
           fromName: v.from?.username || '',
@@ -118,6 +124,10 @@ async function processEvents(body: any) {
 
   for (const ev of events) {
     if (!ev.commentId) continue;
+    // 5.10.2026: remember which ad media belongs to which post, so the poller reads the ad copy's comments too.
+    if (ev.originalPostId && ev.postId && ev.originalPostId !== ev.postId) {
+      try { await linkAdMedia(ev.originalPostId, ev.postId, 'webhook', ev.adId); } catch { /* best effort */ }
+    }
 
     // Resolve the page token. For FB the entry id IS the page id; for IG it's
     // the IG account id, so we match on ig_id.
@@ -142,7 +152,7 @@ async function processEvents(body: any) {
       // Story-reply automations answer DMs, not comments (handled by the poller).
       if (a.post_scope === 'story_replies' || a.post_scope === 'dm_inbound') continue;
       // Post scope check
-      if (a.post_scope === 'specific_post' && a.post_id && a.post_id !== ev.postId) {
+      if (a.post_scope === 'specific_post' && a.post_id && a.post_id !== ev.postId && a.post_id !== ev.originalPostId) {
         continue;
       }
 

@@ -338,6 +338,32 @@ export async function ensureSchema() {
     );
     ALTER TABLE owner_prefs ADD COLUMN IF NOT EXISTS notify_email TEXT;
     ALTER TABLE owner_prefs ADD COLUMN IF NOT EXISTS notify_phone TEXT;
+    -- 5.10.2026: the Facebook account email, when the login granted it (fallback address for the disconnect alert).
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS email TEXT;
+    -- The ad media a comment lived on, when it came from a sponsored copy of the post (null = the post itself).
+    ALTER TABLE trigger_logs ADD COLUMN IF NOT EXISTS source_media_id TEXT;
+    -- 5.10.2026: comments on the sponsored (ad) copies of an Instagram post live on separate media ids
+    -- (the ad creative's effective_instagram_media_id); the organic /comments edge never returns them.
+    -- ad_media_checks caches, per organic media, what Meta says about its ads (boost_ads_list,
+    -- total_comments_count); ad_media_links maps organic media -> ad media once an id is known
+    -- (Marketing API, the comments webhook's original_media_id, or a manual link by the operator).
+    CREATE TABLE IF NOT EXISTS ad_media_checks (
+      media_id          TEXT PRIMARY KEY,
+      organic_comments  INTEGER,
+      total_comments    INTEGER,
+      ad_ids            TEXT[] NOT NULL DEFAULT '{}',
+      ads_read_missing  BOOLEAN NOT NULL DEFAULT false,
+      unsupported       BOOLEAN NOT NULL DEFAULT false,
+      checked_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS ad_media_links (
+      media_id     TEXT NOT NULL,
+      ad_media_id  TEXT NOT NULL,
+      ad_id        TEXT,
+      source       TEXT NOT NULL,
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (media_id, ad_media_id)
+    );
   `);
   initialized = true;
 }

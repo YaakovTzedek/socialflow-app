@@ -1,7 +1,9 @@
 import { sql, hasDb, ensureSchema } from './db';
 import { emailConfigured, emailShell, sendEmail } from './email';
+import { graphGet } from './meta';
 import { getMessages } from './i18n';
 import { DEFAULT_LOCALE, isLocale, type Locale } from './i18n/config';
+import { nextAlertState, pickAlertEmail, classifyGraphError, type AlertDecision, type AlertEvent, type AlertRow } from './connection-logic';
 
 /**
  * The owner's Facebook connection (3.10.2026).
@@ -12,17 +14,22 @@ import { DEFAULT_LOCALE, isLocale, type Locale } from './i18n/config';
  * red line on the dashboard. Now the break is recorded per owner, the app shows
  * a reconnect banner, and the owner is told by email and WhatsApp: once when it
  * is detected and one reminder a day later. The next login clears it.
+ *
+ * 5.10.2026: the per-owner flag became a disconnect EVENT (see
+ * connection-logic.ts). The poller also closes it when the stored tokens work
+ * again, so a stale flag can no longer swallow the alert for a later, real
+ * break; the email falls back to the login / partner email when no alert
+ * address was saved; and /api/pages no longer alerts when only the browser's
+ * own session token died while the page tokens that run the automations work.
  */
 
 const BASE = (process.env.NEXT_PUBLIC_BASE_URL || 'https://isocialflow.com').replace(/\/$/, '');
-const REMIND_AFTER_MS = 24 * 3600_000;
-const MAX_NOTICES = 2;
 
 /** Meta's answer for a token that no longer works (error 190 and its wordings). */
 export function isTokenError(message: unknown): boolean {
-  const s = String(message || '');
-  return /\(#190\)|code[":\s]*190|session has been invalidated|Error validating access token|access token has expired|has not authorized application|session is invalid/i.test(s);
+  return classifyGraphError(message) === 'token';
 }
+export { isConnectionError, classifyGraphError } from './connection-logic';
 
 /** Israeli and international numbers to the digits Green API wants (9725XXXXXXXX). Null if it cannot be a phone. */
 export function normalizePhone(raw: unknown): string | null {
@@ -87,21 +94,41 @@ export async function saveNotifyContacts(ownerId: string, email: string | null, 
     ON CONFLICT (owner_id) DO UPDATE SET notify_email = EXCLUDED.notify_email, notify_phone = EXCLUDED.notify_phone, updated_at = now()`;
 }
 
-/** Record that the owner's tokens stopped working, then alert if it is due. Never throws. */
+/** Run the alert state machine for one owner inside a row lock (two pollers never both send). */
+async function step(ownerId: string, ev: AlertEvent, extra: { error?: string; source?: string } = {}): Promise<AlertDecision> {
+  return (await sql!.begin(async (tx) => {
+    // Only `tx` in here: the client holds a single connection, so a call on `sql` would wait forever.
+    await tx`INSERT INTO connection_alerts (owner_id) VALUES (${ownerId}) ON CONFLICT (owner_id) DO NOTHING`;
+    const [r] = await tx`SELECT broken_at, notified_at, notify_count FROM connection_alerts WHERE owner_id = ${ownerId} FOR UPDATE`;
+    const prev: AlertRow = {
+      broken_at: r?.broken_at ? new Date(r.broken_at).getTime() : null,
+      notified_at: r?.notified_at ? new Date(r.notified_at).getTime() : null,
+      notify_count: Number(r?.notify_count) || 0,
+    };
+    const d = nextAlertState(prev, ev, Date.now());
+    const ts = (v: number | null) => (v == null ? null : new Date(v));
+    if (ev.type === 'failure') {
+      await tx`UPDATE connection_alerts SET broken_at = ${ts(d.row.broken_at)}, notified_at = ${ts(d.row.notified_at)},
+        notify_count = ${d.row.notify_count}, last_error = ${(extra.error || '').slice(0, 500)}, source = ${extra.source || null},
+        resolved_at = NULL, updated_at = now() WHERE owner_id = ${ownerId}`;
+    } else if (d.closed) {
+      await tx`UPDATE connection_alerts SET broken_at = NULL, notify_count = 0, resolved_at = now(),
+        source = ${ev.type}, updated_at = now() WHERE owner_id = ${ownerId}`;
+    }
+    return d;
+  })) as AlertDecision;
+}
+
+/**
+ * Record that the owner's tokens stopped working, and alert once per disconnect
+ * event (plus one reminder a day later). Safe to call on every poll. Never throws.
+ */
 export async function markBroken(ownerId: string, error: string, source: string) {
   if (!hasDb || !ownerId) return;
   try {
     await ensureSchema();
-    // A new break (none open) restarts the notice count; an open one only refreshes the error.
-    await sql!`
-      INSERT INTO connection_alerts (owner_id, broken_at, last_error, source, notify_count, resolved_at, updated_at)
-      VALUES (${ownerId}, now(), ${error.slice(0, 500)}, ${source}, 0, NULL, now())
-      ON CONFLICT (owner_id) DO UPDATE SET
-        broken_at    = COALESCE(connection_alerts.broken_at, now()),
-        notify_count = CASE WHEN connection_alerts.broken_at IS NULL THEN 0 ELSE connection_alerts.notify_count END,
-        notified_at  = CASE WHEN connection_alerts.broken_at IS NULL THEN NULL ELSE connection_alerts.notified_at END,
-        last_error   = EXCLUDED.last_error, source = EXCLUDED.source, resolved_at = NULL, updated_at = now()`;
-    await notifyIfDue(ownerId);
+    const d = await step(ownerId, { type: 'failure' }, { error, source });
+    if (d.send) await sendNotice(ownerId, d.send === 'reminder', error);
   } catch (e) {
     console.error('connection markBroken failed', ownerId, e);
   }
@@ -112,27 +139,57 @@ export async function markResolved(ownerId: string) {
   if (!hasDb || !ownerId) return;
   try {
     await ensureSchema();
-    await sql!`UPDATE connection_alerts SET broken_at = NULL, resolved_at = now(), updated_at = now() WHERE owner_id = ${ownerId} AND broken_at IS NOT NULL`;
+    await step(ownerId, { type: 'login' });
   } catch { /* a login must never fail over this */ }
 }
 
 /**
- * Send the alert: on the first detection, and once more a day later if it is
- * still broken. The row is claimed (notify_count + 1) before sending, so two
- * pollers running at once never send twice.
+ * The poller read these owners' pages with the stored tokens and nothing failed:
+ * close any open disconnect event, so the banner goes away and the NEXT break
+ * is a new event that alerts again. One SELECT when nothing is open.
  */
-async function notifyIfDue(ownerId: string) {
-  const claimed = await sql!`
-    UPDATE connection_alerts SET notify_count = notify_count + 1, notified_at = now()
-    WHERE owner_id = ${ownerId} AND broken_at IS NOT NULL AND notify_count < ${MAX_NOTICES}
-      AND (notified_at IS NULL OR notified_at < now() - ${`${REMIND_AFTER_MS / 1000} seconds`}::interval)
-    RETURNING notify_count`;
-  if (!claimed.length) return;
-  const reminder = Number(claimed[0].notify_count) > 1;
+export async function markHealthy(ownerIds: string[]) {
+  if (!hasDb || !ownerIds.length) return;
+  try {
+    await ensureSchema();
+    const open = await sql!`SELECT owner_id FROM connection_alerts WHERE owner_id = ANY(${ownerIds}) AND broken_at IS NOT NULL`;
+    for (const r of open) await step(String(r.owner_id), { type: 'healthy' });
+  } catch (e) {
+    console.error('connection markHealthy failed', e);
+  }
+}
 
+/**
+ * Do the page tokens the automations run on still work? /api/pages sees only
+ * the browser's own session token; when that one dies (an old device, a
+ * logged-out session) while the stored page tokens are fine, the automations
+ * keep working and an "everything stopped" alert would be false (Tolik, 3.10:
+ * flagged at 23:47 while his automations kept replying until 5.10).
+ * true = at least one stored page token answered; false = none did, or none stored.
+ */
+export async function storedTokensWork(ownerId: string): Promise<boolean> {
+  if (!hasDb || !ownerId) return false;
+  try {
+    await ensureSchema();
+    const rows = await sql!`
+      SELECT DISTINCT ON (t.page_id) t.access_token FROM page_tokens t
+      WHERE t.owner_id = ${ownerId} AND t.page_id IN (SELECT page_id FROM automations WHERE owner_id = ${ownerId} AND status = 'active')
+      LIMIT 3`;
+    for (const r of rows) {
+      try { await graphGet('me', { fields: 'id', access_token: String(r.access_token) }); return true; }
+      catch { /* try the next page */ }
+    }
+  } catch { /* fall through */ }
+  return false;
+}
+
+/** Send the notice the state machine decided on: email + WhatsApp to the owner, a line to the operator. */
+async function sendNotice(ownerId: string, reminder: boolean, error: string) {
   const [who] = await sql!`
     SELECT u.name, p.locale, p.notify_email, p.notify_phone,
       (SELECT payer_email FROM subscriptions s WHERE s.owner_id = ${ownerId} AND s.payer_email IS NOT NULL ORDER BY s.created_at DESC LIMIT 1) AS payer_email,
+      (SELECT email FROM affiliates f WHERE f.owner_id = ${ownerId} AND f.email IS NOT NULL ORDER BY f.created_at DESC LIMIT 1) AS affiliate_email,
+      u.email AS login_email,
       (SELECT count(*)::int FROM automations a WHERE a.owner_id = ${ownerId} AND a.status = 'active') AS active
     FROM (SELECT ${ownerId}::text AS owner_id) o
     LEFT JOIN app_users u ON u.owner_id = o.owner_id
@@ -141,13 +198,14 @@ async function notifyIfDue(ownerId: string) {
   const C = getMessages(locale).connection;
   const name = String(who?.name || '').split(' ')[0] || '';
   const link = reconnectUrl(locale);
+  const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const fill = (s: string) => s.replace('{name}', name).replace('{n}', String(who?.active ?? 0)).replace('{link}', link);
   const sent: string[] = [];
 
-  const to = who?.notify_email || who?.payer_email;
+  const to = pickAlertEmail({ notify_email: who?.notify_email, payer_email: who?.payer_email, login_email: who?.login_email, affiliate_email: who?.affiliate_email });
   if (to && emailConfigured()) {
     try {
-      const html = emailShell(locale, fill(C.emailTitle), `<p style="margin:0 0 14px;">${fill(C.emailLine1)}</p><p style="margin:0;">${fill(C.emailLine2)}</p>`, { href: link, label: C.reconnect });
+      const html = emailShell(locale, fill(C.emailTitle), `<p style="margin:0 0 14px;">${esc(fill(C.emailLine1))}</p><p style="margin:0;">${esc(fill(C.emailLine2))}</p>`, { href: link, label: C.reconnect });
       await sendEmail({ to, subject: fill(reminder ? C.emailSubjectReminder : C.emailSubject), html });
       sent.push('email');
     } catch (e) { console.error('connection email failed', ownerId, e); }
@@ -160,7 +218,7 @@ async function notifyIfDue(ownerId: string) {
   // The operator hears about every break, with what reached the customer.
   const admin = normalizePhone(process.env.ALERT_ADMIN_PHONE);
   if (admin) {
-    const line = `⚠️ SocialFlow: החיבור לפייסבוק נותק${reminder ? ' (תזכורת)' : ''}\n${who?.name || ownerId} (${ownerId})\nאוטומציות פעילות: ${who?.active ?? 0}\nנשלח ללקוח: ${sent.length ? sent.join(' + ') : 'לא נשלח, אין מייל או טלפון'}`;
+    const line = `⚠️ SocialFlow: החיבור לפייסבוק נותק${reminder ? ' (תזכורת)' : ''}\n${who?.name || ownerId} (${ownerId})\nאוטומציות פעילות: ${who?.active ?? 0}\nשגיאה: ${error.slice(0, 160)}\nנשלח ללקוח: ${sent.length ? sent.join(' + ') : 'לא נשלח, אין מייל או טלפון'}`;
     try { await sendWhatsApp(admin, line); } catch { /* best effort */ }
   }
 }

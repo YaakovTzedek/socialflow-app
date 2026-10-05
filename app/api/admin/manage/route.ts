@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, ensureSchema, hasDb } from '@/lib/db';
+import { linkAdMedia } from '@/lib/ad-media';
 
 const KEY = 'socialflow_verify_2026';
 
@@ -22,7 +23,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   if (!hasDb) return NextResponse.json({ error: 'no_db' });
   await ensureSchema();
-  const { action, id, dm_message, public_replies, page_id, from_page, to_page, automation_id, commenters, comment_id, comment_time } = await req.json();
+  const { action, id, dm_message, public_replies, page_id, from_page, to_page, automation_id, commenters, comment_id, comment_time, media_id, ad_media_id, ad_id } = await req.json();
+  // 5.10.2026: tie a sponsored copy (the ad creative's effective_instagram_media_id) to its organic post, so every
+  // automation on that post (specific or all-posts) also answers comments made on the ad. Replaces the 1.10
+  // workaround of a separate automation per ad media; do not keep both (the poller skips ad media that have their own).
+  if (action === 'link_ad_media' && media_id && ad_media_id) {
+    await linkAdMedia(String(media_id), String(ad_media_id), 'manual', ad_id ? String(ad_id) : null);
+    const rows = await sql!`SELECT media_id, ad_media_id, ad_id, source, created_at FROM ad_media_links WHERE media_id = ${String(media_id)}`;
+    return NextResponse.json({ ok: true, links: rows });
+  }
   // 30.9.2026: automations created with the old Reelsi page id failed every DM (token of another page). Move them.
   if (action === 'move_page' && from_page && to_page) {
     const rows = await sql!`UPDATE automations SET page_id = ${String(to_page)} WHERE page_id = ${String(from_page)} RETURNING id, name`;
