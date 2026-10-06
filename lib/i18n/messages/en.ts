@@ -390,7 +390,7 @@ const en = {
     privacy: {
       title: 'Privacy policy',
       who: 'Who we are', whoText: 'SocialFlow is a comment management and automation system for Facebook pages and Instagram Business accounts. It lets a page admin browse posts, reply to comments, and set up automatic replies.',
-      collect: 'What we collect', collectItems: ['Facebook access token (stored encrypted, used only to act on your behalf)', 'Your Facebook name and user id (to identify the account)', 'The list of pages you manage and their posts and comments', 'The automations you create'],
+      collect: 'What we collect', collectItems: ['Facebook access token (stored encrypted, used only to act on your behalf)', 'Your Facebook name and user id (to identify the account)', 'The list of pages you manage and their posts and comments', 'The automations you create', 'Anonymous usage on our public pages (clicks, scrolls, page views) via Microsoft Clarity, to improve the site. Not used inside your account.'],
       use: 'How we use it', useText: 'The data is used only to provide the service: showing pages and posts, publishing replies you approve, and sending automatic replies and messages according to the rules you set. We do not sell or share the data with third parties.',
       storage: 'Storage and security', storageText: 'Access tokens are stored encrypted. Automation data is stored in a secured database. All traffic uses encrypted connections (HTTPS).',
       deletion: 'Deleting your data', deletionText: 'You can delete your data at any time, see the', deletionLink: 'data deletion instructions', deletionText2: '. Disconnecting the account removes all tokens and related data.',
