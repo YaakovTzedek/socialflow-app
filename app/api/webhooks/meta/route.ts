@@ -1,15 +1,12 @@
-import { fillVars } from '@/lib/template';
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, ensureSchema, hasDb } from '@/lib/db';
 import { linkAdMedia } from '@/lib/ad-media';
 import { verifyMetaSignature } from '@/lib/webhook-signature';
 import { messagingEventsFrom } from '@/lib/followup-core';
 import { handleMessagingWebhook, followupEnabled } from '@/lib/followup';
-import {
-  commentOnPost,
-  sendPrivateReply,
-  commentOnInstagramMedia,
-} from '@/lib/meta';
+import { quotaExhaustedOwners } from '@/lib/entitlements';
+import { extractCommentEvents, webhookMatches, handleMatchedComment } from '@/lib/comment-core';
+import { liveCommentDeps, makeBrandingLine } from '@/lib/comment-handler';
 
 const VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || 'socialflow_verify';
 
@@ -25,252 +22,57 @@ export async function GET(req: NextRequest) {
   return new NextResponse('Forbidden', { status: 403 });
 }
 
-interface CommentEvent {
-  platform: 'facebook' | 'instagram';
-  pageOrIgId: string;
-  commentId: string;
-  postId: string;
-  /** Instagram comment on an ad copy: the organic post it promotes (Meta sends media.original_media_id). */
-  originalPostId?: string;
-  adId?: string;
-  text: string;
-  fromId: string;
-  fromName: string;
-}
-
-// POST — receive comment events and run matching automations
-export async function POST(req: NextRequest) {
-  let body: any;
-  let raw = '';
-  try {
-    raw = await req.text();
-    body = JSON.parse(raw);
-  } catch {
-    return new NextResponse('OK', { status: 200 });
-  }
-
-  // 6.10.2026: Instagram DM replies (messaging) feed the follow-up step. Only a delivery signed with our app
-  // secret (X-Hub-Signature-256) is acted on; the comment path below is unchanged. The poller reads the same
-  // threads, and followup_events (keyed by message id) makes sure only one of the two answers.
-  if (followupEnabled() && body?.object === 'instagram' && Array.isArray(body?.entry) && body.entry.some((e: any) => Array.isArray(e?.messaging))) {
-    try {
-      if (verifyMetaSignature(raw, req.headers.get('x-hub-signature-256'), process.env.META_APP_SECRET)) {
-        await handleMessagingWebhook(body, messagingEventsFrom(body));
-      } else {
-        console.warn('webhook messaging: bad or missing signature, ignored');
-      }
-    } catch (e) {
-      console.error('webhook messaging error', e);
-    }
-  }
-
-  // Always ack fast; process best-effort.
-  try {
-    if (hasDb) {
-      await ensureSchema();
-      // Record the raw event first so we can confirm delivery even if nothing matches.
-      await sql!`
-        INSERT INTO webhook_events (object, body)
-        VALUES (${body?.object || 'unknown'}, ${JSON.stringify(body).slice(0, 4000)})
-      `;
-      await processEvents(body);
-    }
-  } catch (e) {
-    console.error('webhook processing error', e);
-  }
-  return new NextResponse('OK', { status: 200 });
-}
-
-function extractEvents(body: any): CommentEvent[] {
-  const events: CommentEvent[] = [];
-  if (!body?.entry) return events;
-
-  for (const entry of body.entry) {
-    for (const change of entry.changes || []) {
-      const v = change.value || {};
-      // Facebook page feed comment
-      if (
-        body.object === 'page' &&
-        change.field === 'feed' &&
-        v.item === 'comment' &&
-        v.verb === 'add'
-      ) {
-        events.push({
-          platform: 'facebook',
-          pageOrIgId: entry.id,
-          commentId: v.comment_id,
-          postId: v.post_id,
-          text: v.message || '',
-          fromId: v.from?.id || '',
-          fromName: v.from?.name || '',
-        });
-      }
-      // Instagram comment
-      if (body.object === 'instagram' && change.field === 'comments') {
-        events.push({
-          platform: 'instagram',
-          pageOrIgId: entry.id,
-          commentId: v.id,
-          postId: v.media?.id || '',
-          originalPostId: v.media?.original_media_id ? String(v.media.original_media_id) : undefined,
-          adId: v.media?.ad_id ? String(v.media.ad_id) : undefined,
-          text: v.text || '',
-          fromId: v.from?.id || '',
-          fromName: v.from?.username || '',
-        });
-      }
-    }
-  }
-  return events;
-}
-
-function keywordMatches(
-  text: string,
-  keywords: string[],
-  matchType: string
-): string | null {
-  const t = (text || '').toLowerCase();
-  for (const kw of keywords) {
-    const k = kw.toLowerCase().trim();
-    if (!k) continue;
-    if (matchType === 'exact' ? t === k : t.includes(k)) return kw;
-  }
-  return null;
-}
-
+/**
+ * Comment events. Since 6.10.2026 this runs the SAME code as the poller (lib/comment-core.ts via
+ * lib/comment-handler.ts): the comment is claimed in processed_comments before any reply or DM, so
+ * whichever of the two sees a comment first answers it and the other skips. Before, the webhook had
+ * its own copy that never claimed (a Facebook comment could be answered twice), replied on Instagram
+ * through the wrong endpoint and sent no Instagram DM.
+ */
 async function processEvents(body: any) {
-  await ensureSchema();
-  const events = extractEvents(body);
+  const events = extractCommentEvents(body);
+  if (!events.length) return;
+  const brandingLine = makeBrandingLine();
 
   for (const ev of events) {
     if (!ev.commentId) continue;
-    // 5.10.2026: remember which ad media belongs to which post, so the poller reads the ad copy's comments too.
-    if (ev.originalPostId && ev.postId && ev.originalPostId !== ev.postId) {
-      try { await linkAdMedia(ev.originalPostId, ev.postId, 'webhook', ev.adId); } catch { /* best effort */ }
-    }
-
-    // Resolve the page token. For FB the entry id IS the page id; for IG it's
-    // the IG account id, so we match on ig_id.
-    const tokenRows =
-      ev.platform === 'facebook'
-        ? await sql!`SELECT * FROM page_tokens WHERE page_id = ${ev.pageOrIgId} LIMIT 1`
-        : await sql!`SELECT * FROM page_tokens WHERE ig_id = ${ev.pageOrIgId} LIMIT 1`;
-    const tokenRow = tokenRows[0];
-    if (!tokenRow) continue;
-    const pageToken = tokenRow.access_token as string;
-    const pageId = tokenRow.page_id as string;
-
-    // Find active automations for this page + platform.
-    const autos = await sql!`
-      SELECT * FROM automations
-      WHERE page_id = ${pageId}
-        AND platform = ${ev.platform}
-        AND status = 'active'
-    `;
-
-    for (const a of autos) {
-      // Story-reply automations answer DMs, not comments (handled by the poller).
-      if (a.post_scope === 'story_replies' || a.post_scope === 'dm_inbound') continue;
-      // Post scope check
-      if (a.post_scope === 'specific_post' && a.post_id && a.post_id !== ev.postId && a.post_id !== ev.originalPostId) {
-        continue;
+    try {
+      // 5.10.2026: remember which ad media belongs to which post, so the poller reads the ad copy's comments too.
+      if (ev.originalPostId && ev.postId && ev.originalPostId !== ev.postId) {
+        try { await linkAdMedia(ev.originalPostId, ev.postId, 'webhook', ev.adId); } catch { /* best effort */ }
       }
 
-      // Keyword check (any_comment when no keywords)
-      let matched: string | null = null;
-      if (a.keywords && a.keywords.length > 0) {
-        matched = keywordMatches(ev.text, a.keywords, a.match_type);
-        if (!matched) continue;
-      }
+      // Resolve the page token. For FB the entry id IS the page id; for IG it's the IG account id.
+      const tokenRows =
+        ev.platform === 'facebook'
+          ? await sql!`SELECT * FROM page_tokens WHERE page_id = ${ev.pageOrIgId} LIMIT 1`
+          : await sql!`SELECT * FROM page_tokens WHERE ig_id = ${ev.pageOrIgId} LIMIT 1`;
+      const tokenRow = tokenRows[0];
+      if (!tokenRow) continue;
+      const pageToken = tokenRow.access_token as string;
+      const pageId = String(tokenRow.page_id);
+      const igId = (tokenRow.ig_id as string | null) || null;
 
-      // Don't reply to the page's own comments.
-      if (ev.fromId && ev.fromId === pageId) continue;
+      const autos = await sql!`
+        SELECT * FROM automations
+        WHERE page_id = ${pageId} AND platform = ${ev.platform} AND status = 'active'
+        ORDER BY created_at`;
+      const matches = webhookMatches(ev, autos as any[], { pageId, igId, pageName: (tokenRow.page_name as string | null) || null });
+      if (!matches.length) continue;
 
-      let publicStatus = 'skipped';
-      let dmStatus = 'skipped';
-      let errorMessage: string | null = null;
-
-      // once_per_user — skip if this commenter already handled.
-      if (a.once_per_user && ev.fromId) {
-        const seen = await sql!`
-          SELECT 1 FROM dm_sent
-          WHERE automation_id = ${a.id} AND commenter_id = ${ev.fromId} LIMIT 1
-        `;
-        if (seen.length > 0) {
-          await logTrigger(a, ev, matched, 'skipped', 'skipped', 'already_handled');
-          continue;
-        }
-      }
-
-      // Public reply
-      if (a.public_reply_enabled && a.public_replies?.length > 0) {
+      // Plan metering, as in the poller: an owner past this month's DM quota is not claimed, so an upgrade catches up.
+      const exhausted = await quotaExhaustedOwners(matches.map((m) => String(m.automation.owner_id)));
+      const deps = liveCommentDeps({ pageToken, igId, brandingLine });
+      for (const m of matches) {
+        if (exhausted.has(String(m.automation.owner_id))) continue;
         try {
-          const reply = fillVars(
-            a.public_replies[Math.floor(Math.random() * a.public_replies.length)] || '',
-            { name: ev.fromName, keyword: matched }
-          );
-          if (reply?.trim()) {
-            if (ev.platform === 'facebook') {
-              await commentOnPost(ev.commentId, reply, pageToken);
-            } else {
-              await commentOnInstagramMedia(ev.commentId, reply, pageToken);
-            }
-            publicStatus = 'sent';
-          }
-        } catch (e: any) {
-          publicStatus = 'failed';
-          errorMessage = e.message;
+          await handleMatchedComment(m.automation, m.comment, deps);
+        } catch (e) {
+          console.error('webhook comment error', m.automation.id, ev.commentId, e);
         }
       }
-
-      // DM (private reply) — Facebook only via comment_id
-      if (a.dm_enabled && a.dm_message && ev.platform === 'facebook') {
-        try {
-          const msg = fillVars(
-            a.dm_link ? `${a.dm_message}\n\n${a.dm_link}` : a.dm_message,
-            { name: ev.fromName, keyword: matched }
-          );
-          await sendPrivateReply(ev.commentId, msg, pageToken);
-          dmStatus = 'sent';
-        } catch (e: any) {
-          dmStatus = 'failed';
-          errorMessage = errorMessage || e.message;
-        }
-      }
-
-      // Record once_per_user + counters + log
-      if (ev.fromId) {
-        await sql!`
-          INSERT INTO dm_sent (automation_id, commenter_id)
-          VALUES (${a.id}, ${ev.fromId})
-          ON CONFLICT DO NOTHING
-        `;
-      }
-      await sql!`
-        UPDATE automations SET trigger_count = trigger_count + 1 WHERE id = ${a.id}
-      `;
-      await logTrigger(a, ev, matched, publicStatus, dmStatus, errorMessage);
+    } catch (e) {
+      console.error('webhook comment event error', ev.commentId, e);
     }
   }
-}
-
-async function logTrigger(
-  a: any,
-  ev: CommentEvent,
-  matched: string | null,
-  publicStatus: string,
-  dmStatus: string,
-  errorMessage: string | null
-) {
-  await sql!`
-    INSERT INTO trigger_logs (
-      automation_id, platform, post_id, comment_id, commenter_id,
-      commenter_name, comment_text, matched_keyword,
-      public_reply_status, dm_status, error_message
-    ) VALUES (
-      ${a.id}, ${ev.platform}, ${ev.postId}, ${ev.commentId}, ${ev.fromId},
-      ${ev.fromName}, ${ev.text}, ${matched},
-      ${publicStatus}, ${dmStatus}, ${errorMessage}
-    )
-  `;
 }
