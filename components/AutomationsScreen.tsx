@@ -4,13 +4,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from './I18nProvider';
 import { useReadOnly } from './ReadOnlyContext';
+import FollowupSection from './FollowupSection';
 
 /** Automations list + the six-step builder + inline editor. API: /api/automations, /api/pages, posts and media endpoints. */
 
 interface Page { id: string; name: string; picture?: string; instagram?: { id: string; username?: string; picture?: string } | null }
-interface Stats { triggers: number; dms_sent: number; replies_sent: number; failed: number; last_at: string | null }
+interface Stats { triggers: number; dms_sent: number; replies_sent: number; failed: number; last_at: string | null; followups_sent?: number }
 interface PostInfo { id: string; permalink?: string; comments_count?: number | null; like_count?: number | null; text?: string; image?: string }
-interface Automation { id: string; name: string; platform: string; page_id: string; page_name?: string; post_id?: string; post_scope: string; keywords: string[]; match_type: string; public_reply_enabled: boolean; public_replies: string[]; dm_enabled: boolean; dm_message?: string; dm_link?: string; once_per_user: boolean; status: string; trigger_count: number; created_at: string; stats?: Stats; post?: PostInfo | null }
+interface Automation { id: string; name: string; platform: string; page_id: string; page_name?: string; post_id?: string; post_scope: string; keywords: string[]; match_type: string; public_reply_enabled: boolean; public_replies: string[]; dm_enabled: boolean; dm_message?: string; dm_link?: string; once_per_user: boolean; status: string; trigger_count: number; followup?: { enabled?: boolean; mode?: string } | null; created_at: string; stats?: Stats; post?: PostInfo | null }
 interface Target { key: string; platform: 'facebook' | 'instagram'; page_id: string; ig_id: string | null; name: string; picture?: string }
 interface PostItem { id: string; text: string; image?: string; likes?: number | null; comments?: number | null }
 
@@ -109,6 +110,7 @@ export default function AutomationsScreen() {
                       <span>· {a.post_scope === 'story_replies' ? A.storyReplies : a.post_scope === 'dm_inbound' ? A.dmInbound : a.post_scope === 'all_posts' ? A.allPosts : A.specificPost}</span>
                       {a.public_reply_enabled && <span>· {A.publicReply}</span>}
                       {a.dm_enabled && <span>· {A.privateMessage}</span>}
+                      {a.followup && a.followup.enabled !== false && <span>· ↩ {m.followup.title} ({m.followup.beta})</span>}
                       <span>· {a.match_type === 'exact' ? A.exactMatch : A.containsMatch}</span>
                     </div>
                     <div className="kws">{a.keywords?.length ? a.keywords.map((k) => <span key={k}>{k}</span>) : <span>{a.post_scope === 'story_replies' ? A.storyReplies : a.post_scope === 'dm_inbound' ? A.dmInboundAny : m.common.anyComment}</span>}</div>
@@ -129,13 +131,14 @@ export default function AutomationsScreen() {
                       <span>{t(A.triggered, { n: st.triggers })}</span>
                       <span className={st.dms_sent ? 'ok' : ''}>✉️ {t(A.dmsSent, { n: st.dms_sent })}</span>
                       <span className={st.replies_sent ? 'ok' : ''}>💬 {t(A.repliesSent, { n: st.replies_sent })}</span>
+                      {!!st.followups_sent && <span className="ok">↩ {t(m.followup.followupsSent, { n: st.followups_sent })}</span>}
                       {st.failed > 0 && <span className="bad">⚠ {t(A.failed, { n: st.failed })}</span>}
                       {last && <span>{t(A.last, { when: last })}</span>}
                     </div>
                     {editing === a.id && (
                       <Editor a={a} onCancel={() => setEditing(null)}
                         onSaved={(updated) => { setAutos((prev) => prev.map((x) => (x.id === a.id ? { ...x, ...updated } : x))); setEditing(null); showToast(A.updated); }}
-                        onError={(x) => showToast(`${m.common.error}: ${x}`)} />
+                        onError={(x) => showToast(`${m.common.error}: ${x}`)} onToast={showToast} />
                     )}
                   </div>
                   <div className="acts">
@@ -454,7 +457,7 @@ function Builder({ targets, onCancel, onSaved, onError }: { targets: Target[]; o
 }
 
 /** Inline editor for an existing automation (everything except the target post). */
-function Editor({ a, onCancel, onSaved, onError }: { a: Automation; onCancel: () => void; onSaved: (u: Partial<Automation>) => void; onError: (x: string) => void }) {
+function Editor({ a, onCancel, onSaved, onError, onToast }: { a: Automation; onCancel: () => void; onSaved: (u: Partial<Automation>) => void; onError: (x: string) => void; onToast: (x: string) => void }) {
   const { m } = useI18n(); const A = m.automations;
   const ro = useReadOnly();
   const VARS = [A.varName, A.varKeyword, A.varPage];
@@ -523,6 +526,7 @@ function Editor({ a, onCancel, onSaved, onError }: { a: Automation; onCancel: ()
         )}
       </div>
       <div className="sfa-setting"><div><strong>{A.oncePerUser}</strong><small>{A.oncePerUserNote}</small></div><button type="button" className={`sfa-toggle${oncePerUser ? ' on' : ''}`} onClick={() => setOncePerUser((v) => !v)} aria-label={A.oncePerUser}><span /></button></div>
+      <FollowupSection automationId={a.id} platform={a.platform} onToast={onToast} />
       <div className="foot">
         <button type="button" className="sfa-btn sfa-btn-primary" onClick={save} disabled={ro || saving} title={ro ? m.owner.readOnlyTip : undefined}>{saving ? A.saving : A.saveChanges}</button>
         <button type="button" className="sfa-btn sfa-btn-ghost" onClick={onCancel} disabled={saving}>{m.common.cancel}</button>

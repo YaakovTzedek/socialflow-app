@@ -21,6 +21,7 @@ import { isInbound, isStoryReply, storyIdOf } from '@/lib/inbox';
 import { isTokenError, isConnectionError, classifyGraphError, markBroken, markHealthy } from '@/lib/connection';
 import { adSurfacesFor, type AdRunCache } from '@/lib/ad-media';
 import { collectComments } from '@/lib/ad-comments';
+import { openFollowupConversation, pollFollowups, followupEnabled } from '@/lib/followup';
 
 export const maxDuration = 60;
 
@@ -59,7 +60,7 @@ function dmTextFor(a: any, branding: string | null, vars: TemplateVars = {}): st
 async function retryFailedDms(brandingLine: (owner: string) => Promise<string | null>): Promise<{ retried: number; recovered: number }> {
   const rows = await sql!`
     SELECT l.id, l.comment_id, l.platform, a.id AS automation_id, a.owner_id, a.page_id,
-           a.dm_message, a.dm_link, a.once_per_user, a.post_scope, l.commenter_id, l.dm_attempts,
+           a.dm_message, a.dm_link, a.once_per_user, a.post_scope, a.followup, l.commenter_id, l.dm_attempts,
            l.commenter_name, l.matched_keyword, t.access_token, t.ig_id, t.page_name
     FROM trigger_logs l
     JOIN automations a ON a.id = l.automation_id
@@ -68,6 +69,7 @@ async function retryFailedDms(brandingLine: (owner: string) => Promise<string | 
       AND (l.dm_retryable = true OR l.dm_attempts = 0)
       AND l.dm_attempts < ${MAX_DM_ATTEMPTS}
       AND l.created_at > now() - interval '23 hours'
+      AND l.followup_step IS NULL
     ORDER BY l.created_at ASC LIMIT 25`;
 
   let recovered = 0;
@@ -89,6 +91,11 @@ async function retryFailedDms(brandingLine: (owner: string) => Promise<string | 
       if (r.commenter_id) {
         await sql!`INSERT INTO dm_sent (automation_id, commenter_id) VALUES (${r.automation_id}, ${r.commenter_id}) ON CONFLICT DO NOTHING`;
       }
+      await openFollowupConversation({
+        automation: { id: r.automation_id, owner_id: r.owner_id, page_id: r.page_id, platform: r.platform, followup: r.followup },
+        recipientId: r.post_scope === 'story_replies' ? String(r.commenter_id || '') || null : sent.recipientId || null,
+        recipientName: r.commenter_name, firstDmMid: sent.messageId, logId: r.id,
+      });
       recovered++;
     } catch (e: any) {
       await sql!`
@@ -247,6 +254,11 @@ async function pollStoryReplies(opts: {
           let err: string | null = null;
           let dmMessageId: string | null = null;
           let dmRetryable = false;
+          // Their message may be a reply to an earlier automation's DM: the follow-up step owns it then.
+          if (followupEnabled()) {
+            const [open] = await sql!`SELECT 1 FROM followup_conversations WHERE page_id = ${pageId} AND recipient_id = ${senderId} AND stage = 'awaiting' AND closes_at > now() LIMIT 1`;
+            if (open) continue;
+          }
           if (a.dm_enabled && a.dm_message) {
             const already = a.once_per_user
               ? await sql!`SELECT 1 FROM dm_sent WHERE automation_id = ${a.id} AND commenter_id = ${senderId} LIMIT 1`
@@ -270,13 +282,17 @@ async function pollStoryReplies(opts: {
           }
 
           await sql!`UPDATE automations SET trigger_count = trigger_count + 1 WHERE id = ${a.id}`;
-          await sql!`
+          const [storyLog] = await sql!`
             INSERT INTO trigger_logs (automation_id, platform, post_id, comment_id,
               commenter_id, commenter_name, comment_text, matched_keyword,
               public_reply_status, dm_status, error_message, dm_message_id, dm_attempts, dm_retryable)
             VALUES (${a.id}, 'instagram', ${storyIdOf(msg)}, ${msg.id}, ${senderId},
               ${msg.from?.username || msg.from?.name || ''}, ${text}, ${kw}, 'skipped', ${dmStatus}, ${err},
-              ${dmMessageId}, ${dmStatus === 'skipped_duplicate' || dmStatus === 'skipped' ? 0 : 1}, ${dmRetryable})`;
+              ${dmMessageId}, ${dmStatus === 'skipped_duplicate' || dmStatus === 'skipped' ? 0 : 1}, ${dmRetryable})
+            RETURNING id`;
+          if (dmStatus === 'sent') {
+            await openFollowupConversation({ automation: a, recipientId: senderId, recipientName: msg.from?.username || msg.from?.name || null, firstDmMid: dmMessageId, logId: storyLog?.id });
+          }
           matched++;
         }
       }
@@ -572,6 +588,7 @@ export async function GET(req: NextRequest) {
           }
 
           let dmMessageId: string | null = null;
+          let dmRecipient: string | null = null;
           let dmRetryable = false;
           if (a.dm_enabled && a.dm_message) {
             // once_per_user is honoured here, against dm_sent, so a person who
@@ -589,6 +606,7 @@ export async function GET(req: NextRequest) {
                   : await sendPrivateReply(commentId, msg, pageToken);
                 dmStatus = 'sent';
                 dmMessageId = sent.messageId;
+                dmRecipient = sent.recipientId || null;
                 if (fromId) {
                   await sql!`
                     INSERT INTO dm_sent (automation_id, commenter_id)
@@ -606,13 +624,17 @@ export async function GET(req: NextRequest) {
           }
 
           await sql!`UPDATE automations SET trigger_count = trigger_count + 1 WHERE id = ${a.id}`;
-          await sql!`
+          const [commentLog] = await sql!`
             INSERT INTO trigger_logs (automation_id, platform, post_id, comment_id,
               commenter_id, commenter_name, comment_text, matched_keyword,
               public_reply_status, dm_status, error_message, dm_message_id, dm_attempts, dm_retryable, source_media_id)
             VALUES (${a.id}, ${a.platform}, ${postId}, ${commentId}, ${String(fromId || '')},
               ${fromName || ''}, ${text}, ${kw}, ${publicStatus}, ${dmStatus}, ${err},
-              ${dmMessageId}, ${dmStatus === 'skipped_duplicate' ? 0 : 1}, ${dmRetryable}, ${sourceMedia})`;
+              ${dmMessageId}, ${dmStatus === 'skipped_duplicate' ? 0 : 1}, ${dmRetryable}, ${sourceMedia})
+            RETURNING id`;
+          if (dmStatus === 'sent') {
+            await openFollowupConversation({ automation: a, recipientId: dmRecipient, recipientName: fromName || null, firstDmMid: dmMessageId, logId: commentLog?.id });
+          }
           matched++;
         }
       }
@@ -653,6 +675,12 @@ export async function GET(req: NextRequest) {
   // it never ran, because the comment pass always uses the whole budget, so a failed DM was never retried.
   let retry = { retried: 0, recovered: 0 };
   try { retry = await retryFailedDms(brandingLine); } catch { /* never fail the poll over the retry pass */ }
+  // Continued DM conversations (6.10.2026): read only the threads of people inside an open follow-up window.
+  // Dormant unless FOLLOWUP_ENABLED=true. Gets at most 12 seconds so the comment pass keeps its budget.
+  let followup: any = null;
+  if (followupEnabled()) {
+    try { followup = await pollFollowups(Math.min(started + TIME_BUDGET_MS, Date.now() + 12_000)); } catch (e: any) { followup = { error: e.message }; }
+  }
   if (req.nextUrl.searchParams.get('stories') !== '1') {
     await mapPool(automations, 4, processAutomation);
     // Move the cursor past the older automations this run reached (in rotation order, stopping at the first miss).
@@ -685,6 +713,7 @@ export async function GET(req: NextRequest) {
     ran_at: new Date().toISOString(),
     took_ms: Date.now() - started,
     dm_retry: retry,
+    ...(followup ? { followup } : {}),
     cursor: cursorInfo,
     ...(brokenOwners.size ? { broken_connections: [...brokenOwners.keys()] } : {}),
     summary,

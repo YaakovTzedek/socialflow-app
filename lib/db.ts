@@ -364,6 +364,57 @@ export async function ensureSchema() {
       created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
       PRIMARY KEY (media_id, ad_media_id)
     );
+    -- 6.10.2026: continued DM conversation (follow-up step, lib/followup-core.ts). automations.followup holds
+    -- the step's config (NULL = none). One followup_conversations row per first DM we sent while the step was
+    -- on; recipient_key is the person's IGSID, or "mid:<our message id>" until the IGSID is resolved.
+    -- followup_events: one row per inbound message we looked at, keyed by its message id, so the webhook and
+    -- the poller can never both answer it. followups_sent is claimed with a conditional UPDATE (each step once).
+    ALTER TABLE automations ADD COLUMN IF NOT EXISTS followup JSONB;
+    ALTER TABLE trigger_logs ADD COLUMN IF NOT EXISTS followup_step INTEGER;
+    CREATE TABLE IF NOT EXISTS followup_conversations (
+      id               BIGSERIAL PRIMARY KEY,
+      owner_id         TEXT NOT NULL,
+      page_id          TEXT NOT NULL,
+      automation_id    TEXT NOT NULL,
+      platform         TEXT NOT NULL DEFAULT 'instagram',
+      recipient_key    TEXT NOT NULL,
+      recipient_id     TEXT,
+      recipient_name   TEXT,
+      source_log_id    BIGINT,
+      first_dm_mid     TEXT,
+      first_dm_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+      closes_at        TIMESTAMPTZ NOT NULL,
+      ig_conversation_id TEXT,
+      stage            TEXT NOT NULL DEFAULT 'awaiting',
+      replies_seen     INTEGER NOT NULL DEFAULT 0,
+      followups_sent   INTEGER NOT NULL DEFAULT 0,
+      last_inbound_at  TIMESTAMPTZ,
+      last_bot_mid     TEXT,
+      last_bot_at      TIMESTAMPTZ,
+      last_polled_at   TIMESTAMPTZ,
+      last_error       TEXT,
+      created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE (automation_id, recipient_key)
+    );
+    CREATE INDEX IF NOT EXISTS followup_conv_open_idx ON followup_conversations (stage, closes_at);
+    CREATE INDEX IF NOT EXISTS followup_conv_lookup_idx ON followup_conversations (page_id, recipient_id, stage);
+    CREATE TABLE IF NOT EXISTS followup_events (
+      inbound_mid      TEXT PRIMARY KEY,
+      conversation_id  BIGINT NOT NULL,
+      source           TEXT NOT NULL,
+      inbound_text     TEXT,
+      inbound_at       TIMESTAMPTZ,
+      outcome          TEXT NOT NULL DEFAULT 'claimed',
+      decision         TEXT,
+      intent           TEXT,
+      confidence       REAL,
+      step             INTEGER,
+      reply_mid        TEXT,
+      error            TEXT,
+      created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS followup_events_conv_idx ON followup_events (conversation_id, created_at);
   `);
   initialized = true;
 }

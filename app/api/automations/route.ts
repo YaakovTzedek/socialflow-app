@@ -30,7 +30,8 @@ export async function GET() {
     const statRows = ids.length
       ? await sql!`
           SELECT automation_id,
-                 count(*)::int AS triggers,
+                 count(*) FILTER (WHERE followup_step IS NULL)::int AS triggers,
+                 count(*) FILTER (WHERE followup_step IS NOT NULL AND dm_status = 'sent')::int AS followups_sent,
                  count(*) FILTER (WHERE dm_status = 'sent')::int AS dms_sent,
                  count(*) FILTER (WHERE public_reply_status = 'sent')::int AS replies_sent,
                  count(*) FILTER (WHERE dm_status = 'failed' OR public_reply_status = 'failed')::int AS failed,

@@ -21,6 +21,8 @@ import { collectComments, sponsoredCommentCount } from './ad-comments';
 import { getBrain, getSegment, getSegmentBenchmark } from './brain';
 import { getRecommendations, getHistorySummary } from './recommend';
 import { getMessages, negotiate, isLocale, fmt, type Locale, type Messages } from './i18n';
+import { normalizeFollowup } from './followup-core';
+import { followupCapability, followupConversations } from './followup';
 
 export const PROTOCOL_VERSION = '2025-06-18';
 const SERVER_INFO = { name: 'socialflow', version: '1.0.0' };
@@ -63,6 +65,8 @@ const TOOL_META: Record<string, { title: string; readOnlyHint?: true; destructiv
   get_report: { title: 'Get a report', readOnlyHint: true },
   get_insights: { title: 'Get insights', readOnlyHint: true, openWorldHint: true },
   publish_post: { title: 'Publish a post', destructiveHint: true, openWorldHint: true },
+  set_followup: { title: 'Set the follow-up step of an automation', destructiveHint: false },
+  get_followup_conversations: { title: 'Get follow-up conversations', readOnlyHint: true },
 };
 function annotate<T extends { name: string }>(tools: T[]) {
   return tools.map((t) => {
@@ -86,6 +90,23 @@ function toolsFor(m: Messages) {
         public_replies: { type: 'array', items: { type: 'string' }, description: A.public_replies }, dm_message: { type: 'string', description: A.dm_message }, dm_link: { type: 'string', description: A.dm_link },
         once_per_user: { type: 'boolean', default: true }, status: { type: 'string', enum: ['active', 'paused'], default: 'active' } }, required: ['page_id', 'platform'], additionalProperties: false } },
     { name: 'update_automation', description: T.update_automation, inputSchema: { type: 'object', properties: { id: { type: 'string' }, status: { type: 'string', enum: ['active', 'paused'] }, post_scope: { type: 'string', enum: ['specific_post', 'all_posts', 'story_replies', 'dm_inbound'], description: A.post_scope }, name: { type: 'string' }, keywords: { type: 'array', items: { type: 'string' } }, match_type: { type: 'string', enum: ['contains', 'exact'] }, public_reply_enabled: { type: 'boolean' }, public_replies: { type: 'array', items: { type: 'string' } }, dm_enabled: { type: 'boolean' }, dm_message: { type: 'string' }, dm_link: { type: 'string' }, once_per_user: { type: 'boolean' } }, required: ['id'], additionalProperties: false } },
+    { name: 'set_followup', description: m.followup.toolSet, inputSchema: { type: 'object', properties: {
+        automation_id: { type: 'string', description: m.followup.argAutomation },
+        enabled: { type: 'boolean', default: true, description: m.followup.argEnabled },
+        mode: { type: 'string', enum: ['simple', 'ai'], description: m.followup.argMode },
+        keywords: { type: 'array', items: { type: 'string' }, description: m.followup.argKeywords },
+        match_type: { type: 'string', enum: ['contains', 'exact'], default: 'contains' },
+        message: { type: 'string', description: m.followup.argMessage },
+        intents: { type: 'array', maxItems: 10, description: m.followup.argIntents, items: { type: 'object', properties: {
+          label: { type: 'string' }, description: { type: 'string' }, reply: { type: 'string' }, keywords: { type: 'array', items: { type: 'string' } },
+        }, required: ['label', 'reply'], additionalProperties: false } },
+        fallback: { type: 'string', description: m.followup.argFallback },
+        min_confidence: { type: 'number', minimum: 0, maximum: 1, default: 0.6 },
+        max_followups: { type: 'integer', minimum: 1, maximum: 3, default: 1, description: m.followup.argMax },
+        window_hours: { type: 'integer', minimum: 1, maximum: 72, default: 48, description: m.followup.argWindow },
+        remove: { type: 'boolean', description: m.followup.argRemove },
+      }, required: ['automation_id'], additionalProperties: false } },
+    { name: 'get_followup_conversations', description: m.followup.toolConversations, inputSchema: { type: 'object', properties: { automation_id: { type: 'string' }, limit: { type: 'integer', minimum: 1, maximum: 100, default: 30 } }, required: ['automation_id'], additionalProperties: false } },
     { name: 'delete_automation', description: T.delete_automation, inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'], additionalProperties: false } },
     { name: 'get_activity', description: T.get_activity, inputSchema: { type: 'object', properties: { automation_id: { type: 'string' }, limit: { type: 'integer', minimum: 1, maximum: 200, default: 50 }, since_hours: { type: 'integer', minimum: 1, maximum: 720, description: A.since_hours } }, additionalProperties: false } },
     { name: 'get_report', description: T.get_report, inputSchema: { type: 'object', properties: { period: { type: 'string', enum: ['today', '7d', '30d'], default: '7d' } }, additionalProperties: false } },
@@ -192,8 +213,9 @@ async function toolGetPostComments(owner: string, a: Json, m: Messages) {
 async function statsFor(ids: string[]) {
   if (!ids.length) return new Map<string, any>();
   const rows = await sql!`
-    SELECT automation_id, count(*)::int AS triggers,
+    SELECT automation_id, count(*) FILTER (WHERE followup_step IS NULL)::int AS triggers,
            count(*) FILTER (WHERE dm_status = 'sent')::int AS dms_sent,
+           count(*) FILTER (WHERE followup_step IS NOT NULL AND dm_status = 'sent')::int AS followups_sent,
            count(*) FILTER (WHERE public_reply_status = 'sent')::int AS replies_sent,
            count(*) FILTER (WHERE dm_status = 'failed' OR public_reply_status = 'failed')::int AS failed,
            max(created_at) AS last_at
@@ -207,6 +229,7 @@ function shape(a: any, st?: any) {
     post_id: a.post_id, post_scope: a.post_scope, keywords: a.keywords, match_type: a.match_type,
     public_reply_enabled: a.public_reply_enabled, public_replies: a.public_replies,
     dm_enabled: a.dm_enabled, dm_message: a.dm_message, dm_link: a.dm_link, once_per_user: a.once_per_user,
+    followup: a.followup || null,
     created_at: a.created_at,
     stats: st || { triggers: 0, dms_sent: 0, replies_sent: 0, failed: 0, last_at: null },
   };
@@ -301,6 +324,33 @@ async function toolUpdateAutomation(owner: string, a: Json, m: Messages) {
   const [row] = await sql!`SELECT * FROM automations WHERE id = ${id} AND owner_id = ${owner}`;
   if (!row) throw new Error('not_found');
   return { updated: true, automation: shape(row) };
+}
+
+async function toolSetFollowup(owner: string, a: Json, m: Messages) {
+  const id = String(a.automation_id || '');
+  const [row] = await sql!`SELECT id, platform FROM automations WHERE id = ${id} AND owner_id = ${owner}`;
+  if (!row) throw new Error('not_found');
+  if (a.remove === true) {
+    await sql!`UPDATE automations SET followup = NULL WHERE id = ${id} AND owner_id = ${owner}`;
+    return { updated: true, followup: null };
+  }
+  if (row.platform !== 'instagram') throw new Error(m.followup.errInstagramOnly);
+  const { automation_id: _a, remove: _r, ...cfgIn } = a;
+  const r = normalizeFollowup(cfgIn);
+  if (!r.ok) throw new Error((m.followup.errors as Record<string, string>)[r.error] || r.error);
+  const cap = await followupCapability(owner);
+  if (r.config.mode === 'ai' && r.config.enabled && !cap.ai) throw new Error(m.followup.aiLocked);
+  await sql!`UPDATE automations SET followup = ${sql!.json(r.config as any)} WHERE id = ${id} AND owner_id = ${owner}`;
+  return {
+    updated: true, followup: r.config,
+    live: cap.enabled, note: cap.enabled ? m.followup.mcpNoteLive : m.followup.mcpNoteDormant,
+    ...(r.config.mode === 'ai' && !cap.llm ? { warning: m.followup.noLlm } : {}),
+  };
+}
+
+async function toolGetFollowupConversations(owner: string, a: Json) {
+  const conversations = await followupConversations(owner, String(a.automation_id || ''), Number(a.limit) || 30);
+  return { count: conversations.length, conversations };
 }
 
 async function toolDeleteAutomation(owner: string, a: Json) {
@@ -456,6 +506,8 @@ async function callTool(owner: string, name: string, args: Json, m: Messages) {
     case 'get_report': return toolGetReport(owner, args);
     case 'get_insights': return toolGetInsights(owner, args, m);
     case 'publish_post': return toolPublishPost(owner, args, m);
+    case 'set_followup': return toolSetFollowup(owner, args, m);
+    case 'get_followup_conversations': return toolGetFollowupConversations(owner, args);
     default: throw Object.assign(new Error(`Unknown tool: ${name}`), { code: -32602 });
   }
 }

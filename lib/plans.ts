@@ -38,6 +38,12 @@ export interface PlanLimits {
   publishing: boolean;
   /** "Sent with SocialFlow" appended to every DM. */
   branding: boolean;
+  /**
+   * AI follow-up (6.10.2026, beta): an LLM reads the reply to the private message and answers by intent.
+   * The simple follow-up (reply anything / reply with a word -> message) is not gated by plan.
+   * Capability only; whether and how to charge for it is Yaakov's open decision (no price change here).
+   */
+  aiFollowup: boolean;
 }
 
 export interface CatalogEntry {
@@ -57,27 +63,27 @@ export interface CatalogEntry {
 export const PLAN_CATALOG: Record<PlanId, CatalogEntry> = {
   free: {
     tier: 'free', name: 'Free', sellable: true, priceIls: 0, priceIlsYear: 0, priceUsd: 0, priceUsdYear: 0,
-    limits: { activeAutomations: 3, dmsPerMonth: 300, accounts: 1, seats: 1, logDays: 7, mcp: false, publishing: false, branding: true },
+    limits: { activeAutomations: 3, dmsPerMonth: 300, accounts: 1, seats: 1, logDays: 7, mcp: false, publishing: false, branding: true, aiFollowup: false },
     blurb: 'Start without a card: 3 active automations and 300 private messages a month.',
   },
   creator: {
     tier: 'creator', name: 'Creator', sellable: true, priceIls: 49, priceIlsYear: 490, priceUsd: 12, priceUsdYear: 120,
-    limits: { activeAutomations: null, dmsPerMonth: 3000, accounts: 2, seats: 1, logDays: 90, mcp: false, publishing: false, branding: false },
+    limits: { activeAutomations: null, dmsPerMonth: 3000, accounts: 2, seats: 1, logDays: 90, mcp: false, publishing: false, branding: false, aiFollowup: false },
     blurb: 'For creators and small businesses: unlimited automations, 3,000 messages a month, no branding.',
   },
   creator_partner: {
     tier: 'creator', name: 'Creator Partner', sellable: false, priceIls: 0, priceIlsYear: 0, priceUsd: 0, priceUsdYear: 0,
-    limits: { activeAutomations: null, dmsPerMonth: 3000, accounts: 1, seats: 1, logDays: 90, mcp: false, publishing: false, branding: false },
+    limits: { activeAutomations: null, dmsPerMonth: 3000, accounts: 1, seats: 1, logDays: 90, mcp: false, publishing: false, branding: false, aiFollowup: false },
     blurb: 'A year of Creator on one profile, in exchange for a review and a guide. Granted by hand, never sold.',
   },
   pro: {
     tier: 'pro', name: 'Pro', sellable: true, priceIls: 99, priceIlsYear: 990, priceUsd: 24, priceUsdYear: 240,
-    limits: { activeAutomations: null, dmsPerMonth: 20000, accounts: 5, seats: 3, logDays: 365, mcp: true, publishing: true, branding: false },
+    limits: { activeAutomations: null, dmsPerMonth: 20000, accounts: 5, seats: 3, logDays: 365, mcp: true, publishing: true, branding: false, aiFollowup: true },
     blurb: 'For people who live on this: 20,000 messages, 5 accounts, and management from Claude and ChatGPT through MCP.',
   },
   agency: {
     tier: 'agency', name: 'Agency', sellable: true, priceIls: 249, priceIlsYear: 2490, priceUsd: 59, priceUsdYear: 590,
-    limits: { activeAutomations: null, dmsPerMonth: 100000, accounts: 15, seats: 10, logDays: 365, mcp: true, publishing: true, branding: false },
+    limits: { activeAutomations: null, dmsPerMonth: 100000, accounts: 15, seats: 10, logDays: 365, mcp: true, publishing: true, branding: false, aiFollowup: true },
     blurb: 'For agencies: 15 accounts, 10 users, 100,000 messages a month.',
   },
 };

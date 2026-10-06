@@ -2,6 +2,9 @@ import { fillVars } from '@/lib/template';
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, ensureSchema, hasDb } from '@/lib/db';
 import { linkAdMedia } from '@/lib/ad-media';
+import { verifyMetaSignature } from '@/lib/webhook-signature';
+import { messagingEventsFrom } from '@/lib/followup-core';
+import { handleMessagingWebhook, followupEnabled } from '@/lib/followup';
 import {
   commentOnPost,
   sendPrivateReply,
@@ -38,10 +41,27 @@ interface CommentEvent {
 // POST — receive comment events and run matching automations
 export async function POST(req: NextRequest) {
   let body: any;
+  let raw = '';
   try {
-    body = await req.json();
+    raw = await req.text();
+    body = JSON.parse(raw);
   } catch {
     return new NextResponse('OK', { status: 200 });
+  }
+
+  // 6.10.2026: Instagram DM replies (messaging) feed the follow-up step. Only a delivery signed with our app
+  // secret (X-Hub-Signature-256) is acted on; the comment path below is unchanged. The poller reads the same
+  // threads, and followup_events (keyed by message id) makes sure only one of the two answers.
+  if (followupEnabled() && body?.object === 'instagram' && Array.isArray(body?.entry) && body.entry.some((e: any) => Array.isArray(e?.messaging))) {
+    try {
+      if (verifyMetaSignature(raw, req.headers.get('x-hub-signature-256'), process.env.META_APP_SECRET)) {
+        await handleMessagingWebhook(body, messagingEventsFrom(body));
+      } else {
+        console.warn('webhook messaging: bad or missing signature, ignored');
+      }
+    } catch (e) {
+      console.error('webhook messaging error', e);
+    }
   }
 
   // Always ack fast; process best-effort.

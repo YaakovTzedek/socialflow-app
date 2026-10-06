@@ -40,8 +40,9 @@ export interface Entitlement {
  * Clear CLOSED_BETA when the product opens and the catalog limits apply again.
  */
 function withBeta(plan: CatalogEntry): CatalogEntry {
-  if (process.env.CLOSED_BETA !== 'true' || plan.limits.mcp) return plan;
-  return { ...plan, limits: { ...plan.limits, mcp: true } };
+  if (process.env.CLOSED_BETA !== 'true' || (plan.limits.mcp && plan.limits.aiFollowup)) return plan;
+  // 6.10.2026: beta testers (Tolik) also get the AI follow-up step, the other thing they test.
+  return { ...plan, limits: { ...plan.limits, mcp: true, aiFollowup: true } };
 }
 
 export function monthStart(): Date {
