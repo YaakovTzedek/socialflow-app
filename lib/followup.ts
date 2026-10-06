@@ -26,7 +26,7 @@ function betaOwners(): Set<string> {
   return new Set((process.env.FOLLOWUP_BETA_OWNERS || '').split(',').map((s) => s.trim()).filter(Boolean));
 }
 
-export interface FollowupCapability { enabled: boolean; ai: boolean; llm: 'openai' | 'anthropic' | null; beta: true }
+export interface FollowupCapability { enabled: boolean; ai: boolean; llm: 'openrouter' | 'openai' | 'anthropic' | null; beta: true }
 
 export async function followupCapability(ownerId: string): Promise<FollowupCapability> {
   let ai = betaOwners().has(ownerId);
